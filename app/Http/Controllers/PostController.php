@@ -24,6 +24,7 @@ use Illuminate\Http\Response;
 use Alert;
 use Exception;
 use Image;
+use Storage;
 
 class PostController extends Controller
 {
@@ -127,7 +128,7 @@ class PostController extends Controller
             ->where('postponed_to', '<=', $carbon->now())
             ->orWhere('postponed_to', null)
             ->orderBy('postponed_to', 'desc')
-            ->simplePaginate(8);
+            ->simplePaginate(20);
         return $posts;
     }
 
@@ -192,7 +193,7 @@ class PostController extends Controller
 
     public function getRandomPostImage(Request $request, $width = 1920)
     {
-        $directory = public_path() . '/images/posts/';
+        $directory = 'https://coanime.net/images/posts/';
 
         $images = glob($directory . '*-' . $width . 'w.{jpg,jpeg,png,gif}', GLOB_BRACE);
         $randomImage = basename($images[array_rand($images)]);
@@ -219,12 +220,20 @@ class PostController extends Controller
                 $randomImage = basename($arrayImages[array_rand($arrayImages)]);
 
                 return response()->json(array(
-                    'message' => 'Success',
+                    'code' => 200,
+                    'message' => array(
+                        'type' => 'success',
+                        'text' => 'Imagen encontrada',
+                    ),
                     'image' => 'https://coanime.net/images/posts/' . $randomImage
                 ), 200); 
             } else {
                 return response()->json(array(
-                    'message' => 'Not Found!'
+                    'code' => 404,
+                    'message' => array(
+                        'type' => 'error',
+                        'text' => 'No se encontraron resultados',
+                    ),
                 ), 404);
             }
         } else {
@@ -401,7 +410,7 @@ class PostController extends Controller
     public function imageUpload(Request $request)
     {
         $postImage = '';
-
+        
         if ($request->file('file')) {
             try {
                 $file = $request->file('file');
@@ -410,17 +419,17 @@ class PostController extends Controller
                 $image = Image::make($request->file('file')->getRealPath());
 
                 // Path to save the original image size
-                $originalPath = public_path() . '/images/posts/';
+                /*$originalPath = public_path() . '/images/posts/';
 
                 // Path to save the thumbnails
-                $thumbnailPath = public_path() . '/images/posts/thumbnails/';
+                $thumbnailPath = public_path() . '/images/posts/thumbnails/';*/
 
                 // Making the Original Name
                 $fileName = hash('sha256', strval(time()));
 
-                $watermark = Image::make(public_path() . '/images/logo_homepage.png');
+                /*$watermark = Image::make(public_path() . '/images/logo_homepage.png');
 
-                $watermark->opacity(30);
+                $watermark->opacity(30);*/
 
                 if ($image->width() > 720) {
                     $image->resize(720, null, function ($constraint) {
@@ -438,7 +447,7 @@ class PostController extends Controller
                     });
                 }
 
-                if (($image->width() * .20) < 300) {
+                /* if (($image->width() * .20) < 300) {
                     if (($image->width() * .20) < 150) {
                         $watermark->resize(100, null, function ($constraint) {
                             $constraint->aspectRatio();
@@ -448,16 +457,17 @@ class PostController extends Controller
                             $constraint->aspectRatio();
                         });
                     }
-                }
+                }*/
 
-                $image->insert($watermark, 'bottom-right', 10, 10);
+                /*$image->insert($watermark, 'bottom-right', 10, 10);*/
 
-                $image->encode('jpg', 100);
+                $image->encode('webp', 100);
+                $filePath = 'posts/' . $fileName . '.webp';
+                
+                /*$image->save($originalPath . $fileName . '-' . $image->width() . 'w.webp');
 
-                $image->save($originalPath . $fileName . '-' . $image->width() . 'w.jpg');
-
-                $postImage = 'https://coanime.net/images/posts/' . $fileName . '-' . $image->width() . 'w.jpg';
-
+                $postImage = 'https://coanime.net/images/posts/' . $fileName . '-' . $image->width() . 'w.webp';*/
+                Storage::disk('s3')->put($filePath, file_get_contents($image));
                 return response()->json(array(
                     'code' => 200,
                     'message' => 'Success!! Image Uploaded',
@@ -729,7 +739,7 @@ class PostController extends Controller
 
             return response()->json(array(
                 'code' => 200,
-                'message' => 'Success!!',
+                'message' => ['type' => 'success', 'text' => 'Post found'],
                 'post' => $post,
                 'titleImage' => $titleImage,
                 'relateds' => $relateds,
@@ -741,7 +751,7 @@ class PostController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => 'Not Found!!',
+                'message' => ['type' => 'error', 'text' => 'Post not found'],
             ), 404);
             //return view('errors.404');
         }

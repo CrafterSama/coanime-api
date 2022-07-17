@@ -565,7 +565,7 @@ class TitleController extends Controller
         if ($request->file('image-client')) :
             $file = $request->file('image-client');
         //Creamos una instancia de la libreria instalada
-        $image = \Image::make($request->file('image-client')->getRealPath());
+        $image = Image::make($request->file('image-client')->getRealPath());
         //Ruta donde queremos guardar las imagenes
         $originalPath = public_path() . '/images/encyclopedia/titles/';
         //Ruta donde se guardaran los Thumbnails
@@ -574,7 +574,7 @@ class TitleController extends Controller
         // Guardar Original
         $fileName = hash('sha256', Str::slug($request['name']) . strval(time()));
 
-        $watermark = \Image::make(public_path() . '/images/logo_homepage.png');
+        $watermark = Image::make(public_path() . '/images/logo_homepage.png');
 
         $watermark->opacity(30);
 

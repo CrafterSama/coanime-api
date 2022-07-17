@@ -17,6 +17,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\PostVoteController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
+use PHPUnit\TextUI\XmlConfiguration\Group;
 
 Route::get('/verify-email/{id}/{hash}', [VerifyEmailController::class, '__invoke'])
                 ->middleware(['auth', 'signed', 'throttle:6,1'])
@@ -36,17 +37,17 @@ Route::middleware('guest')->group(function () {
   Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
   Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.update');
   
-  // ** Api Endpoints
+  // ** Api Endpoints **
   Route::prefix('/api/v1/')->group(function () {
-    // ** Get Endpoints 
-    Route::get('home', [PostController::class, 'apiPosts'])->name('home');
+    Route::get('home', [PostController::class, 'index'])->name('home');
 
-    Route::get('article/{slug}', [PostController::class, 'showApi']);
-    Route::get('articles', [PostController::class, 'posts']);
-    Route::get('articles/{category}', [PostController::class, 'postsByCategory']);
-    Route::get('articles/{tag}', [PostController::class, 'postsByTag']);
+    // ** Get Endpoints **
+    Route::get('article/{slug}', [PostController::class, 'showApi'])->name('api.article.show');
+    Route::get('articles', [PostController::class, 'apiPosts'])->name('api.articles');
+    Route::get('articles/{category}', [PostController::class, 'postsByCategory'])->name('api.articles.category');
+    Route::get('articles/{tag}', [PostController::class, 'postsByTag'])->name('api.articles.tag');
 
-    Route::get('ecma', [EncyclopediaController::class, 'api']);
+    Route::get('ecma', [EncyclopediaController::class, 'ecma'])->name('api.ecma');
 
     Route::get('titles', [TitleController::class, 'apiTitles']);
     Route::get('titles/{type}', [TitleController::class, 'apiTitlesByType']);
@@ -80,9 +81,16 @@ Route::middleware('guest')->group(function () {
     Route::get('random-image', [PostController::class, 'getRandomPostImage']);
     Route::get('random-image-title/{slug}', [PostController::class, 'getRandomPostImageByTitle']);
 
-    //** Posts Endpoints
+    // ** Posts Endpoints **
 
-    Route::post('post-image-upload', [PostController::class, 'imageUpload']);
     Route::post('vote', [PostVoteController::class, 'vote']);
+    Route::put('post-image-upload', [PostController::class, 'imageUpload']);
+  });
+});
+
+Route::middleware(['auth'])->group(function () {
+  Route::prefix('api/v1/')->group(function () {
+    Route::get('posts', [PostController::class, 'posts'])->name('posts');
+    Route::get('posts/{id}', [PostController::class, 'show']);
   });
 });
