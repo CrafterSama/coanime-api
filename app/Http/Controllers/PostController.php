@@ -299,7 +299,7 @@ class PostController extends Controller
             'content' => 'required',
             'postponed_to' => 'date_format: "Y-m-d H:i:s"',
             'category_id' => 'required',
-            'image-client' => 'max:1024|mimes:jpg,jpeg,gif,bmp,png',
+            'image' => 'required|max:255',
         ]);
 
         $data = new Post;
@@ -307,7 +307,6 @@ class PostController extends Controller
         $currentUser = Auth::user()->id;
         $data['user_id'] = $currentUser;
         $data['slug'] = Str::slug($data['title']);
-        /* $data['content'] = Helper::removePTagsOnImages($data['content']); */
 
         if (Post::where('slug', 'like', $data['slug'])->count() > 0) {
             $data['slug'] = Str::slug($data['title']) . '1';
@@ -317,33 +316,8 @@ class PostController extends Controller
             $data['postponed_to'] = Carbon::now()->format('Y-m-d H:i:s');
         }
 
-        if ($request->file('image-client')) {
-            $file = $request->file('image-client');
-            // Make the Library Instance
-            $image = Image::make($request->file('image-client')->getRealPath());
-            // Path to save the original image size
-            $originalPath = public_path() . '/images/posts/';
-            // Path to save the thumbnails
-            $thumbnailPath = public_path() . '/images/posts/thumbnails/';
-            // Making the Original Name
-            $fileName = hash('sha256', $data['slug'] . strval(time()));
-            $watermark = Image::make(public_path() . '/images/logo_homepage.png');
-            $watermark->opacity(30);
-            $image->insert($watermark, 'bottom-right', 10, 10);
-            $image->encode('jpg', 100);
-            if ($image->width() > 1920) {
-                $image->resize(1920, null, function ($constraint) {
-                    $constraint->aspectRatio();
-                });
-            }
-            $image->save($originalPath . $fileName . '.jpg');
-            // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-            $image->resize(480, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-            // Guardar
-            $image->save($thumbnailPath . 'thumb-' . $fileName . '.jpg');
-            $data['image'] = $fileName . '.jpg';
+        if ($request->input('image')) {
+            $data['image'] = $request->input('image');
         } else {
             $data['image'] = null;
         }
@@ -409,81 +383,70 @@ class PostController extends Controller
      */
     public function imageUpload(Request $request)
     {
-        $postImage = '';
+        $principalImage = '';
+        $secondaryImage = '';
+        $thumbnailImage = '';
         
+        //dd($request->file('file'));
         if ($request->file('file')) {
             try {
-                $file = $request->file('file');
-
-                // Make the Library Instance
                 $image = Image::make($request->file('file')->getRealPath());
-
-                // Path to save the original image size
-                /*$originalPath = public_path() . '/images/posts/';
-
-                // Path to save the thumbnails
-                $thumbnailPath = public_path() . '/images/posts/thumbnails/';*/
-
-                // Making the Original Name
                 $fileName = hash('sha256', strval(time()));
-
-                /*$watermark = Image::make(public_path() . '/images/logo_homepage.png');
-
-                $watermark->opacity(30);*/
-
-                if ($image->width() > 720) {
-                    $image->resize(720, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                    if ($image->height() > 600) {
-                        $image->resize(null, 600, function ($constraint) {
-                            $constraint->aspectRatio();
-                        });
-                    }
-                }
-                if ($image->height() > 600) {
-                    $image->resize(null, 600, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                }
-
-                /* if (($image->width() * .20) < 300) {
-                    if (($image->width() * .20) < 150) {
-                        $watermark->resize(100, null, function ($constraint) {
-                            $constraint->aspectRatio();
-                        });
-                    } else {
-                        $watermark->resize(($image->width() * .20), null, function ($constraint) {
-                            $constraint->aspectRatio();
-                        });
-                    }
-                }*/
-
-                /*$image->insert($watermark, 'bottom-right', 10, 10);*/
-
                 $image->encode('webp', 100);
-                $filePath = 'posts/' . $fileName . '.webp';
-                
-                /*$image->save($originalPath . $fileName . '-' . $image->width() . 'w.webp');
 
-                $postImage = 'https://coanime.net/images/posts/' . $fileName . '-' . $image->width() . 'w.webp';*/
-                Storage::disk('s3')->put($filePath, file_get_contents($image));
+                
+                if ($image->width() > 2560) {
+                    $image->resize(2560, null, function ($constraint) {
+                        $constraint->aspectRatio();
+                    });
+                }
+                
+                $principal = '/posts/' . $fileName . '.webp';
+                $principalImage = Storage::disk('s3')->put($principal, $image);
+                $principalImage = Storage::disk('s3')->url($principal);
+
+
+                if ($image->width() > 1920) {
+                    $image->resize(1920, null, function ($constraint) {
+                        $constraint->aspectRatio();
+                    });
+                }
+
+                $secondary = '/posts/' . $fileName . '-1920w.webp';
+                $secondaryImage = Storage::disk('s3')->put($secondary, $image);
+                $secondaryImage = Storage::disk('s3')->url($secondary);
+
+                if ($image->width() > 480) {
+                    $image->resize(480, null, function ($constraint) {
+                        $constraint->aspectRatio();
+                    });
+                }
+
+                $thumbnail = '/posts/thumbnails/' . $fileName . '.webp';
+                $thumbnailImage = Storage::disk('s3')->put($thumbnail, $image);
+                $thumbnailImage = Storage::disk('s3')->url($thumbnail);
+
                 return response()->json(array(
                     'code' => 200,
-                    'message' => 'Success!! Image Uploaded',
-                    'link' => $postImage,
-                ), 200);
+                    'message' => [
+                        'type' => 'success',
+                        'text' => 'Success!! Image Uploaded'
+                    ],
+                    'url' => $principalImage,
+                    'url_1920' => $secondaryImage,
+                    'thumbnail' => $thumbnailImage,
+                ), Response::HTTP_OK);
             } catch (Exception $e) {
                 return response()->json(array(
                     'code' => 500,
                     'message' => $e->getMessage(),
-                ), 500);
+                ), Response::HTTP_INTERNAL_SERVER_ERROR);
             } 
         } else {
             return response()->json(array(
                 'code' => 400,
                 'message' => 'Error!! Image not Uploaded',
-            ), 400);
+            ), Response::HTTP_BAD_REQUEST);
         }
     }
 
@@ -652,6 +615,7 @@ class PostController extends Controller
      */
     public function show($slug)
     {
+        $categories = Category::orderBy('name', 'asc')->get();
         if (Post::where('slug', 'like', $slug)->pluck('id')->count() > 0) {
             $post = Post::with('users', 'categories', 'titles', 'tags', 'votes')->whereSlug($slug)->firstOrFail();
 
@@ -742,6 +706,7 @@ class PostController extends Controller
                 'message' => ['type' => 'success', 'text' => 'Post found'],
                 'post' => $post,
                 'titleImage' => $titleImage,
+                'categories' => $categories,
                 'relateds' => $relateds,
                 'votes' => $votes,
                 'keywords' => $keywords,
@@ -895,7 +860,7 @@ class PostController extends Controller
             'title' => 'required|max:255',
             'content' => 'required',
             'category_id' => 'required',
-            'image-client' => 'max:2048|mimes:jpg,jpeg,gif,bmp,png',
+            'file' => 'max:2048|mimes:jpg,jpeg,gif,bmp,png',
         ]);
 
         $data = Post::with('users', 'categories', 'titles', 'tags')->find($id);
@@ -908,43 +873,41 @@ class PostController extends Controller
             $data['postponed_to'] = Carbon::now()->format('Y-m-d H:i:s');
         }
 
-        if ($request->file('image-client')) {
-            $file = $request->file('image-client');
+        if ($request->file('file')) {
+            $file = $request->file('file');
             //Creamos una instancia de la libreria instalada
-            $image = Image::make($request->file('image-client')->getRealPath());
+            $image = Image::make($request->file('file')->getRealPath());
             //Ruta donde queremos guardar las imagenes
-            $originalPath = public_path() . '/images/posts/';
+            //$originalPath = public_path() . '/images/posts/';
             //Ruta donde se guardaran los Thumbnails
-            $thumbnailPath = public_path() . '/images/posts/thumbnails/';
+            //$thumbnailPath = public_path() . '/images/posts/thumbnails/';
             // Making the Original Name
             $fileName = hash('sha256', $data['slug'] . strval(time()));
-            $watermark = Image::make(public_path() . '/images/logo_homepage.png');
-            $watermark->opacity(30);
-            $image->insert($watermark, 'bottom-right', 10, 10);
-            $image->encode('jpg', 100);
+            //$watermark = Image::make(public_path() . '/images/logo_homepage.png');
+            //$watermark->opacity(30);
+            //$image->insert($watermark, 'bottom-right', 10, 10);
             if ($image->width() > 1920) {
                 $image->resize(1920, null, function ($constraint) {
                     $constraint->aspectRatio();
                 });
             }
-            $image->save($originalPath . $fileName . '.jpg');
+            $image->encode('webp', 100);
+            //$image->save($originalPath . $fileName . '.jpg');
             // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-            $image->resize(480, null, function ($constraint) {
+            /*$image->resize(480, null, function ($constraint) {
                 $constraint->aspectRatio();
-            });
+            });*/
             // Guardar
-            $image->save($thumbnailPath . 'thumb-' . $fileName . '.jpg');
+            //$image->save($thumbnailPath . 'thumb-' . $fileName . '.jpg');
+            $filePath = 'posts/' . $fileName . '.webp';
+            Storage::disk('s3')->put($filePath, file_get_contents($image));
 
-            $data['image'] = $fileName . '.jpg';
+            $data['file'] = $fileName . '.webp';
 
             $request['tags'] = explode(' ', $request['name']);
         }
 
-        if ($request->ajax()) {
-            $data['draft'] = 1;
-        } else {
-            $data['draft'] = 0;
-        }
+        $data['draft'] = 0;
 
         if ($data->update($post)) {
             if (!empty($request['title_id'])) {
@@ -981,10 +944,7 @@ class PostController extends Controller
 
             return response()->json(array(
                 'code' => 200,
-                'message' => 'Success',
-                'title' => 'Coanime.net - Editar Post',
-                'description' => 'Coanime.net - Editar Post',
-                'path_posts' => 'https://coanime.net/posts/',
+                'message' => [ 'type' => 'success', 'text' => 'Post actualizado correctamente' ],
                 'path_image' => $data->image,
                 'result' => $data,
             ), 200);

@@ -84,7 +84,6 @@ Route::middleware('guest')->group(function () {
     // ** Posts Endpoints **
 
     Route::post('vote', [PostVoteController::class, 'vote']);
-    Route::put('post-image-upload', [PostController::class, 'imageUpload']);
   });
 });
 
@@ -92,5 +91,7 @@ Route::middleware(['auth'])->group(function () {
   Route::prefix('api/v1/')->group(function () {
     Route::get('posts', [PostController::class, 'posts'])->name('posts');
     Route::get('posts/{id}', [PostController::class, 'show']);
+    Route::put('posts/{id}', [PostController::class, 'update']);
+    Route::post('upload-images', [PostController::class, 'imageUpload']);
   });
 });
