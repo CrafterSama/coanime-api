@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -18,5 +19,16 @@ class Authenticate extends Middleware
         if (! $request->expectsJson()) {
             return route('login');
         }
+    }
+
+    public function handle($request, Closure $next, ...$guards)
+    {
+        if ($xcsrf = $request->cookie('XSRF-TOKEN')) {
+            $request->headers->set('Authorization', 'Bearer ' . $xcsrf);
+        }
+        
+        $this->authenticate($request, $guards);
+
+        return $next($request);
     }
 }
