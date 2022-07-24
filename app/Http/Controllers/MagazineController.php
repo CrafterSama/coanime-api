@@ -10,10 +10,8 @@ use App\Models\Magazine;
 use App\Models\MagazineType;
 use App\Models\MagazineImage;
 use App\Models\MagazineRelease;
-
 use Illuminate\Http\Request;
-
-use UxWeb\SweetAlert\SweetAlert as Alert;
+use Illuminate\Support\Str;
 
 class MagazineController extends Controller
 {
@@ -25,11 +23,28 @@ class MagazineController extends Controller
     public function index(Request $request)
     {
         $magazine = Magazine::search($request->name)->with('type', 'image', 'release', 'country')->orderBy('name', 'asc')->paginate(30);
-        if ($magazine->count() > 0) :
-            return view('magazines.home', ['magazine' => $magazine]);
-        else :
-            return view('errors.404');
-        endif;
+        if ($magazine->count() > 0) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Resultados encontrados'
+                ],
+                'title' => 'Coanime.net - Lista de Revistas',
+                'description' => 'Lista de revistas en la enciclopedia de coanime.net',
+                'result' => $magazine,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'Sin Resultados'
+                ],
+                'title' => 'Coanime.net - Lista de Revistas',
+                'description' => 'Lista de revistas en la enciclopedia de coanime.net',
+            ), 404);
+        }
     }
 
     /**
@@ -40,31 +55,28 @@ class MagazineController extends Controller
     public function apiIndex(Request $request)
     {
         $magazine = Magazine::search($request->name)->with('type', 'image', 'release', 'country')->orderBy('name', 'asc')->paginate(30);
-        if ($magazine->count() > 0) :
+        if ($magazine->count() > 0) {
             return response()->json(array(
-                'message' => 'Resource found',
-                'magazine' => $magazine
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Resultados encontrados'
+                ],
+                'title' => 'Coanime.net - Lista de Revistas',
+                'description' => 'Lista de revistas en la enciclopedia de coanime.net',
+                'result' => $magazine,
             ), 200);
-        else :
+        } else {
             return response()->json(array(
-                'message' => 'Resource not found',
-                'magazine' => []
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'Sin Resultados'
+                ],
+                'title' => 'Coanime.net - Lista de Revistas',
+                'description' => 'Lista de revistas en la enciclopedia de coanime.net',
             ), 404);
-        endif;
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        $types = MagazineType::pluck('name', 'id');
-        $releases = MagazineRelease::pluck('name', 'id');
-        $countries = Country::pluck('name', 'code');
-        $image = new MagazineImage;
-        return view('dashboard.magazine.create', compact('releases', 'image', 'types', 'countries'));
+        }
     }
 
     /**
@@ -88,11 +100,11 @@ class MagazineController extends Controller
 
         $data = new Magazine;
 
-        $request['slug'] = str_slug($request['name']);
+        $request['slug'] = Str::slug($request['name']);
 
         $file = $request->file('image-client');
         //Creamos una instancia de la libreria instalada
-        $image = \Image::make($request->file('image-client')->getRealPath());
+        $image = Image::make($request->file('image-client')->getRealPath());
         //Ruta donde queremos guardar las imagenes
         $originalPath = public_path() . '/images/encyclopedia/magazine/';
         //Ruta donde se guardaran los Thumbnails
@@ -100,7 +112,7 @@ class MagazineController extends Controller
         // Guardar Original
         $fileName = hash('sha256', $request['slug'] . strval(time()));
 
-        $watermark = \Image::make(public_path() . '/images/logo_homepage.png');
+        $watermark = Image::make(public_path() . '/images/logo_homepage.png');
 
         $watermark->opacity(30);
 
@@ -116,25 +128,40 @@ class MagazineController extends Controller
         // Guardar
         $image->save($thumbnailPath . 'thumb-' . $fileName.'.jpg');
 
-        $request['user_id'] = \Auth::user()->id;
+        $request['user_id'] = Auth::user()->id;
 
-        if (Magazine::where('slug', 'like', $request['slug'])->count() > 0) :
-            $request['slug'] = str_slug($request['name']) . '-01';
-        endif;
+        if (Magazine::where('slug', 'like', $request['slug'])->count() > 0) {
+            $request['slug'] = Str::slug($request['name']) . '-01';
+        }
         $request['images'] = $fileName.'.jpg';
 
         $data = $request->all();
 
-        if ($data = Magazine::create($data)) :
+        if ($data = Magazine::create($data)) {
             $image = $data->image ?: new MagazineImage;
             $image->name = $request['images'];
             $data->image()->save($image);
-            \Alert::success('Revista Agregado');
-            return redirect()->to('dashboard/magazine');
-        else :
-            \Alert::error('No se ha podido guardar la Informacion Suministrada');
-            return back();
-        endif;
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Revista creada correctamente'
+                ],
+                'title' => 'Coanime.net - Lista de Revistas',
+                'description' => 'Lista de revistas en la enciclopedia de coanime.net',
+                'result' => $data,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'Error al crear la revista'
+                ],
+                'title' => 'Coanime.net - Lista de Revistas',
+                'description' => 'Lista de revistas en la enciclopedia de coanime.net',
+            ), 404);
+        }
     }
 
     /**
@@ -148,11 +175,28 @@ class MagazineController extends Controller
             ->whereSlug($slug)
             ->firstOrFail();
 
-        if ($mgz->count() > 0) :
-            return view('magazines.details', compact('mgz'));
-        else :
-            return view('errors.404');
-        endif;
+        if ($mgz->count() > 0) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Revista encontrada'
+                ],
+                'title' => 'Coanime.net - Revista',
+                'description' => 'Revista en la enciclopedia de coanime.net',
+                'result' => $mgz,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'Revista no encontrada'
+                ],
+                'title' => 'Coanime.net - Revista',
+                'description' => 'Revista en la enciclopedia de coanime.net',
+            ), 404);
+        }
     }
 
     /**
@@ -165,33 +209,28 @@ class MagazineController extends Controller
         $mgz = Magazine::with('image', 'type', 'release', 'country')
             ->whereSlug($slug)
             ->firstOrFail();
-        if($mgz->count() > 0):
+        if($mgz->count() > 0) {
             return response()->json(array(
-                'message' => 'Resource found',
-                'magazine' => $mgz
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Revista encontrada'
+                ],
+                'title' => 'Coanime.net - Revista',
+                'description' => 'Revista en la enciclopedia de coanime.net',
+                'result' => $mgz,
             ), 200);
-        else :
+        } else {
             return response()->json(array(
-                'message' => 'Resource not found',
-                'magazine' => []
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'Revista no encontrada'
+                ],
+                'title' => 'Coanime.net - Revista',
+                'description' => 'Revista en la enciclopedia de coanime.net',
             ), 404);
-        endif;
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Request $request, $id)
-    {
-        $magazine = Magazine::with('image', 'release', 'type', 'users')->find($id);
-        $types = MagazineType::pluck('name', 'id');
-        $releases = MagazineRelease::pluck('name', 'id');
-        $countries = Country::pluck('name', 'code');
-        //dd($magazine);
-        return view('dashboard.magazine.create', compact('releases', 'types', 'magazine', 'countries'));
+        }
     }
 
     /**
@@ -216,18 +255,18 @@ class MagazineController extends Controller
 
         $data = Magazine::find($id);
 
-        if ($request->file('image-client')) :
+        if ($request->file('image-client')) {
             $file = $request->file('image-client');
             //Creamos una instancia de la libreria instalada
-            $image = \Image::make($request->file('image-client')->getRealPath());
+            $image = Image::make($request->file('image-client')->getRealPath());
             //Ruta donde queremos guardar las imagenes
             $originalPath = public_path() . '/images/encyclopedia/magazine/';
             //Ruta donde se guardaran los Thumbnails
             $thumbnailPath = public_path() . '/images/encyclopedia/magazine/thumbnails/';
             // Guardar Original
-            $fileName = hash('sha256', str_slug($request['name']) . strval(time()));
+            $fileName = hash('sha256', Str::slug($request['name']) . strval(time()));
 
-            $watermark = \Image::make(public_path() . '/images/logo_homepage.png');
+            $watermark = Image::make(public_path() . '/images/logo_homepage.png');
 
             $watermark->opacity(30);
 
@@ -243,26 +282,42 @@ class MagazineController extends Controller
             $image->save($thumbnailPath . 'thumb-' . $fileName.'.jpg');
 
             $request['images'] = $fileName.'.jpg';
-        endif;
+        }
 
-        $request['user_id'] = \Auth::user()->id;
-        $request['slug'] = str_slug($request['name']);
+        $request['user_id'] = Auth::user()->id;
+        $request['slug'] = Str::slug($request['name']);
         /*if(Magazine::where('slug','like', $request['slug'])->count() > 0):
-                        $request['slug'] = str_slug($request['name']).'-01';
+                        $request['slug'] = Str::slug($request['name']).'-01';
         */
 
-        if ($data->update($request->all())) :
-            if ($request->file('image-client')) :
+        if ($data->update($request->all())) {
+            if ($request->file('image-client')) {
                 $image = $data->image ?: MagazineImage::where('magazine_id', $id);
                 $image->name = $request['images'];
                 $data->image()->save($image);
-            endif;
-            \Alert::success('Revista Actualizada');
-            return redirect()->to('dashboard/magazine');
-        else :
-            \Alert::error('No se ha podido guardar la Informacion Suministrada');
-            return back();
-        endif;
+            }
+            
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Revista actualizada correctamente'
+                ],
+                'title' => 'Coanime.net - Revista',
+                'description' => 'Revista en la enciclopedia de coanime.net',
+                'result' => $data,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'Error al actualizar la revista'
+                ],
+                'title' => 'Coanime.net - Revista',
+                'description' => 'Revista en la enciclopedia de coanime.net',
+            ), 404);
+        }
     }
 
     /**
@@ -275,25 +330,37 @@ class MagazineController extends Controller
     {
         $magazine = Magazine::find($id);
 
-        if ($magazine->delete()) :
-            Alert::success('El Titulo se ha Eliminado satisfactoriamente');
-            return back();
-        else :
-            Alert::error('El Post no se ha podido Eliminar');
-            return back();
-        endif;
+        if ($magazine->delete()) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Revista eliminada correctamente'
+                ],
+                'title' => 'Coanime.net - Revista',
+                'description' => 'Revista en la enciclopedia de coanime.net',
+                'result' => $magazine,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'Error al eliminar la revista'
+                ],
+                'title' => 'Coanime.net - Revista',
+                'description' => 'Revista en la enciclopedia de coanime.net',
+            ), 404);
+        }
     }
 
-    public function name(Request $request, $name)
-    {
-    }
     public function slugs()
     {
-        $slugs = \App\Company::all();
-        foreach ($slugs as $s) :
-            $s->slug = str_slug($s->name);
+        $slugs = \App\Models\Company::all();
+        foreach ($slugs as $s) {
+            $s->slug = Str::slug($s->name);
             $s->update();
             echo $s->slug . '<br>';
-        endforeach;
+        }
     }
 }

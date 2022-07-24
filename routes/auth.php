@@ -47,7 +47,7 @@ Route::middleware('guest')->group(function () {
     Route::get('articles/{category}', [PostController::class, 'postsByCategory'])->name('api.articles.category');
     Route::get('articles/{tag}', [PostController::class, 'postsByTag'])->name('api.articles.tag');
 
-    Route::get('ecma', [EncyclopediaController::class, 'ecma'])->name('api.ecma');
+    Route::get('ecma', [EncyclopediaController::class, 'index'])->name('api.ecma');
 
     Route::get('titles', [TitleController::class, 'apiTitles']);
     Route::get('titles/{type}', [TitleController::class, 'apiTitlesByType']);
@@ -89,9 +89,43 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware(['auth'])->group(function () {
   Route::prefix('api/v1/')->group(function () {
+    // ** Auth Posts Endpoints **
     Route::get('posts', [PostController::class, 'posts'])->name('posts');
     Route::get('posts/{id}', [PostController::class, 'show']);
     Route::put('posts/{id}', [PostController::class, 'update']);
-    Route::post('upload-images', [PostController::class, 'imageUpload']);
+    Route::post('posts', [PostController::class, 'store']);
+    
+    // ** Auth Upload Image Endpoints **
+    Route::post('upload-images', [ImageController::class, 'store']);
+
+    // ** Auth Titles Endpoints **
+    Route::get('titles', [TitleController::class, 'index'])->name('titles');
+    Route::get('titles/{id}', [TitleController::class, 'show']);
+    Route::put('titles/{id}', [TitleController::class, 'update']);
+    Route::post('titles', [TitleController::class, 'store']);
+    
+    // ** Auth People Endpoints **
+    Route::get('people', [PeopleController::class, 'index'])->name('people');
+    Route::get('people/{id}', [PeopleController::class, 'show']);
+    Route::put('people/{id}', [PeopleController::class, 'update']);
+    Route::post('people', [PeopleController::class, 'store']);
+    
+    // ** Auth Magazine Endpoints **
+    Route::get('magazine', [MagazineController::class, 'index'])->name('magazine');
+    Route::get('magazine/{id}', [MagazineController::class, 'show']);
+    Route::put('magazine/{id}', [MagazineController::class, 'update']);
+    Route::post('magazine', [MagazineController::class, 'store']);
+    
+    // ** Auth Events Endpoints **
+    Route::get('events', [EventController::class, 'index'])->name('events');
+    Route::get('events/{id}', [EventController::class, 'show']);
+    Route::put('events/{id}', [EventController::class, 'show']);
+    Route::post('events', [EventController::class, 'store']);
+    
+    // ** Auth Company Endpoints **
+    Route::get('companies', [CompanyController::class, 'index'])->name('companies');
+    Route::get('companies/{id}', [CompanyController::class, 'show']);
+    Route::put('companies/{id}', [CompanyController::class, 'update']);
+    Route::post('companies', [CompanyController::class, 'store']);
   });
 });

@@ -6,7 +6,9 @@ use App\Models\City;
 use App\Models\Country;
 use App\Models\People;
 use App\Models\Helper;
+use Iluminate\Http\Response;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class PeopleController extends Controller {
 
@@ -17,12 +19,28 @@ class PeopleController extends Controller {
 	 */
 	public function index(Request $request) {
         $people = People::search($request->name)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
-		if ($people->count() > 0):
-			return view('people.home', ['people' => $people]);
-		else:
-			return back()->with('errors', 'Error Trying to obtein the People Data');
-		endif;
-
+		if ($people->count() > 0) {
+			return response()->json(array(
+				'code' => 200,
+				'message' => [ 
+						'type' => 'success',
+						'text' => 'Resultados encontrados'
+				],
+				'title' => 'Coanime.net - Lista de Personas',
+				'description' => 'Lista de Personas en la enciclopedia de coanime.net',
+				'result' => $people,
+			), 200);
+		} else {
+			return response()->json(array(
+				'code' => 404,
+				'message' => [ 
+						'type' => 'error',
+						'text' => 'Sin resultados'
+				],
+				'title' => 'Coanime.net - Lista de Personas',
+				'description' => 'Lista sin resultados',
+			), 404);
+		}
 	}
 
     /**
@@ -31,36 +49,56 @@ class PeopleController extends Controller {
 	 * @return \Illuminate\Http\Response
 	 */
 	public function apiIndex(Request $request) {
-        $people = People::search($request->name)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
-		if ($people->count() > 0):
+		$people = People::search($request->name)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
+		if ($people->count() > 0) {
+			return response()->json(array(
+				'code' => 200,
+				'message' => [ 
+						'type' => 'success',
+						'text' => 'Resultados encontrados'
+				],
+				'title' => 'Coanime.net - Lista de Personas',
+				'description' => 'Lista de Personas en la enciclopedia de coanime.net',
+				'result' => $people,
+			), 200);
+		} else {
+			return response()->json(array(
+				'code' => 404,
+				'message' => [ 
+						'type' => 'error',
+						'text' => 'Sin resultados'
+				],
+				'title' => 'Coanime.net - Lista de Personas',
+				'description' => 'Lista sin resultados',
+			), 404);
+		} 
+	}
 
-            return response()->json(array(
-                'message' => 'Resource found',
-                'people' => $people
-            ), 200);
-		else:
-            return response()->json(array(
-                'message' => 'Resource not found',
-                'people' => []
-            ), 404);
-		endif;
-
-    }
-
-    public function apiSearchPeople(Request $request) {
-        $people = People::search($request->name)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
-        if ($people->count() > 0) :
-            return response()->json(array(
-                'message' => 'Resource found',
-                'people' => $people
-            ), 200);
-		else:
-            return response()->json(array(
-                'message' => 'Resource not found',
-                'people' => []
-            ), 404);
-		endif;
-    }
+	public function apiSearchPeople(Request $request) {
+		$people = People::search($request->name)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
+		if ($people->count() > 0) {
+			return response()->json(array(
+					'code' => 200,
+					'message' => [ 
+							'type' => 'success',
+							'text' => 'Resultados encontrados'
+					],
+					'title' => 'Coanime.net - Lista de Personas',
+					'description' => 'Lista de Personas en la enciclopedia de coanime.net',
+					'result' => $people,
+			), 200);
+		} else {
+			return response()->json(array(
+					'code' => 404,
+					'message' => [ 
+							'type' => 'error',
+							'text' => 'Sin resultados'
+					],
+					'title' => 'Coanime.net - Lista de Personas',
+					'description' => 'Lista sin resultados',
+			), 404);
+		}
+	}
 
 	/**
 	 * Show the form for creating a new resource.
@@ -82,10 +120,17 @@ class PeopleController extends Controller {
 	 * @return \Illuminate\Http\Response
 	 */
 	public function store(Request $request) {
-		if (People::where('name', 'like', $request->get('name'))->where('birthday', '=', $request->get('birthday'))->count() > 0):
-			\Alert::error('La serie que trata de guardar ya esta en nuestros archivos');
-			return back();
-		else:
+		if (People::where('name', 'like', $request->get('name'))->where('birthday', '=', $request->get('birthday'))->count() > 0) {
+			return response()->json(array(
+				'code' => 400,
+				'message' => [ 
+						'type' => 'error',
+						'text' => 'Ya existe una persona con ese nombre y fecha de nacimiento'
+				],
+				'title' => 'Coanime.net - Crear Persona',
+				'description' => 'Crear una nueva persona',
+			), 400);
+		} else {
 			$this->validate($request, [
 				'name' => 'required|max:255',
 				'japanese_name' => 'required',
@@ -109,24 +154,25 @@ class PeopleController extends Controller {
 
 			$data = new People;
 
-			$request['user_id'] = \Auth::user()->id;
-			$request['slug'] = str_slug($request['name']);
-			if (People::where('slug', 'like', $request['slug'])->count() > 0):
-				$request['slug'] = str_slug($request['name']) . '1';
-			endif;
+			$request['user_id'] = Auth::user()->id;
+			$request['slug'] = Str::slug($request['name']);
+			
+			if (People::where('slug', 'like', $request['slug'])->count() > 0){
+				$request['slug'] = Str::slug($request['name']) . '1';
+			}
 
-			if ($request->file('image-client')):
+			if ($request->file('image-client')) {
 				$file = $request->file('image-client');
 				//Creamos una instancia de la libreria instalada
-				$image = \Image::make($request->file('image-client')->getRealPath());
+				$image = Image::make($request->file('image-client')->getRealPath());
 				//Ruta donde queremos guardar las imagenes
 				$originalPath = public_path() . '/images/encyclopedia/people/';
 				//Ruta donde se guardaran los Thumbnails
 				$thumbnailPath = public_path() . '/images/encyclopedia/people/thumbnails/';
 				// Guardar Original
-				$fileName = hash('sha256', str_slug($request['name']) . strval(time()));
+				$fileName = hash('sha256', Str::slug($request['name']) . strval(time()));
 
-				$watermark = \Image::make(public_path() . '/images/logo_homepage.png');
+				$watermark = Image::make(public_path() . '/images/logo_homepage.png');
 
                 $watermark->opacity(30);
 
@@ -141,20 +187,35 @@ class PeopleController extends Controller {
 				$image->save($thumbnailPath . 'thumb-' . $fileName.'.jpg');
 
 				$request['image'] = $fileName.'.jpg';
-			else:
+			} else {
 				$request['image'] = NULL;
-			endif;
+			}
 
 			//dd($data);
 
-			if ($data = People::create($request->all())):
-				\Alert::success('Persona Agregada');
-				return redirect()->to('dashboard/people');
-			else:
-				\Alert::error('No se ha podido guardar la Informacion Suministrada');
-				return back();
-			endif;
-		endif;
+			if ($data = People::create($request->all())) {
+				return response()->json(array(
+					'code' => 200,
+					'message' => [ 
+							'type' => 'success',
+							'text' => 'Persona creada correctamente'
+					],
+					'title' => 'Coanime.net - Crear Persona',
+					'description' => 'Crear una nueva persona',
+				), 200);
+			} else {
+				return response()->json(array(
+					'code' => 400,
+					'message' => [ 
+							'type' => 'error',
+							'text' => 'Error al crear la persona'
+					],
+					'title' => 'Coanime.net - Crear Persona',
+					'description' => 'Crear una nueva persona',
+				), 400);
+
+			}	
+		}
 	}
 
 	/**
@@ -164,15 +225,31 @@ class PeopleController extends Controller {
 	 * @return \Illuminate\Http\Response
 	 */
 	public function show($slug) {
-		if (People::where('slug', '=', $slug)->count() > 0):
+		if (People::where('slug', '=', $slug)->count() > 0) {
 			$people = People::with('city', 'country')->whereSlug($slug)->firstOrFail();
-
 			//dd($people);
-			return view('people.details', ['people' => $people]);
-		else:
-			return view('errors.404');
-		endif;
-    }
+			return response()->json(array(
+				'code' => 200,
+				'message' => [ 
+						'type' => 'success',
+						'text' => 'Persona encontrada'
+				],
+				'title' => 'Coanime.net - Persona',
+				'description' => 'Ver la información de una persona',
+				'data' => $people,
+			), 200);
+		} else {
+			return response()->json(array(
+				'code' => 400,
+				'message' => [ 
+						'type' => 'error',
+						'text' => 'Persona no encontrada'
+				],
+				'title' => 'Coanime.net - Persona',
+				'description' => 'Ver la información de una persona',
+			), 400);
+		}
+	}
 
 	/**
 	 * Display the specified resource.
@@ -181,34 +258,31 @@ class PeopleController extends Controller {
 	 * @return \Illuminate\Http\Response
 	 */
 	public function apiShow($slug) {
-		if (People::where('slug', '=', $slug)->count() > 0):
-            $people = People::with('city', 'country')->whereSlug($slug)->firstOrFail();
-            $people->bio = Helper::parseBBCode($people->bio);
+		if (People::where('slug', '=', $slug)->count() > 0) {
+			$people = People::with('city', 'country')->whereSlug($slug)->firstOrFail();
+			$people->bio = Helper::parseBBCode($people->bio);
 
-            return response()->json(array(
-                'message' => 'Resource found',
-                'person' => $people
-            ), 200);
-        else :
-            return response()->json(array(
-                'message' => 'Resource not found',
-                'person' => null
-            ), 404);
-        endif;
-    }
-
-	/**
-	 * Show the form for editing the specified resource.
-	 *
-	 * @param  int  $id
-	 * @return \Illuminate\Http\Response
-	 */
-	public function edit(Request $request, $id) {
-		$person = People::find($id);
-		$falldown = ['no' => 'No', 'si' => 'Si'];
-		$cities = City::pluck('name', 'id');
-		$countries = Country::pluck('name', 'code');
-		return view('dashboard.people.create', compact('person', 'falldown', 'countries', 'cities'));
+			return response()->json(array(
+				'code' => 200,
+				'message' => [ 
+						'type' => 'success',
+						'text' => 'Persona encontrada'
+				],
+				'title' => 'Coanime.net - Buscar Persona',
+				'description' => 'Buscar una persona',
+				'data' => $people
+			), 200);
+		} else {
+			return response()->json(array(
+				'code' => 400,
+				'message' => [ 
+						'type' => 'error',
+						'text' => 'Persona no encontrada'
+				],
+				'title' => 'Coanime.net - Buscar Persona',
+				'description' => 'Buscar una persona',
+			), 400);
+		}
 	}
 
 	/**
@@ -238,23 +312,23 @@ class PeopleController extends Controller {
 			$request['falldown_date'] = NULL;
 		}
 
-		$request['user_id'] = \Auth::user()->id;
-		$request['slug'] = str_slug($request['name']);
+		$request['user_id'] = Auth::user()->id;
+		$request['slug'] = Str::slug($request['name']);
 
 
 
-		if ($request->file('image-client')):
+		if ($request->file('image-client')) {
 			$file = $request->file('image-client');
 			//Creamos una instancia de la libreria instalada
-			$image = \Image::make($request->file('image-client')->getRealPath());
+			$image = Image::make($request->file('image-client')->getRealPath());
 			//Ruta donde queremos guardar las imagenes
 			$originalPath = public_path() . '/images/encyclopedia/people/';
 			//Ruta donde se guardaran los Thumbnails
 			$thumbnailPath = public_path() . '/images/encyclopedia/people/thumbnails/';
 			// Guardar Original
-			$fileName = hash('sha256', str_slug($request['name']) . strval(time()));
+			$fileName = hash('sha256', Str::slug($request['name']) . strval(time()));
 
-			$watermark = \Image::make(public_path() . '/images/logo_homepage.png');
+			$watermark = Image::make(public_path() . '/images/logo_homepage.png');
 
             $watermark->opacity(30);
 
@@ -269,15 +343,29 @@ class PeopleController extends Controller {
 			$image->save($thumbnailPath . 'thumb-' . $fileName.'.jpg');
 
 			$request['image'] = $fileName.'.jpg';
-		endif;
+		}
 
-		if ($data->update($request->all())):
-			\Alert::success('Persona Actualizada');
-			return redirect()->to('dashboard/people');
-		else:
-			\Alert::error('No se ha podido guardar la Informacion Suministrada');
-			return back();
-		endif;
+		if ($data->update($request->all())) {
+			return response()->json(array(
+				'code' => 200,
+				'message' => [ 
+						'type' => 'success',
+						'text' => 'Persona actualizada correctamente'
+				],
+				'title' => 'Coanime.net - Editar Persona',
+				'description' => 'Editar una persona',
+			), 200);
+		} else {
+			return response()->json(array(
+				'code' => 400,
+				'message' => [ 
+						'type' => 'error',
+						'text' => 'Error al actualizar la persona'
+				],
+				'title' => 'Coanime.net - Editar Persona',
+				'description' => 'Editar una persona',
+			), 400);
+		}
 	}
 
 	/**
@@ -289,37 +377,52 @@ class PeopleController extends Controller {
 	public function destroy($id, Request $request) {
 		$people = People::find($id);
 
-		if ($people->delete()):
-			\Alert::success('El Titulo se ha Eliminado satisfactoriamente');
-			return back();
-		else:
-			\Alert::error('El Post no se ha podido Eliminar');
-			return back();
-		endif;
+		if ($people->delete()) {
+			return response()->json(array(
+				'code' => 200,
+				'message' => [ 
+						'type' => 'success',
+						'text' => 'Persona eliminada correctamente'
+				],
+				'title' => 'Coanime.net - Eliminar Persona',
+				'description' => 'Eliminar una persona',
+			), 200);
+		} else {
+			return response()->json(array(
+				'code' => 400,
+				'message' => [ 
+						'type' => 'error',
+						'text' => 'Error al eliminar la persona'
+				],
+				'title' => 'Coanime.net - Eliminar Persona',
+				'description' => 'Eliminar una persona',
+			), 400);
+		}
 	}
 
 	public function name(Request $request, $name) {
 
 	}
+
 	public function slugs() {
 		$people = People::all();
-		foreach ($people as $p):
-			if (is_null($p->falldown_date) || empty($p->falldown_date)):
+		foreach ($people as $p) {
+			if (is_null($p->falldown_date) || empty($p->falldown_date)) {
 				echo $p->id . ' - No Paso Nada<br>';
-			else:
-				if (preg_match("/([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{2,4})/", $p->falldown_date, $newBT)):
+			} else {
+				if (preg_match("/([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{2,4})/", $p->falldown_date, $newBT)) {
 					$newBroadTime = $newBT[3] . "-" . $newBT[2] . "-" . $newBT[1] . ' 00:00:00';
 					$p->falldown_date = $newBroadTime;
 					$p->update();
 					echo $p->id . ' -> ' . $p->falldown_date . ' -> Cambio Listo<br>';
-				else:
+				} else {
 					$newBroadTime = $p->falldown_date . ' 00:00:00';
 					$p->falldown_date = $newBroadTime;
 					$p->update();
 					echo $p->id . ' -> ' . $p->falldown_date . ' -> Cambio Listo<br>';
-				endif;
-			endif;
-		endforeach;
+				}
+			}
+		}
 		/*$people = People::all();
 					$magazine = Magazine::all();
 					$events = Event::all();
@@ -328,31 +431,31 @@ class PeopleController extends Controller {
 
 			        /*foreach($people as $p):
 			            $p->name = $p->first_name. ' ' .$p->last_name;
-						$p->slug = str_slug($p->first_name. ' ' .$p->last_name);
+						$p->slug = Str::slug($p->first_name. ' ' .$p->last_name);
 			            $p->update();
 			            echo 'People -> '.$p->name.'<br>'.$p->slug.'<br>';
 			        endforeach;
 
 			        foreach($magazine as $mgz):
-						$mgz->slug = str_slug($mgz->name);
+						$mgz->slug = Str::slug($mgz->name);
 			            $mgz->update();
 			            echo 'Magazine -> '.$mgz->slug.'<br>';
 			        endforeach;
 
 			        foreach($events as $event):
-						$event->slug = str_slug($event->name);
+						$event->slug = Str::slug($event->name);
 			            $event->update();
 			            echo 'Events -> '.$event->slug.'<br>';
 			        endforeach;
 
 			        foreach($titles as $title):
-						$title->slug = str_slug($title->name);
+						$title->slug = Str::slug($title->name);
 			            $title->update();
 			            echo 'Titles -> '.$title->slug.'<br>';
 			        endforeach;
 
 			        foreach($companies as $company):
-						$company->slug = str_slug($company->name);
+						$company->slug = Str::slug($company->name);
 			            $company->update();
 			            echo 'Companies -> '.$company->slug.'<br>';
 		*/

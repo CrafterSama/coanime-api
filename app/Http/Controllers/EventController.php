@@ -9,6 +9,7 @@ use App\Models\Event;
 use App\Models\Country;
 use App\Models\City;
 use App\Models\CountryLanguage;
+use Illuminate\Support\Str;
 
 class EventController extends Controller
 {
@@ -19,27 +20,31 @@ class EventController extends Controller
      */
     public function index(Request $request)
     {
-
-        if(Event::search($request->name)->with('users','city','country')->orderBy('date_start','asc')->paginate()->count() > 0):
-
+        if(Event::search($request->name)->with('users','city','country')->orderBy('date_start','asc')->paginate()->count() > 0) {
             $events = Event::search($request->name)->with('users','city','country')->orderBy('date_start','asc')->simplePaginate();
 
-            return view('events.home', compact('events'));
-        else:
-            return back()->with('errors', 'Error Trying to obtein the Event Data');
-        endif;
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        $event = New Event;
-        $countries = Country::all();
-        return view('dashboard.events.create', compact('event','countries'));
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Lista de Eventos Encontrada'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => $events,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'No se encontraron Eventos'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => [],
+            ), 404);
+        }
     }
 
     /**
@@ -62,16 +67,16 @@ class EventController extends Controller
         ]);
 
         $data = new Event;
-        $request['user_id'] = \Auth::user()->id;
-        $request['slug'] = str_slug($request['name']);
-        if(Event::where('slug','like',$request['slug'])->count() > 0):
-            $request['slug'] = str_slug($request['name']).'1';
-        endif;
+        $request['user_id'] = Auth::user()->id;
+        $request['slug'] = Str::slug($request['name']);
+        if(Event::where('slug','like',$request['slug'])->count() > 0) {
+            $request['slug'] = Str::slug($request['name']).'1';
+        }
 
-        if($request->file('image-client')):
+        if($request->file('image-client')) {
             $file = $request->file('image-client');
             //Creamos una instancia de la libreria instalada
-            $image = \Image::make($request->file('image-client')->getRealPath());
+            $image = Image::make($request->file('image-client')->getRealPath());
             //Ruta donde queremos guardar las imagenes
             $originalPath = public_path().'/images/events/';
             //Ruta donde se guardaran los Thumbnails
@@ -79,7 +84,7 @@ class EventController extends Controller
             // Guardar Original
             $fileName = hash('sha256', $data['slug'] . strval(time()));
 
-            $watermark = \Image::make(public_path() . '/images/logo_homepage.png');
+            $watermark = Image::make(public_path() . '/images/logo_homepage.png');
 
             $watermark->opacity(30);
 
@@ -96,19 +101,35 @@ class EventController extends Controller
             $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
 
             $request['image'] = $fileName.'.jpg';
-        else:
+        } else {
             $request['image'] = NULL;
-        endif;
+        }
 
         //dd($data);
 
-        if($data = Event::create($request->all())):
-            \Alert::success('Evento Agregado');
-            return redirect()->to('dashboard/events');
-        else:
-            \Alert::error('No se ha podido guardar la Informacion Suministrada');
-            return back();
-        endif;
+        if($data = Event::create($request->all())) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Evento Creado'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => $data,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'No se pudo crear el Evento'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => [],
+            ), 404);
+        }
     }
 
     /**
@@ -122,21 +143,29 @@ class EventController extends Controller
 		$id = Event::where('slug','like',$slug)->pluck('id');
 		$event = Event::with('users')->find($id);
 
-		return view('events.details', compact('event'));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Request $request, $id)
-    {
-        $event = Event::find($id);
-        $cities = City::pluck('name','id');
-        $countries = Country::pluck('name','code');
-        return view('dashboard.events.create', compact('event','cities','countries'));
+        if($event) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Evento Encontrado'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => $event,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'No se encontró el Evento'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => [],
+            ), 404);
+        }
     }
 
     /**
@@ -161,21 +190,21 @@ class EventController extends Controller
             'image-client' => 'max:2048|mimes:jpeg,gif,bmp,png',
         ]);
 
-        $request['user_id'] = \Auth::user()->id;
-        $request['slug']    = str_slug($request['name']);
+        $request['user_id'] = Auth::user()->id;
+        $request['slug']    = Str::slug($request['name']);
 
         if($request->file('image-client')):
             $file = $request->file('image-client');
             //Creamos una instancia de la libreria instalada
-            $image = \Image::make($request->file('image-client')->getRealPath());
+            $image = Image::make($request->file('image-client')->getRealPath());
             //Ruta donde queremos guardar las imagenes
             $originalPath = public_path().'/images/events/';
             //Ruta donde se guardaran los Thumbnails
             $thumbnailPath = public_path().'/images/events/thumbnails/';
             // Guardar Original
-            $fileName = hash('sha256', str_slug($request['name']) . strval(time()));
+            $fileName = hash('sha256', Str::slug($request['name']) . strval(time()));
 
-            $watermark = \Image::make(public_path() . '/images/logo_homepage.png');
+            $watermark = Image::make(public_path() . '/images/logo_homepage.png');
 
             $watermark->opacity(30);
 
@@ -194,13 +223,29 @@ class EventController extends Controller
             $request['image'] = $fileName.'.jpg';
         endif;
 
-        if($data->update($request->all())):
-            \Alert::success('Evento Actualizado');
-            return redirect()->to('dashboard/events');
-        else:
-            \Alert::error('No se ha podido guardar la Informacion Suministrada');
-            return back();
-        endif;
+        if($data->update($request->all())) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Evento Actualizado'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => $data,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'No se pudo actualizar el Evento'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => [],
+            ), 404);
+        }
     }
 
     /**
@@ -213,13 +258,29 @@ class EventController extends Controller
     {
         $event = Event::find($id);
 
-		if ($event->delete()):
-			\Alert::success('El Post se ha Eliminado satisfactoriamente');
-			return back();
-		else:
-			\Alert::error('El Post no se ha podido Eliminar');
-			return back();
-		endif;
+		if ($event->delete()) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Evento Eliminado'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => $event,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'No se pudo eliminar el Evento'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => [],
+            ), 404);
+        }
     }
 
     public function name(Request $request, $name)

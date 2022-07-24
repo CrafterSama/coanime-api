@@ -32,33 +32,32 @@ class TitleController extends Controller
      */
     public function index(Request $request)
     {
-        if ($request->ajax()) {
-            $titles = Title::titles($request->name)->select('id', 'name', 'type_id', 'other_titles')->with('images', 'type')->orderBy('name', 'asc')->paginate(30);
-            return $titles;
-        } else {
-            if ($titles = Title::search($request->name)->with('images', 'rating', 'type', 'genres')->orderBy('name', 'asc')->simplePaginate()) {
-                $types = TitleType::orderBy('name', 'asc')->get();
-                $genres = Genre::orderBy('name', 'asc')->get();
-
-                return response()->json(array(
-                    'code' => 200,
-                    'message' => 'Success',
-                    'title' => 'Coanime.net - Lista de Titulos',
-                    'description' => 'Lista de titulos enla enciclopedia de coanime.net',
-                    'result' => $titles,
-                    'types' => $types,
-                    'genres' => $genres,
-                ));
-                // return view('titles.home', compact('titles', 'types', 'genres')); 
-            } else {
-                return response()->json(array(
-                    'code' => 404,
-                    'message' => 'Not Found',
-                    'title' => 'Coanime.net - Lista de Titulos - Titulos No encontrados',
-                    'description' => 'Lista de titulos enla enciclopedia de coanime.net',
-                ));
-            }
-        }
+      if ($titles = Title::search($request->name)->with('images', 'rating', 'type', 'genres', 'users')->orderBy('name', 'asc')->simplePaginate()) {
+          $types = TitleType::orderBy('name', 'asc')->get();
+          $genres = Genre::orderBy('name', 'asc')->get();
+          return response()->json(array(
+              'code' => 200,
+              'message' => [ 
+                  'type' => 'success',
+                  'text' => 'Resultados encontrados'
+              ],
+              'title' => 'Coanime.net - Lista de Titulos',
+              'description' => 'Lista de titulos enla enciclopedia de coanime.net',
+              'result' => $titles,
+              'types' => $types,
+              'genres' => $genres,
+          ), 200);
+      } else {
+          return response()->json(array(
+              'code' => 404,
+              'message' => [
+                  'type' => 'error',
+                  'text' => 'No se encontraron resultados'
+              ],
+              'title' => 'Coanime.net - Lista de Titulos - Titulos No encontrados',
+              'description' => 'Lista de titulos enla enciclopedia de coanime.net',
+          ), 404);
+      }
     }
 
 
