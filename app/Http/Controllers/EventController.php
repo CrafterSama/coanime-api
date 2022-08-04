@@ -20,9 +20,9 @@ class EventController extends Controller
      */
     public function index(Request $request)
     {
-        if(Event::search($request->name)->with('users','city','country')->orderBy('date_start','asc')->paginate()->count() > 0) {
-            $events = Event::search($request->name)->with('users','city','country')->orderBy('date_start','asc')->simplePaginate();
+        $events = Event::search($request->name)->with('users','city','country')->orderBy('date_start','asc')->simplePaginate();
 
+        if($events->count() > 0) {
             return response()->json(array(
                 'code' => 200,
                 'message' => [ 
@@ -192,41 +192,12 @@ class EventController extends Controller
 
         $request['user_id'] = Auth::user()->id;
         $request['slug']    = Str::slug($request['name']);
-
-        if($request->file('image-client')):
-            $file = $request->file('image-client');
-            //Creamos una instancia de la libreria instalada
-            $image = Image::make($request->file('image-client')->getRealPath());
-            //Ruta donde queremos guardar las imagenes
-            $originalPath = public_path().'/images/events/';
-            //Ruta donde se guardaran los Thumbnails
-            $thumbnailPath = public_path().'/images/events/thumbnails/';
-            // Guardar Original
-            $fileName = hash('sha256', Str::slug($request['name']) . strval(time()));
-
-            $watermark = Image::make(public_path() . '/images/logo_homepage.png');
-
-            $watermark->opacity(30);
-
-            $image->insert($watermark, 'bottom-right', 10, 10);
-
-            $image->encode('jpg', 95);
-
-            $image->save($originalPath.$fileName.'.jpg');
-            // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-            $image->resize(300, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-            // Guardar
-            $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
-
-            $request['image'] = $fileName.'.jpg';
-        endif;
+        $request['image']   = is_string($request->get('image')) ? $request->get('image') : NULL;
 
         if($data->update($request->all())) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [  
                     'type' => 'success',
                     'text' => 'Evento Actualizado'
                 ],

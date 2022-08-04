@@ -22,18 +22,6 @@ class EncyclopediaController extends Controller
      */
     public function index()
     {
-        $carbon     = new Carbon;
-        $titles     = Title::with('images', 'rating', 'type', 'genres')->orderBy('id', 'desc')->paginate(3);
-        $people     = People::orderBy('id', 'desc')->paginate(3);
-        $magazine     = Magazine::with('type', 'image', 'release')->orderBy('id', 'desc')->paginate(3);
-        $companies  = Company::orderBy('id', 'desc')->paginate(4);
-        $types         = TitleType::all();
-        //dd($titles);
-        return view('encyclopedia.index', compact('people', 'magazine', 'titles', 'companies', 'types', 'carbon'));
-    }
-
-    public function api()
-    {
         $titles     = Title::with('images', 'rating', 'type', 'genres')->orderBy('id', 'desc')->paginate(3);
         $people     = People::orderBy('id', 'desc')->paginate(3);
         $magazine     = Magazine::with('type', 'image', 'release')->orderBy('id', 'desc')->paginate(3);
@@ -41,7 +29,8 @@ class EncyclopediaController extends Controller
         $types         = TitleType::all();
 
         return response()->json(array(
-            'title' => 'Enciclopedia de Referencia de Coanime.net',
+            'title' => 'Enciclopedia',
+            'description' => 'Enciclopedia de Referencia de Coanime.net',
             'titles' => $titles,
             'people' => $people,
             'magazine' => $magazine,

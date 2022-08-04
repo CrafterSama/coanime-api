@@ -98,4 +98,16 @@ class Post extends Model
                 'categories.slug as category_slug'
             );
     }
+
+    /*public function toSearchableArray()
+    {
+        $array = $this->toArray();
+
+        // If you want, apply the default transformations
+        $array = $this->transform($array);
+
+        // Apply custom treatment
+
+        return $array;
+    }*/
 }

@@ -16,6 +16,7 @@ use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\PostVoteController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ImageController;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\TextUI\XmlConfiguration\Group;
 
@@ -31,64 +32,62 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
                 ->middleware('auth')
                 ->name('logout');
 
-Route::middleware('guest')->group(function () {
-  Route::post('/register', [RegisteredUserController::class, 'store'])->name('register');
-  Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login');
-  Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
-  Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.update');
-  
-  // ** Api Endpoints **
-  Route::prefix('/api/v1/')->group(function () {
-    Route::get('home', [PostController::class, 'index'])->name('home');
+Route::post('/register', [RegisteredUserController::class, 'store'])->name('register');
+Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login');
+Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
+Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.update');
 
-    // ** Get Endpoints **
-    Route::get('article/{slug}', [PostController::class, 'showApi'])->name('api.article.show');
-    Route::get('articles', [PostController::class, 'apiPosts'])->name('api.articles');
-    Route::get('articles/{category}', [PostController::class, 'postsByCategory'])->name('api.articles.category');
-    Route::get('articles/{tag}', [PostController::class, 'postsByTag'])->name('api.articles.tag');
+// ** Api Endpoints **
+Route::prefix('external/')->group(function () {
+  Route::get('home', [PostController::class, 'index'])->name('home');
 
-    Route::get('ecma', [EncyclopediaController::class, 'index'])->name('api.ecma');
+  // ** Get Endpoints **
+  Route::get('articles', [PostController::class, 'apiPosts'])->name('api.articles');
+  Route::get('articles/{slug}', [PostController::class, 'showApi'])->name('api.articles.show');
+  Route::get('articles/{category}', [PostController::class, 'postsByCategory'])->name('api.articles.category');
+  Route::get('articles/{tag}', [PostController::class, 'postsByTag'])->name('api.articles.tag');
 
-    Route::get('titles', [TitleController::class, 'apiTitles']);
-    Route::get('titles/{type}', [TitleController::class, 'apiTitlesByType']);
-    Route::get('titles/{type}/{slug}', [TitleController::class, 'apiShowTitle']);
-    Route::get('titles/{type}/{slug}/posts', [TitleController::class, 'postsTitle']);
+  Route::get('ecma', [EncyclopediaController::class, 'index']);
 
-    Route::get('search/titles/{name}', [TitleController::class, 'apiSearchTitles']);
-    Route::get('search/people/{name}', [PeopleController::class, 'apiIndex']);
-    Route::get('search/magazine/{name}', [MagazineController::class, 'apiIndex']);
-    Route::get('search/companies/{name}', [CompanyController::class, 'apiIndex']);
+  Route::get('titles', [TitleController::class, 'apiTitles']);
+  Route::get('titles/{type}', [TitleController::class, 'apiTitlesByType']);
+  Route::get('titles/{type}/{slug}', [TitleController::class, 'apiShowTitle']);
+  Route::get('titles/{type}/{slug}/posts', [TitleController::class, 'postsTitle']);
 
-    Route::get('genres/{slug}', [TitleController::class, 'apiAllByGenre']);
+  Route::get('search/titles/{name}', [TitleController::class, 'apiSearchTitles']);
+  Route::get('search/people/{name}', [PeopleController::class, 'apiIndex']);
+  Route::get('search/magazine/{name}', [MagazineController::class, 'apiIndex']);
+  Route::get('search/companies/{name}', [CompanyController::class, 'apiIndex']);
 
-    Route::get('people', [PeopleController::class, 'apiIndex']);
-    Route::get('people/{slug}', [PeopleController::class, 'apiShow']);
+  Route::get('genres/{slug}', [TitleController::class, 'apiAllByGenre']);
 
-    Route::get('magazine', [MagazineController::class, 'apiIndex']);
-    Route::get('magazine/{slug}', [MagazineController::class, 'apiShow']);
+  Route::get('people', [PeopleController::class, 'apiIndex']);
+  Route::get('people/{slug}', [PeopleController::class, 'apiShow']);
 
-    Route::get('companies', [CompanyController::class, 'apiIndex']);
-    Route::get('companies/{slug}', [CompanyController::class, 'apiShow']);
+  Route::get('magazine', [MagazineController::class, 'apiIndex']);
+  Route::get('magazine/{slug}', [MagazineController::class, 'apiShow']);
 
-    Route::get('profile/{slug}', [UserController::class, 'apiProfile']);
-    Route::get('profile/{id}/posts', [UserController::class, 'postsProfile']);
-    Route::get('profile/{id}/titles', [UserController::class, 'titlesProfile']);
-    Route::get('profile/{id}/companies', [UserController::class, 'companiesProfile']);
-    Route::get('profile/{id}/magazine', [UserController::class, 'magazineProfile']);
-    Route::get('profile/{id}/people', [UserController::class, 'peopleProfile']);
-    Route::get('profile/{id}/events', [UserController::class, 'eventsProfile']);
+  Route::get('companies', [CompanyController::class, 'apiIndex']);
+  Route::get('companies/{slug}', [CompanyController::class, 'apiShow']);
 
-    Route::get('random-image', [PostController::class, 'getRandomPostImage']);
-    Route::get('random-image-title/{slug}', [PostController::class, 'getRandomPostImageByTitle']);
+  Route::get('profile/{slug}', [UserController::class, 'apiProfile']);
+  Route::get('profile/{id}/posts', [UserController::class, 'postsProfile']);
+  Route::get('profile/{id}/titles', [UserController::class, 'titlesProfile']);
+  Route::get('profile/{id}/companies', [UserController::class, 'companiesProfile']);
+  Route::get('profile/{id}/magazine', [UserController::class, 'magazineProfile']);
+  Route::get('profile/{id}/people', [UserController::class, 'peopleProfile']);
+  Route::get('profile/{id}/events', [UserController::class, 'eventsProfile']);
 
-    // ** Posts Endpoints **
+  Route::get('random-image', [PostController::class, 'getRandomPostImage']);
+  Route::get('random-image-title/{slug}', [PostController::class, 'getRandomPostImageByTitle']);
 
-    Route::post('vote', [PostVoteController::class, 'vote']);
-  });
+  // ** Posts Endpoints **
+
+  Route::post('vote', [PostVoteController::class, 'vote']);
 });
 
 Route::middleware(['auth'])->group(function () {
-  Route::prefix('api/v1/')->group(function () {
+  Route::prefix('internal/')->group(function () {
     // ** Auth Posts Endpoints **
     Route::get('posts', [PostController::class, 'posts'])->name('posts');
     Route::get('posts/{id}', [PostController::class, 'show']);
@@ -127,5 +126,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('companies/{id}', [CompanyController::class, 'show']);
     Route::put('companies/{id}', [CompanyController::class, 'update']);
     Route::post('companies', [CompanyController::class, 'store']);
+
+    // ** Auth User Endpoints **
+    Route::get('users', [UserController::class, 'index'])->name('users');
+    Route::get('me', [UserController::class, 'me'])->name('me');
+    Route::put('me', [UserController::class, 'updateMe'])->name('me.update');
   });
 });

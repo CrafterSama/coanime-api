@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use App\Http\Requests;
 use App\Models\User;
 use App\Models\Post;
+use App\Models\Helper;
 
 use App\Models\Title;
 use App\Models\People;
@@ -16,6 +17,7 @@ use App\Models\Company;
 use App\Models\Event;
 use App\Models\Role;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Image;
 
 class UserController extends Controller
@@ -78,6 +80,68 @@ class UserController extends Controller
         $user = User::with('roles')->find($id);
 
         return $user->pivot()->role_id;
+    }
+   
+    public function user(Request $request) {
+        $user = Auth::user();
+        return User::find($user->id)->with('roles')->first();
+    }
+
+    public function me(Request $request)
+    {
+        $id = Auth::user()->id;
+        
+        if ($user = User::with('roles')->find($id)) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => Helper::successMessage('User found'),
+                'title' => 'Coanime.net - Profile',
+                'description' => 'This is the User Profile',
+                'result' => $user,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => Helper::errorMessage('User not found'),
+                'title' => 'Coanime.net - Profile',
+                'description' => 'This is the User Profile',
+                'result' => [],
+            ), 404);
+        }
+    }
+
+    public function updateMe(Request $request)
+    {
+        $user = User::find(Auth::user()->id);
+        $user->name = $request->name;
+        $user->username = $request->username;
+        $user->bio = $request->bio;
+        $user->youtube = $request->youtube;
+        $user->twitter = $request->twitter;
+        $user->website = $request->website;
+        $user->instagram = $request->instagram;
+        $user->facebook = $request->facebook;
+        $user->tiktok = $request->tiktok;
+        $user->pinterest = $request->pinterest;
+        if ($request->profile_photo_path) {
+            $user->profile_photo_path = $request->profile_photo_path;
+        }
+        if ($request->cover_photo_path) {
+            $user->cover_photo_path = $request->cover_photo_path;
+        }
+        if ($user->save()) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => Helper::successMessage('Your profile was updated successfully'),
+                'result' => $user,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 400,
+                'message' => Helper::errorMessage('Your profile was not updated'),
+                'result' => [],
+            ), 400);
+        }
     }
 
     /**

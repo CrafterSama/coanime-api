@@ -17,6 +17,22 @@ use Illuminate\Database\Eloquent\Model;
 
 class Helper extends Model
 {
+    public static function successMessage($string = null)
+    {
+        $type = 'success';
+        $text = is_string($string) ? $string : 'Request successful';
+        
+        return compact('type', 'text');
+    }
+    
+    public static function errorMessage($string = null)
+    {
+        $type = 'success';
+        $text = is_string($string) ? $string : 'Request unsuccessful';
+        
+        return compact('type', 'text');
+    }
+
     private static function ConSoSinS($val, $sentence)
     {
         if ($val > 1) return $val . str_replace(array('(s)', '(es)'), array('s', 'es'), $sentence);

@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, InteractsWithMedia;
 
     /**
      * The attributes that are mass assignable.
@@ -18,7 +21,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name', 'email', 'password', 'bio', 'nick', 'twitter', 'facebook', 'pinterest', 'instagram', 'devianart', 'googleplus', 'behance', 'tumblr', 'website', 'genre', 'birthday', 'slug',
+        'name', 'email', 'password', 'bio', 'nick', 'twitter', 'facebook', 'pinterest', 'instagram', 'devianart', 'googleplus', 'behance', 'tumblr', 'website', 'genre', 'birthday', 'slug'
     ];
 
     /**
@@ -70,22 +73,17 @@ class User extends Authenticatable
         return $this->hasMany(Title::class)->orderBy('id', 'desc');
     }
 
-    public function roles()
-    {
-        return $this->belongsTo(Role::class, 'role_id', 'id');
-    }
-
     public function isAdmin()
     {
-        if ($this->roles->name == 'Administrator') {
+        if ($this->hasRole('administrator')) {
             return true;
         }
     }
 
-    public function isMod()
+    /*public function isMod()
     {
-        if ($this->roles->name == 'Moderator') {
+        if ($this->roles->name == 'moderator') {
             return true;
         }
-    }
+    }*/
 }

@@ -91,10 +91,6 @@ class PostController extends Controller
                 'message' => 'Success',
                 'title' => 'Coanime.net - Noticias y Enciclopedia de Cultura Japonesa, Manga y Anime',
                 'description' => 'Tu Fuente de Información sobre Manga, Anime, Cultura Otaku con noticias mas relevantes y actuales del Medio y en tu idioma, subscribete.',
-                'path_posts' => '/posts/',
-                'path_events' => '/eventos/',
-                'path_image_posts' => '/images/posts/',
-                'path_image_events' => '/images/events/',
                 'keywords' => $keywords,
                 'events' => $events,
                 'relevants' => $relevants,
@@ -174,10 +170,6 @@ class PostController extends Controller
                 'message' => 'Success',
                 'title' => 'Coanime.net - Noticias y Enciclopedia de Cultura Japonesa, Manga y Anime',
                 'description' => 'Tu Fuente de Información sobre Manga, Anime, Cultura Otaku con noticias mas relevantes y actuales del Medio y en tu idioma, subscribete.',
-                'path_posts' => 'https://coanime.net/posts/',
-                'path_events' => 'https://coanime.net/eventos/',
-                'path_image_posts' => 'https://coanime.net/images/posts/',
-                'path_image_events' => 'https://coanime.net/images/events/',
                 'events' => $events,
                 'relevants' => $relevants,
                 'result' => $posts
@@ -250,29 +242,6 @@ class PostController extends Controller
      */
     public function create()
     {
-        /* $posts = Post::where('user_id', \Auth::user()->id)->get();
-        $titles = Title::where('user_id', \Auth::user()->id)->get();
-        $people = People::where('user_id', \Auth::user()->id)->get();
-        $magazine = Magazine::where('user_id', \Auth::user()->id)->get();
-        $company = Company::where('user_id', \Auth::user()->id)->get();
-
-        if ($titles->count() > 10 || $people->count() > 10 || $magazine->count() > 10 || $company->count() > 10 ) :
-            $categories = Category::pluck('name', 'id');
-            //$categories['']  = 'Seleccione';
-            $categories = $categories->toArray();
-
-            $currentUser = \Auth::user()->id;
-            $data = new Post;
-            $data->user_id = $currentUser;
-            $data->save();
-            $data->id;
-
-            $post = Post::with('users', 'categories', 'titles')->find($data->id);
-            return view('dashboard.posts.create', compact('categories', 'posts'));
-        else:
-            return back();
-            \Alert::warning('Debes Agregar al Menos 10 registros a la Enciclopedia para agregar un Post');
-        endif;*/
         $currentUser = Auth::user()->id;
         $data = new Post;
         $data->user_id = $currentUser;
@@ -375,78 +344,6 @@ class PostController extends Controller
             $post->tags()->sync($tagData->toArray());
 
             echo implode(',', $results) . '<br />';
-        }
-    }
-
-    /**
-     * Method for Upload an Image from the Post Form
-     */
-    public function imageUpload(Request $request)
-    {
-        $principalImage = '';
-        $secondaryImage = '';
-        $thumbnailImage = '';
-        
-        //dd($request->file('file'));
-        if ($request->file('file')) {
-            try {
-                $image = Image::make($request->file('file')->getRealPath());
-                $fileName = hash('sha256', strval(time()));
-                $image->encode('webp', 100);
-
-                
-                if ($image->width() > 2560) {
-                    $image->resize(2560, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                }
-                
-                $principal = '/posts/' . $fileName . '.webp';
-                $principalImage = Storage::disk('s3')->put($principal, $image);
-                $principalImage = Storage::disk('s3')->url($principal);
-
-
-                if ($image->width() > 1920) {
-                    $image->resize(1920, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                }
-
-                $secondary = '/posts/' . $fileName . '-1920w.webp';
-                $secondaryImage = Storage::disk('s3')->put($secondary, $image);
-                $secondaryImage = Storage::disk('s3')->url($secondary);
-
-                if ($image->width() > 480) {
-                    $image->resize(480, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                }
-
-                $thumbnail = '/posts/thumbnails/' . $fileName . '.webp';
-                $thumbnailImage = Storage::disk('s3')->put($thumbnail, $image);
-                $thumbnailImage = Storage::disk('s3')->url($thumbnail);
-
-                return response()->json(array(
-                    'code' => 200,
-                    'message' => [
-                        'type' => 'success',
-                        'text' => 'Success!! Image Uploaded'
-                    ],
-                    'url' => $principalImage,
-                    'url_1920' => $secondaryImage,
-                    'thumbnail' => $thumbnailImage,
-                ), Response::HTTP_OK);
-            } catch (Exception $e) {
-                return response()->json(array(
-                    'code' => 500,
-                    'message' => $e->getMessage(),
-                ), Response::HTTP_INTERNAL_SERVER_ERROR);
-            } 
-        } else {
-            return response()->json(array(
-                'code' => 400,
-                'message' => 'Error!! Image not Uploaded',
-            ), Response::HTTP_BAD_REQUEST);
         }
     }
 
@@ -795,12 +692,10 @@ class PostController extends Controller
 
             return response()->json(array(
                 'code' => 200,
-                'message' => 'Success',
+                'message' => Helper::successMessage('Post found'),
                 'title' => 'Coanime.net - ' . $post->categories->name . ' - ' . $post->title,
                 'description' => $post->excerpt,
-                'path_posts' => 'https://coanime.net/posts/',
                 'path_image' => $post->image,
-                'thumbnail' => '/thumb-' . str_replace('1920', '320', $post->image),
                 'tags' => $keywords,
                 'result' => $post,
                 'article_video_links' => $videoLinks,
@@ -808,7 +703,10 @@ class PostController extends Controller
                 'relateds' => $relateds
             ), 200);
         } else {
-            return response()->json(array('code' => 404, 'message' => 'Error, Not Found'), 404);
+            return response()->json(array(
+                'code' => 404,
+                'message' => Helper::errorMessage('Post not found'),
+            ), 404);
         }
     }
 
@@ -873,40 +771,6 @@ class PostController extends Controller
             $data['postponed_to'] = Carbon::now()->format('Y-m-d H:i:s');
         }
 
-        if ($request->file('file')) {
-            $file = $request->file('file');
-            //Creamos una instancia de la libreria instalada
-            $image = Image::make($request->file('file')->getRealPath());
-            //Ruta donde queremos guardar las imagenes
-            //$originalPath = public_path() . '/images/posts/';
-            //Ruta donde se guardaran los Thumbnails
-            //$thumbnailPath = public_path() . '/images/posts/thumbnails/';
-            // Making the Original Name
-            $fileName = hash('sha256', $data['slug'] . strval(time()));
-            //$watermark = Image::make(public_path() . '/images/logo_homepage.png');
-            //$watermark->opacity(30);
-            //$image->insert($watermark, 'bottom-right', 10, 10);
-            if ($image->width() > 1920) {
-                $image->resize(1920, null, function ($constraint) {
-                    $constraint->aspectRatio();
-                });
-            }
-            $image->encode('webp', 100);
-            //$image->save($originalPath . $fileName . '.jpg');
-            // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-            /*$image->resize(480, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });*/
-            // Guardar
-            //$image->save($thumbnailPath . 'thumb-' . $fileName . '.jpg');
-            $filePath = 'posts/' . $fileName . '.webp';
-            Storage::disk('s3')->put($filePath, file_get_contents($image));
-
-            $data['file'] = $fileName . '.webp';
-
-            $request['tags'] = explode(' ', $request['name']);
-        }
-
         $data['draft'] = 0;
 
         if ($data->update($post)) {
@@ -945,7 +809,6 @@ class PostController extends Controller
             return response()->json(array(
                 'code' => 200,
                 'message' => [ 'type' => 'success', 'text' => 'Post actualizado correctamente' ],
-                'path_image' => $data->image,
                 'result' => $data,
             ), 200);
         } else {
