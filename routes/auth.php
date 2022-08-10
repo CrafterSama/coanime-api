@@ -44,8 +44,10 @@ Route::prefix('external/')->group(function () {
   // ** Get Endpoints **
   Route::get('articles', [PostController::class, 'apiPosts'])->name('api.articles');
   Route::get('articles/{slug}', [PostController::class, 'showApi'])->name('api.articles.show');
-  Route::get('articles/{category}', [PostController::class, 'postsByCategory'])->name('api.articles.category');
-  Route::get('articles/{tag}', [PostController::class, 'postsByTag'])->name('api.articles.tag');
+
+  Route::get('categories/{category}', [PostController::class, 'showAllByCategory'])->name('api.articles.category');
+
+  Route::get('tags/{tag}', [PostController::class, 'ShowAllByTag'])->name('api.articles.tag');
 
   Route::get('ecma', [EncyclopediaController::class, 'index']);
 

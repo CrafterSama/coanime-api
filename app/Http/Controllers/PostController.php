@@ -43,6 +43,8 @@ class PostController extends Controller
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->whereNotIn('category_id', [10])
+                ->where('image', '!=', null)
+                ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('view_counter', '>', 5)
                 ->whereBetween('postponed_to', [Carbon::now()->subMonths(36), Carbon::now()])
                 ->orWhere('postponed_to', null)
@@ -56,6 +58,8 @@ class PostController extends Controller
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->where('category_id', 13)
+                ->where('image', '!=', null)
+                ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
                 ->orderBy('postponed_to', 'desc')
@@ -67,6 +71,8 @@ class PostController extends Controller
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->whereNotIn('category_id', [10])
+                ->where('image', '!=', null)
+                ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
                 ->orderBy('postponed_to', 'desc')
@@ -121,6 +127,8 @@ class PostController extends Controller
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->where('category_id', '!=', 10)
+            ->where('image', '!=', null)
+            ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
             ->where('postponed_to', '<=', $carbon->now())
             ->orWhere('postponed_to', null)
             ->orderBy('postponed_to', 'desc')
@@ -141,6 +149,8 @@ class PostController extends Controller
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->where('category_id', '!=', 10)
+                ->where('image', '!=', null)
+                ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('view_counter', '>', 5)
                 ->whereBetween('postponed_to', [Carbon::now()->subMonths(36), Carbon::now()])
                 ->orWhere('postponed_to', null)
@@ -154,6 +164,8 @@ class PostController extends Controller
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->where('category_id', '!=', 10)
+                ->where('image', '!=', null)
+                ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
                 ->orderBy('postponed_to', 'desc')
@@ -209,7 +221,10 @@ class PostController extends Controller
                     array_push($arrayImages, $post->image);
                 }
 
-                $randomImage = basename($arrayImages[array_rand($arrayImages)]);
+                //$randomImage = basename($arrayImages[array_rand($arrayImages)]);
+                $randomImage = $arrayImages[array_rand($arrayImages)];
+
+                ///dd($randomImage);
 
                 return response()->json(array(
                     'code' => 200,
@@ -217,7 +232,7 @@ class PostController extends Controller
                         'type' => 'success',
                         'text' => 'Imagen encontrada',
                     ),
-                    'image' => 'https://coanime.net/images/posts/' . $randomImage
+                    'image' => $randomImage
                 ), 200); 
             } else {
                 return response()->json(array(
@@ -355,45 +370,63 @@ class PostController extends Controller
      */
     public function showAllByCategory($category)
     {
-        $category_id = Category::where('slug', '=', $category)->pluck('id');
+        try {
+            $category_id = Category::where('slug', '=', $category)->pluck('id');
+            $category_name = Category::where('slug', '=', $category)->pluck('name');
 
-        $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
-            ->with('categories', 'tags', 'users')
-            ->where('approved', 'yes')
-            ->where('draft', '0')
-            ->whereNotIn('category_id', [10])
-            ->where('view_counter', '>', 50)
-            ->where('category_id', $category_id)
-            ->whereBetween('postponed_to', [Carbon::now()->subMonths(12), Carbon::now()])
-            ->orWhere('postponed_to', null)
-            ->orderBy('view_counter', 'desc')
-            ->take(3)
-            ->get();
+            $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+                ->with('categories', 'tags', 'users')
+                ->where('image', '!=', 'https://coanime.net/images/posts/')
+                ->where('approved', 'yes')
+                ->where('draft', '0')
+                ->whereNotIn('category_id', [10])
+                ->where('view_counter', '>', 50)
+                ->where('category_id', $category_id)
+                ->whereBetween('postponed_to', [Carbon::now()->subMonths(12), Carbon::now()])
+                ->orWhere('postponed_to', null)
+                ->orderBy('view_counter', 'desc')
+                ->take(3)
+                ->get();
 
-        $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
-            ->with('users', 'categories', 'titles', 'tags')
-            ->where('approved', 'yes')
-            ->where('draft', '0')
-            ->whereNotIn('category_id', [10])
-            ->where('category_id', $category_id)
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
-            ->orderBy('postponed_to', 'desc')
-            ->take(4)
-            ->get();
+            $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+                ->with('users', 'categories', 'titles', 'tags')
+                ->where('image', '!=', 'https://coanime.net/images/posts/')
+                ->where('approved', 'yes')
+                ->where('draft', '0')
+                ->whereNotIn('category_id', [10])
+                ->where('category_id', $category_id)
+                ->where('postponed_to', '<=', Carbon::now())
+                ->orWhere('postponed_to', null)
+                ->orderBy('postponed_to', 'desc')
+                ->take(4)
+                ->get();
 
-        $categories = Category::orderBy('name', 'asc')->get();
+            $keywords = [];
+                foreach ($news as $p) {
+                    foreach ($p->tags as $tag) {
+                        $keywords[] = $tag->name;
+                    }
+                }
 
-        $tags = Tag::orderBy('name', 'asc')->get();
-        return response()->json(array(
-            'code' => 200,
-            'message' => 'Success!!',
-            'relevants' => $relevants,
-            'news' => $news,
-            'categories' => $categories,
-            'tags' => $tags,
-        ), 200);
-        //return view('web.home', compact('relevants', 'news', 'tags', 'categories', 'carbon'));
+                $keywords = implode(', ', $keywords);
+
+                return response()->json(array(
+                    'code' => 200,
+                    'message' => 'Success',
+                    'title' => 'Coanime.net - Noticias relacionadas con ' . $category_name,
+                    'description' => 'Posts y noticias relacionados con la categoria ' . $category_name,
+                    'keywords' => $keywords,
+                    /*'events' => $events,*/
+                    'relevants' => $relevants,
+                    /*'videos' => $videos,*/
+                    'result' => $news
+                ), 200);
+        } catch (\Exception $e) {
+            return response()->json(array(
+                'code' => 500,
+                'message' => $e->getMessage(),
+            ));
+        }
     }
 
     /**
@@ -777,7 +810,6 @@ class PostController extends Controller
             if (!empty($request['title_id'])) {
                 $data->titles()->sync([$request['title_id']]);
             }
-            //dd($request['tag_id']);
             if (count($request['tag_id']) > 0 || $request['tag_id'] != null) {
                 $tags = array();
                 $tagData = array();

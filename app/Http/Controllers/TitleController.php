@@ -15,6 +15,7 @@ use App\Models\Company;
 use App\Models\Magazine;
 use App\Models\People;
 use App\Models\Post;
+use App\Models\Helper;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -71,28 +72,36 @@ class TitleController extends Controller
     {
         $types = TitleType::orderBy('name', 'asc')->get();
         $genres = Genre::orderBy('name', 'asc')->get();
-        $titles = Title::titles($request->name)->with('images', 'type', 'genres')->orderBy('name', 'asc')->paginate(30);
-
-        return response()->json(array(
-            'title' => 'Coanime.net - Titulos',
-            'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
-            'result' => $titles,
-            'types' => $types,
-            'genres' => $genres
-        ), 200);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        $types = TitleType::pluck('name', 'id');
-        $genres = Genre::pluck('name', 'id');
-        $ratings = Ratings::pluck('name', 'id');
-        return view('dashboard.titles.create', compact('genres', 'ratings', 'types'));
+        try {
+            if ($titles = Title::titles($request->name)->with('images', 'type', 'genres')->orderBy('name', 'asc')->paginate(30)) {
+                return response()->json(array(
+                    'code' => 200,
+                    'message' => Helper::successMessage('Resultados encontrados'),
+                    'title' => 'Coanime.net - Titulos',
+                    'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
+                    'result' => $titles,
+                    'types' => $types,
+                    'genres' => $genres
+                ), 200);
+            } else {
+                return response()->json(array(
+                    'code' => 404,
+                    'message' => Helper::errorMessage('No se encontraron resultados'),
+                    'title' => 'Coanime.net - Titulos - No encontrados',
+                    'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
+                    'result' => $titles,
+                    'types' => $types,
+                    'genres' => $genres
+                ), 404);
+            }
+        } catch (\Exception $e) {
+            return response()->json(array(
+                'code' => 500,
+                'message' => Helper::errorMessage('Error al buscar los titulos ' . $e->getMessage()),
+                'title' => 'Coanime.net - Titulos - Titulos No encontrados',
+                'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
+            ), 404);
+        }
     }
 
     /**
@@ -366,13 +375,10 @@ class TitleController extends Controller
 
         return response()->json(array(
             'code' => 200,
-            'message' => array(
-                'type' => 'Success',
-                'text' => 'Titulos encontrados',
-            ),
+            'message' => Helper::successMessage('Titulos encontrados'),
             'title' => 'Coanime.net - Titulos',
             'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
-            'path_image_url' => 'https://coanime.net/images/encyclopedia/titles/',
+            'keywords' => 'TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
             'result' => $titles,
             'types' => $types,
             'genres' => $genres
@@ -386,25 +392,21 @@ class TitleController extends Controller
 
         if ($title->count() > 0) {
             $id = $title->pluck('id');
+            $name = $title->pluck('name');
+            $description = $title->pluck('sinopsis');
             $title = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->findOrFail($id);
 
             return response()->json(array(
                 'code' => 200,
-                'message' => array(
-                    'type' => 'Success',
-                    'text' => 'Titulos encontrados',
-                ),
-                'title' => 'Coanime.net - Titulos - ' . $title->name,
-                'description' => Str::words($title->sinopsis, 20),
-                'data' => $title[0],
+                'message' => Helper::successMessage('Titulo encontrado'),
+                'title' => 'Coanime.net - Titulos - ' . $name->first(),
+                'description' => Str::words(htmlentities(strip_tags($description->first())), 20),
+                'data' => $title->first(),
             ), 200);
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => array(
-                    'type' => 'Error',
-                    'text' => 'Titulo no encontrado',
-                ),
+                'message' => Helper::errorMessage('Titulo no encontrado'),
             ), 404);
         }
     }
@@ -418,13 +420,6 @@ class TitleController extends Controller
         $types = TitleType::orderBy('name', 'asc')->get();
         $genres = Genre::orderBy('name', 'asc')->get();
 
-        $data = array(
-            'path_image_url' => 'https://coanime.net/images/encyclopedia/titles/',
-            'titles' => $titles,
-            'types' => $types,
-            'genres' => $genres,
-        );
-
         return response()->json(array(
             'code' => 200,
             'message' => array(
@@ -433,7 +428,9 @@ class TitleController extends Controller
             ),
             'title' => 'Coanime.net - Titulos - ' . $type_name,
             'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $type_name,
-            'data' => $data,
+            'result' => $titles,
+            'types' => $types,
+            'genres' => $genres,
         ), 200);
     }
 
@@ -607,7 +604,7 @@ class TitleController extends Controller
         endif;
 
         $request['user_id'] = $data['user_id'];
-        $request['edited_by'] = \Auth::user()->id;
+        $request['edited_by'] = Auth::user()->id;
         $request['slug'] = Str::slug($request['name']);
 
         //dd($request);
