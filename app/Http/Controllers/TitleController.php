@@ -414,11 +414,10 @@ class TitleController extends Controller
     public function apiTitlesByType($type)
     {
         $type_id = TitleType::where('slug', '=', $type)->pluck('id');
-        $type_name = TitleType::where('slug', '=', $type)->pluck('name');
+        $name = TitleType::where('slug', '=', $type)->pluck('name');
         $id = Title::where('type_id', $type_id)->pluck('id');
         $titles = Title::where('type_id', $type_id)->with('images', 'rating', 'type', 'genres')->orderBy('name', 'asc')->paginate(30);
         $types = TitleType::orderBy('name', 'asc')->get();
-        $genres = Genre::orderBy('name', 'asc')->get();
 
         return response()->json(array(
             'code' => 200,
@@ -426,18 +425,17 @@ class TitleController extends Controller
                 'type' => 'Success',
                 'text' => 'Titulos encontrados',
             ),
-            'title' => 'Coanime.net - Titulos - ' . $type_name,
-            'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $type_name,
+            'title' => 'Coanime.net - Titulos - ' . $name->first(),
+            'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $name->first(),
             'result' => $titles,
             'types' => $types,
-            'genres' => $genres,
         ), 200);
     }
 
     public function apiAllByGenre($genre)
     {
         $genre_id = Genre::where('slug', '=', $genre)->pluck('id');
-        $genre_name = Genre::where('slug', '=', $genre)->pluck('name');
+        $name = Genre::where('slug', '=', $genre)->pluck('name');
 
         $titles = Title::whereHas('genres', function ($q) use ($genre_id) {
             $q->where('genre_id', $genre_id);
@@ -445,24 +443,16 @@ class TitleController extends Controller
 
         $genres = Genre::orderBy('name', 'asc')->get();
 
-        $types = TitleType::orderBy('name', 'asc')->get();
-
-        $data = array(
-            'path_image_url' => 'https://coanime.net/images/encyclopedia/titles/',
-            'titles' => $titles,
-            'types' => $types,
-            'genres' => $genres,
-        );
-
         return response()->json(array(
             'code' => 200,
             'message' => array(
                 'type' => 'Success',
                 'text' => 'Titulos encontrados',
             ),
-            'title' => 'Coanime.net - Titulos - ' . $genre_name,
-            'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $genre_name,
-            'data' => $data,
+            'title' => 'Coanime.net - Titulos - ' . $name->first(),
+            'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $name->first(),
+            'titles' => $titles,
+            'genres' => $genres,
         ), 200);
     }
 
@@ -506,25 +496,6 @@ class TitleController extends Controller
         /* return view('web.home', compact('posts')); */
     }
 
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @param  \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Request $request, $id)
-    {
-        $title = Title::with('images', 'rating', 'type', 'genres', 'users')->find($id);
-        $types = TitleType::pluck('name', 'id');
-        $genres = Genre::orderBy('name', 'asc')->pluck('name', 'id');
-        $ratings = Ratings::pluck('name', 'id');
-        $selected = $title->genres()->pluck('genre_id')->toArray();
-
-        return view('dashboard.titles.create', compact('genres', 'ratings', 'types', 'title', 'selected'));
-    }
-
     /**
      * Update the specified resource in storage.
      *
@@ -558,50 +529,51 @@ class TitleController extends Controller
 
         $data = Title::find($id);
 
-        if ($request->file('image-client')) :
+        if ($request->file('image-client')) {
             $file = $request->file('image-client');
-        //Creamos una instancia de la libreria instalada
-        $image = Image::make($request->file('image-client')->getRealPath());
-        //Ruta donde queremos guardar las imagenes
-        $originalPath = public_path() . '/images/encyclopedia/titles/';
-        //Ruta donde se guardaran los Thumbnails
-        $thumbnailPath = public_path() . '/images/encyclopedia/titles/thumbnails/';
-        $tName = $data->type->name;
-        // Guardar Original
-        $fileName = hash('sha256', Str::slug($request['name']) . strval(time()));
+            //Creamos una instancia de la libreria instalada
+            $image = Image::make($request->file('image-client')->getRealPath());
+            //Ruta donde queremos guardar las imagenes
+            $originalPath = public_path() . '/images/encyclopedia/titles/';
+            //Ruta donde se guardaran los Thumbnails
+            $thumbnailPath = public_path() . '/images/encyclopedia/titles/thumbnails/';
+            $tName = $data->type->name;
+            // Guardar Original
+            $fileName = hash('sha256', Str::slug($request['name']) . strval(time()));
 
-        $watermark = Image::make(public_path() . '/images/logo_homepage.png');
+            $watermark = Image::make(public_path() . '/images/logo_homepage.png');
 
-        $watermark->opacity(30);
+            $watermark->opacity(30);
 
-        if (($image->width() * .20) < 300) {
-            if (($image->width() * .20) < 150) {
-                $watermark->resize(100, null, function ($constraint) {
-                    $constraint->aspectRatio();
-                });
-            } else {
-                $watermark->resize(($image->width() * .20), null, function ($constraint) {
-                    $constraint->aspectRatio();
-                });
+            if (($image->width() * .20) < 300) {
+                if (($image->width() * .20) < 150) {
+                    $watermark->resize(100, null, function ($constraint) {
+                        $constraint->aspectRatio();
+                    });
+                } else {
+                    $watermark->resize(($image->width() * .20), null, function ($constraint) {
+                        $constraint->aspectRatio();
+                    });
+                }
             }
-        }
 
-        $image->insert($watermark, 'bottom-right', 10, 10);
+            $image->insert($watermark, 'bottom-right', 10, 10);
 
-        $image->save($originalPath . $fileName . '.jpg');
+            $image->save($originalPath . $fileName . '.jpg');
 
-        // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-        $image->resize(300, null, function ($constraint) {
-            $constraint->aspectRatio();
-        });
-        // Guardar
-        $image->save($thumbnailPath . 'thumb-' . $fileName . '.jpg');
+            // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
+            $image->resize(300, null, function ($constraint) {
+                $constraint->aspectRatio();
+            });
+            // Guardar
+            $image->save($thumbnailPath . 'thumb-' . $fileName . '.jpg');
 
-        $request['images'] = 'https://coanime.net/images/encyclopedia/titles/' . $fileName . '.jpg';
-        $request['thumbnail'] = 'https://coanime.net/images/encyclopedia/titles/thumbnails/thumb-' . $fileName . '.jpg'; else :
+            $request['images'] = 'https://coanime.net/images/encyclopedia/titles/' . $fileName . '.jpg';
+            $request['thumbnail'] = 'https://coanime.net/images/encyclopedia/titles/thumbnails/thumb-' . $fileName . '.jpg';
+        } else {
             $request['images'] = null;
-        $request['thumbnail'] = null;
-        endif;
+            $request['thumbnail'] = null;
+        }
 
         $request['user_id'] = $data['user_id'];
         $request['edited_by'] = Auth::user()->id;
@@ -609,22 +581,22 @@ class TitleController extends Controller
 
         //dd($request);
 
-        if ($data->update($request->all())) :
-            if ($request->file('image-client')) :
-                if (TitleImage::where('title_id', $id)->count() > 0) :
-                    $images = $data->images ?: TitleImage::where('title_id', $id); else :
+        if ($data->update($request->all())) {
+            if ($request->file('image-client')) {
+                if (TitleImage::where('title_id', $id)->count() > 0) {
+                    $images = $data->images ?: TitleImage::where('title_id', $id);
+                } else {
                     $images = $data->images ?: new TitleImage;
-        endif;
-        $images->name = $request['images'];
-        $images->thumbnail = $request['thumbnail'];
-        $data->images()->save($images);
-        endif;
-        $data->genres()->sync($request['genre_id']);
-        Alert::success('Titulo Actualizado');
-        return redirect()->to('dashboard/titles'); else :
-            Alert::error('No se ha podido guardar la Informacion Suministrada');
-        return back();
-        endif;
+                }
+                $images->name = $request['images'];
+                $images->thumbnail = $request['thumbnail'];
+                $data->images()->save($images);
+            }
+            $data->genres()->sync($request['genre_id']);
+            return redirect()->to('dashboard/titles'); 
+        } else {
+            return back();
+        }
     }
 
     /**
