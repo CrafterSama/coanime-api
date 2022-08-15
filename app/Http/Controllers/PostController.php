@@ -726,7 +726,7 @@ class PostController extends Controller
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage('Post found'),
-                'title' => 'Coanime.net - ' . $post->categories->name . ' - ' . $post->title,
+                'title' => 'Coanime.net - Articulos - ' . $post->categories->name . ' - ' . $post->title,
                 'description' => $post->excerpt,
                 'path_image' => $post->image,
                 'tags' => $keywords,

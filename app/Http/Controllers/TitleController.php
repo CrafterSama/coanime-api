@@ -610,12 +610,23 @@ class TitleController extends Controller
     {
         $title = Title::find($id);
 
-        if ($title->delete()) :
-            Alert::success('El Titulo se ha Eliminado satisfactoriamente');
-        return back(); else :
-            Alert::error('El Post no se ha podido Eliminar');
-        return back();
-        endif;
+        if ($title->delete()) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => array(
+                    'type' => 'Success',
+                    'text' => 'Título eliminado',
+                ),
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => array(
+                    'type' => 'Error',
+                    'text' => 'Título no eliminado',
+                ),
+            ), 404);
+        }
     }
 
     public function name()
