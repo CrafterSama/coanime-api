@@ -224,8 +224,6 @@ class PostController extends Controller
                 //$randomImage = basename($arrayImages[array_rand($arrayImages)]);
                 $randomImage = $arrayImages[array_rand($arrayImages)];
 
-                ///dd($randomImage);
-
                 return response()->json(array(
                     'code' => 200,
                     'message' => array(
@@ -241,12 +239,16 @@ class PostController extends Controller
                         'type' => 'error',
                         'text' => 'No se encontraron resultados',
                     ),
-                ), 404);
+                ), 200);
             }
         } else {
             return response()->json(array(
-                'message' => 'Not Found!'
-            ), 404);
+                'code' => 404,
+                'message' => array(
+                    'type' => 'error',
+                    'text' => 'No se encontraron resultados',
+                ),
+            ), 200);
         }
     }
 
@@ -726,7 +728,7 @@ class PostController extends Controller
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage('Post found'),
-                'title' => 'Coanime.net - Articulos - ' . $post->categories->name . ' - ' . $post->title,
+                'title' => 'Articulos - ' . $post->categories->name . ' - ' . $post->title,
                 'description' => $post->excerpt,
                 'path_image' => $post->image,
                 'tags' => $keywords,

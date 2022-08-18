@@ -384,6 +384,29 @@ class TitleController extends Controller
             'genres' => $genres
         ), 200);
     }
+    
+    /**
+     * Get the Titles in JSON Format from th API.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return Illuminate\Http\JsonResponse
+     */
+    public function getAllTitles(Request $request)
+    {
+        if ($titles = Title::all()->with('type')->orderBy('name', 'asc')->get()) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => Helper::successMessage('Titulos encontrados'),
+                'result' => $titles,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => Helper::errorMessage('No se encontraron titulos'),
+            ), 404);
+        }
+
+    }
 
     public function apiShowTitle($type, $slug)
     {
@@ -401,7 +424,7 @@ class TitleController extends Controller
                 'message' => Helper::successMessage('Titulo encontrado'),
                 'title' => 'Coanime.net - Titulos - ' . $name->first(),
                 'description' => Str::words(htmlentities(strip_tags($description->first())), 20),
-                'data' => $title->first(),
+                'result' => $title->first(),
             ), 200);
         } else {
             return response()->json(array(
