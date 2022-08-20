@@ -20,7 +20,7 @@ class EventController extends Controller
      */
     public function index(Request $request)
     {
-        $events = Event::search($request->name)->with('users','city','country')->orderBy('date_start','asc')->paginate(30);
+        $events = Event::search($request->name)->with('users','city','country')->orderBy('date_start','desc')->paginate(30);
 
         if($events->count() > 0) {
             return response()->json(array(
