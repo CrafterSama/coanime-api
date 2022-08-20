@@ -19,7 +19,7 @@ class CompanyController extends Controller
      */
     public function index(Request $request)
     {
-        $companies = Company::search($request->name)->orderBy('name', 'asc')->paginate(30);
+        $companies = Company::search($request->name)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
         if ($companies->count() > 0) {
             return response()->json(array(
                 'code' => 200,
@@ -48,22 +48,22 @@ class CompanyController extends Controller
      */
     public function apiIndex(Request $request)
     {
-        $companies = Company::search($request->name)->orderBy('name', 'asc')->paginate(30);
+        $companies = Company::search($request->name)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
 
         if ($companies->count() > 0) {
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage(),
-                'title' => 'Coanime.net - Eventos',
-                'description' => 'Lista de Eventos en Coanime.net',
+                'title' => 'Coanime.net - Entidades',
+                'description' => 'Lista de Entidades en la enciclopedia relacionadas al mundillo de la produccion de entretenimiento en Asia',
                 'result' => $companies,
             ), 200);
         } else {
             return response()->json(array(
                 'code' => 404,
                 'message' => Helper::errorMessage(),
-                'title' => 'Coanime.net - Eventos',
-                'description' => 'Lista de Eventos en Coanime.net',
+                'title' => 'Coanime.net - Entidades',
+                'description' => 'Lista de Entidades en la enciclopedia relacionadas al mundillo de la produccion de entretenimiento en Asia',
                 'result' => [],
             ), 404);
         }
@@ -139,7 +139,38 @@ class CompanyController extends Controller
                     'code' => 404,
                     'message' => Helper::errorMessage(),
                     'title' => 'Coanime.net - Entidades',
-                    'description' => 'Lista de Entidades relacionadas con el medio en Coanime.net',
+                    'description' => 'La Entidad que busca no esta disponible en Coanime.net',
+                    'result' => [],
+                ), 404);
+            }   
+        } catch (Exception $e) {
+            return response()->json(array(
+                'code' => 500,
+                'message' => Helper::errorMessage($e->getMessage()),
+                'result' => [],
+            ), 500);
+        }
+    }
+    
+    public function apiShow($slug)
+    {
+        $company = Company::with('country')->whereSlug($slug)->firstOrFail();
+
+        try {
+            if ($company->count() > 0) {
+                return response()->json(array(
+                    'code' => 200,
+                    'message' => Helper::successMessage(),
+                    'title' => 'Coanime.net - Entidades - ' . $company->name . '',
+                    'description' => 'Información acerca de la Entidad ' . $company->name . ' en Coanime.net',
+                    'result' => $company,
+                ), 200);
+            } else {
+                return response()->json(array(
+                    'code' => 404,
+                    'message' => Helper::errorMessage(),
+                    'title' => 'Coanime.net - Entidades',
+                    'description' => 'La Entidad que busca no esta disponible en Coanime.net',
                     'result' => [],
                 ), 404);
             }   

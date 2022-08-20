@@ -95,8 +95,8 @@ class PostController extends Controller
             return response()->json(array(
                 'code' => 200,
                 'message' => 'Success',
-                'title' => 'Coanime.net - Noticias y Enciclopedia de Cultura Japonesa, Manga y Anime',
-                'description' => 'Tu Fuente de Información sobre Manga, Anime, Cultura Otaku con noticias mas relevantes y actuales del Medio y en tu idioma, subscribete.',
+                'title' => 'Coanime.net - Noticias y Enciclopedia de Cultura Asiática, Manga y Anime',
+                'description' => 'Encuentra las noticias más recientes de anime, manga, video juegos y más. Puedes encontrar información  de eventos realizados en Hispanoamérica y de las series, manga, seiyus o compañías encargadas en nuestra Enciclopedia.',
                 'keywords' => $keywords,
                 'events' => $events,
                 'relevants' => $relevants,

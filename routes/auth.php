@@ -64,6 +64,9 @@ Route::prefix('external/')->group(function () {
 
   Route::get('genres/{slug}', [TitleController::class, 'apiAllByGenre']);
 
+  Route::get('events', [EventController::class, 'index']);
+  Route::get('events/{slug}', [EventController::class, 'apiShow']);
+  
   Route::get('people', [PeopleController::class, 'apiIndex']);
   Route::get('people/{slug}', [PeopleController::class, 'apiShow']);
 

@@ -167,6 +167,42 @@ class EventController extends Controller
             ), 404);
         }
     }
+    
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function apiShow($slug)
+    {
+		$id = Event::where('slug','like',$slug)->pluck('id');
+		$event = Event::with('users', 'country', 'city')->find($id);
+
+        if($event) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Evento Encontrado'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => $event,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [ 
+                    'type' => 'error',
+                    'text' => 'No se encontró el Evento'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => [],
+            ), 404);
+        }
+    }
 
     /**
      * Update the specified resource in storage.

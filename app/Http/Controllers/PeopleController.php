@@ -236,7 +236,7 @@ class PeopleController extends Controller {
 				],
 				'title' => 'Coanime.net - Persona',
 				'description' => 'Ver la información de una persona',
-				'data' => $people,
+				'result' => $people,
 			), 200);
 		} else {
 			return response()->json(array(
@@ -270,7 +270,7 @@ class PeopleController extends Controller {
 				],
 				'title' => 'Coanime.net - Buscar Persona',
 				'description' => 'Buscar una persona',
-				'data' => $people
+				'result' => $people
 			), 200);
 		} else {
 			return response()->json(array(
