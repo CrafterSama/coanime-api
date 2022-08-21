@@ -83,8 +83,8 @@ class UserController extends Controller
     }
    
     public function user(Request $request) {
-        $user = Auth::user();
-        return User::find($user->id)->with('roles')->first();
+        $id = Auth::user()->id;
+        return User::find($id)->with('roles')->first();
     }
 
     public function me(Request $request)

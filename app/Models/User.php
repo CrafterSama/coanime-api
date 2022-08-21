@@ -21,7 +21,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name', 'email', 'password', 'bio', 'nick', 'twitter', 'facebook', 'pinterest', 'instagram', 'devianart', 'googleplus', 'behance', 'tumblr', 'website', 'genre', 'birthday', 'slug'
+        'name', 'email', 'password', 'bio', 'nick', 'twitter', 'facebook', 'pinterest', 'instagram', 'devianart', 'youtube', 'tiktok', 'behance', 'tumblr', 'website', 'genre', 'birthday', 'slug', 'profile_photo_path', 'cover_photo_path'
     ];
 
     /**
@@ -79,11 +79,4 @@ class User extends Authenticatable
             return true;
         }
     }
-
-    /*public function isMod()
-    {
-        if ($this->roles->name == 'moderator') {
-            return true;
-        }
-    }*/
 }

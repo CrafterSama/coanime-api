@@ -18,7 +18,6 @@ use App\Http\Controllers\PostVoteController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ImageController;
 use Illuminate\Support\Facades\Route;
-use PHPUnit\TextUI\XmlConfiguration\Group;
 
 Route::get('/verify-email/{id}/{hash}', [VerifyEmailController::class, '__invoke'])
                 ->middleware(['auth', 'signed', 'throttle:6,1'])
