@@ -129,18 +129,26 @@ class UserController extends Controller
         if ($request->cover_photo_path) {
             $user->cover_photo_path = $request->cover_photo_path;
         }
-        if ($user->save()) {
+        try {
+            if ($user->save()) {
+                return response()->json(array(
+                    'code' => 200,
+                    'message' => Helper::successMessage('Your profile was updated successfully'),
+                    'result' => $user,
+                ), 200);
+            } else {
+                return response()->json(array(
+                    'code' => 400,
+                    'message' => Helper::errorMessage('Your profile was not updated'),
+                    'result' => [],
+                ), 400);
+            }
+        } catch (\Exception $e) {
             return response()->json(array(
-                'code' => 200,
-                'message' => Helper::successMessage('Your profile was updated successfully'),
-                'result' => $user,
-            ), 200);
-        } else {
-            return response()->json(array(
-                'code' => 400,
-                'message' => Helper::errorMessage('Your profile was not updated'),
+                'code' => 500,
+                'message' => Helper::errorMessage('Something went wrong '. $e->getMessage()),
                 'result' => [],
-            ), 400);
+            ), 500);
         }
     }
 

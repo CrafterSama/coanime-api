@@ -177,7 +177,7 @@ class EventController extends Controller
     public function apiShow($slug)
     {
 		$id = Event::where('slug','like',$slug)->pluck('id');
-		$event = Event::with('users', 'country', 'city')->find($id);
+		$event = Event::with('users', 'country', 'city')->findOrFail($id)->first();
 
         if($event) {
             return response()->json(array(
@@ -186,8 +186,8 @@ class EventController extends Controller
                     'type' => 'success',
                     'text' => 'Evento Encontrado'
                 ],
-                'title' => 'Coanime.net - Eventos',
-                'description' => 'Lista de Eventos en Coanime.net',
+                'title' => 'Coanime.net - Eventos - '. $event->name .'',
+                'description' => $event->name . ' tendrá lugar en ' . $event->address . ' ubicado en la ciudad de ' . $event->city->name . ' en ' . $event->country->name,
                 'result' => $event,
             ), 200);
         } else {

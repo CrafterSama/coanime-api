@@ -32,8 +32,8 @@ class ImageController extends Controller
         $this->validate($request, [
             'model' => 'required:string',
             'file' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
-        ]);        
-        
+        ]);
+
         $model = $request->model;
 
         $path = '/' . $model . '/';
@@ -44,20 +44,19 @@ class ImageController extends Controller
                 $fileName = hash('sha256', strval(time()));
                 $image->encode('webp', 100);
 
-                
                 if ($image->width() > 2560) {
                     $image->resize(2560, null, function ($constraint) {
                         $constraint->aspectRatio();
                     });
                 }
-                
+
                 $filePath = $path . $fileName . '.webp';
                 $imageUrl = Storage::disk('s3')->put($filePath, $image);
                 $imageUrl = Storage::disk('s3')->url($filePath);
 
                 return response()->json(array(
                     'code' => 200,
-                    'message' => Helper::successMessage('Image uoloaded successfully'),
+                    'message' => Helper::successMessage('Image uploaded successfully'),
                     'url' => $imageUrl,
                 ), Response::HTTP_OK);
             } catch (Exception $e) {

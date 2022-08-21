@@ -33,6 +33,11 @@ class Post extends Model
             ->orWhere('content', 'like', '%' . $name . '%');
     }
 
+    public function scopeNotPagesCategories($query, $category)
+    {
+        return $query->whereNotIn('category_id', [$category]);
+    }
+
     public function fullContent($id)
     {
         $post = Post::find($id);

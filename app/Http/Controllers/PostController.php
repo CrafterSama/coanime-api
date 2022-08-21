@@ -38,43 +38,40 @@ class PostController extends Controller
         try {
 
             $relevants = Post::search($request->name)
-                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->whereNotIn('category_id', [10])
-                ->where('image', '!=', null)
-                ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('view_counter', '>', 5)
                 ->whereBetween('postponed_to', [Carbon::now()->subMonths(36), Carbon::now()])
-                ->orWhere('postponed_to', null)
+                ->orWhere('postponed_to', '!=', null)
+                ->where('image', '!=', null)
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
                 ->get();
     
             $videos = Post::search($request->name)
-                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->where('category_id', 13)
-                ->where('image', '!=', null)
-                ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('postponed_to', '<=', Carbon::now())
-                ->orWhere('postponed_to', null)
+                ->orWhere('postponed_to','!=', null)
+                ->where('image', '!=', null)
                 ->orderBy('postponed_to', 'desc')
                 ->take(5)->get();
     
             $news = Post::search($request->name)
-                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->whereNotIn('category_id', [10])
-                ->where('image', '!=', null)
-                ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
+                ->where('image', '!=', null)
                 ->orderBy('postponed_to', 'desc')
                 ->take(4)->get();
     
@@ -127,12 +124,34 @@ class PostController extends Controller
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->where('category_id', '!=', 10)
-            ->where('image', '!=', null)
-            ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
             ->where('postponed_to', '<=', $carbon->now())
             ->orWhere('postponed_to', null)
+            ->where('image', '!=', null)
+            /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
             ->orderBy('postponed_to', 'desc')
-            ->simplePaginate(20);
+            ->paginate(30);
+        return $posts;
+    }
+    /**
+     * All the Articles by Category
+     *
+     */
+    public function postsByCategory(Request $request)
+    {
+        $carbon = new Carbon;
+        $category = Category::where('slug', $request->category)->pluck('id')->first();
+        //dd($category);
+        $posts = Post::search($request->name)
+            ->with('users', 'categories', 'titles', 'tags')
+            ->where('approved', 'yes')
+            ->where('category_id', '!=', 10)
+            ->where('category_id', $category)
+            ->where('draft', '0')
+            ->where('postponed_to', '<=', $carbon->now())
+            ->orWhere('postponed_to', null)
+            ->where('image', '!=', null)
+            ->orderBy('postponed_to', 'desc')
+            ->paginate(30);
         return $posts;
     }
 
@@ -144,30 +163,30 @@ class PostController extends Controller
     {
         try {
             $relevants = Post::search($request->name)
-                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->where('category_id', '!=', 10)
-                ->where('image', '!=', null)
-                ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('view_counter', '>', 5)
                 ->whereBetween('postponed_to', [Carbon::now()->subMonths(36), Carbon::now()])
                 ->orWhere('postponed_to', null)
+                ->where('image', '!=', null)
+                /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
                 ->get();
 
             $posts = Post::search($request->name)
-                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->where('category_id', '!=', 10)
-                ->where('image', '!=', null)
-                ->orWhere('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
+                ->where('image', '!=', null)
+                /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
                 ->orderBy('postponed_to', 'desc')
                 ->paginate(4);
 
@@ -376,9 +395,8 @@ class PostController extends Controller
             $category_id = Category::where('slug', '=', $category)->pluck('id');
             $category_name = Category::where('slug', '=', $category)->pluck('name');
 
-            $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+            $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
-                ->where('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->whereNotIn('category_id', [10])
@@ -386,19 +404,20 @@ class PostController extends Controller
                 ->where('category_id', $category_id)
                 ->whereBetween('postponed_to', [Carbon::now()->subMonths(12), Carbon::now()])
                 ->orWhere('postponed_to', null)
+                ->where('image', '!=', null)
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
                 ->get();
 
-            $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+            $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
-                ->where('image', '!=', 'https://coanime.net/images/posts/')
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->whereNotIn('category_id', [10])
                 ->where('category_id', $category_id)
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
+                ->where('image', '!=', null)
                 ->orderBy('postponed_to', 'desc')
                 ->take(4)
                 ->get();
@@ -447,7 +466,7 @@ class PostController extends Controller
             $q->where('tag_id', $tag_id);
         })->with('users', 'categories', 'tags')->orderBy('postponed_to', 'desc')->simplePaginate(); */
 
-        $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+        $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
             ->whereHas('tags', function ($q) use ($tag_id) {
                 $q->where('tag_id', $tag_id);
             })
@@ -458,11 +477,13 @@ class PostController extends Controller
             ->where('view_counter', '>', 50)
             ->whereBetween('postponed_to', [Carbon::now()->subMonths(12), Carbon::now()])
             ->orWhere('postponed_to', null)
+            ->where('image', '!=', null)
+            /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
             ->orderBy('view_counter', 'desc')
             ->take(3)
             ->get();
 
-        $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to')
+        $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
             ->whereHas('tags', function ($q) use ($tag_id) {
                 $q->where('tag_id', $tag_id);
             })
@@ -472,6 +493,8 @@ class PostController extends Controller
             ->whereNotIn('category_id', [10])
             ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
+            ->orWhere('image', '!=', null)
+            /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
             ->orderBy('postponed_to', 'desc')
             ->take(4)
             ->get();
