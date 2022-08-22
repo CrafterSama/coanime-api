@@ -383,15 +383,20 @@ class PostController extends Controller
                         $data->tags()->sync($tags);
                     }
                 }
+                return response()->json(array(
+                    'code' => 200,
+                    'message' => Helper::successMessage('Post Created Successfully'),
+                    'data' => $data
+                ));
+            } else {
+                return response()->json(array(
+                    'code' => 422,
+                    'message' => Helper::errorMessage('Post Not Created'),
+                ));
             }
-            return response()->json(array(
-                'code' => 200,
-                'message' => Helper::successMessage('Post Created Successfully'),
-                'data' => $data
-            )); 
         } catch (\Exception $e) {
             return response()->json(array(
-                'code' => 500,
+                'code' => 422,
                 'message' => Helper::errorMessage('Error, Internal Server Error . ' . $e->getMessage()),
             ));
         }
