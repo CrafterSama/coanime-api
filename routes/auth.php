@@ -44,6 +44,7 @@ Route::prefix('external/')->group(function () {
   Route::get('articles', [PostController::class, 'posts'])->name('api.articles');  
   Route::get('articles/{slug}', [PostController::class, 'showApi'])->name('api.articles.show');
 
+  Route::get('categories', [PostController::class, 'categories'])->name('api.categories');
   Route::get('categories/{category}', [PostController::class, 'showAllByCategory'])->name('api.home.category');
   Route::get('categories/articles/{category}', [PostController::class, 'postsByCategory'])->name('api.articles.category');
 

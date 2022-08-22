@@ -132,6 +132,29 @@ class PostController extends Controller
             ->paginate(30);
         return $posts;
     }
+
+    /**
+     * All the Categories
+     *
+     */
+    public function categories(Request $request) 
+    {
+        try {
+            $categories = Category::all();
+            return response()->json(array(
+                'code' => 200,
+                'message' => Helper::successMessage('Success'),
+                'categories' => $categories,
+            ), 200);
+        } catch (Exception $e) {
+            return response()->json(array(
+                'code' => 500,
+                'message' => Helper::errorMessage('Error to obtain data'),
+                'error' => $e->getMessage()
+            ), 500);
+        }
+    }
+
     /**
      * All the Articles by Category
      *
@@ -332,20 +355,44 @@ class PostController extends Controller
                 if (!empty($request['title_id'])) {
                     $data->titles()->sync([$request['title_id']]);
                 }
-    
-                if (!empty($request['tag_id'])) {
-                        $data->tags()->sync($request['tag_id']);
+
+                if (count($request['tag_id']) > 0 || $request['tag_id'] != null) {
+                    $tags = array();
+                    $tagData = array();
+                    foreach ($request['tag_id'] as $key => $value) {
+                        if (is_numeric($value)) {
+                            $tags[] = $value;
+                        } else {
+                            $tagData['name'] = strtolower($value);
+                            $tagData['slug'] = Str::slug($value);
+                            $checkTag = Tag::where('slug', $tagData['slug']);
+                            if ($checkTag->count() > 0) {
+                                $tags[] = $checkTag->pluck('id')->first();
+                            } else {
+                                //dd($tagData);
+                                if (is_object($tagData)) {
+                                    $tagData = Tag::create($tagData->toArray());
+                                } else {
+                                    $tagData = Tag::create($tagData);
+                                }
+                                $tags[] = $tagData->id;
+                            }
+                        }
+                    }
+                    if ($tags) {
+                        $data->tags()->sync($tags);
+                    }
                 }
             }
             return response()->json(array(
                 'code' => 200,
-                'message' => 'Success!! Post Created',
+                'message' => Helper::successMessage('Post Created Successfully'),
                 'data' => $data
             )); 
         } catch (\Exception $e) {
             return response()->json(array(
                 'code' => 500,
-                'message' => $e->getMessage(),
+                'message' => Helper::errorMessage('Error, Internal Server Error . ' . $e->getMessage()),
             ));
         }
     }
