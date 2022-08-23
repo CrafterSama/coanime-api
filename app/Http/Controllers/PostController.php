@@ -127,7 +127,20 @@ class PostController extends Controller
             ->where('postponed_to', '<=', $carbon->now())
             ->orWhere('postponed_to', null)
             ->where('image', '!=', null)
-            /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
+            ->orderBy('postponed_to', 'desc')
+            ->paginate(30);
+        return $posts;
+    }
+    
+    public function postsDashboard(Request $request)
+    {
+        $carbon = new Carbon;
+
+        $posts = Post::search($request->name)
+            ->with('users', 'categories', 'titles', 'tags')
+            ->where('approved', 'yes')
+            ->where('draft', '0')
+            ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
             ->paginate(30);
         return $posts;

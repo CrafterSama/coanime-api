@@ -97,6 +97,7 @@ Route::middleware(['auth'])->group(function () {
   Route::prefix('internal/')->group(function () {
     // ** Auth Posts Endpoints **
     Route::get('posts', [PostController::class, 'posts'])->name('posts');
+    Route::get('posts-dashboard', [PostController::class, 'postsDashboard'])->name('posts-dashboard');
     Route::get('posts/{id}', [PostController::class, 'show']);
     Route::put('posts/{id}', [PostController::class, 'update']);
     Route::post('posts', [PostController::class, 'store']);
