@@ -142,7 +142,7 @@ class PostController extends Controller
             ->where('draft', '0')
             ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
-            ->paginate(30);
+            ->paginate(10);
         return $posts;
     }
 
@@ -285,7 +285,7 @@ class PostController extends Controller
                         'type' => 'success',
                         'text' => 'Imagen encontrada',
                     ),
-                    'image' => $randomImage
+                    'url' => $randomImage
                 ), 200); 
             } else {
                 return response()->json(array(
@@ -294,7 +294,7 @@ class PostController extends Controller
                         'type' => 'error',
                         'text' => 'No se encontraron resultados',
                     ),
-                ), 200);
+                ), 404);
             }
         } else {
             return response()->json(array(
@@ -303,7 +303,7 @@ class PostController extends Controller
                     'type' => 'error',
                     'text' => 'No se encontraron resultados',
                 ),
-            ), 200);
+            ), 404);
         }
     }
 

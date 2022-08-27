@@ -393,7 +393,7 @@ class TitleController extends Controller
      */
     public function getAllTitles(Request $request)
     {
-        if ($titles = Title::all()->with('type')->orderBy('name', 'asc')->get()) {
+        if ($titles = Title::with('type')->orderBy('name', 'asc')->get()) {
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage('Titulos encontrados'),

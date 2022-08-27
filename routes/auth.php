@@ -39,6 +39,7 @@ Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('p
 // ** Api Endpoints **
 Route::prefix('external/')->group(function () {
   Route::get('home', [PostController::class, 'index'])->name('home');
+  Route::get('get-titles', [TitleController::class, 'getAllTitles']);
 
   // ** Get Endpoints **
   Route::get('articles', [PostController::class, 'posts'])->name('api.articles');  
@@ -52,7 +53,6 @@ Route::prefix('external/')->group(function () {
 
   Route::get('ecma', [EncyclopediaController::class, 'index']);
 
-  Route::get('all-titles', [TitleController::class, 'getAllTitles']);
   Route::get('titles', [TitleController::class, 'apiTitles']);
   Route::get('titles/{type}', [TitleController::class, 'apiTitlesByType']);
   Route::get('titles/{type}/{slug}', [TitleController::class, 'apiShowTitle']);
