@@ -140,9 +140,8 @@ class PostController extends Controller
             ->with('users', 'categories', 'titles', 'tags')
             ->where('approved', 'yes')
             ->where('draft', '0')
-            ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
-            ->paginate(10);
+            ->paginate();
         return $posts;
     }
 
@@ -355,12 +354,6 @@ class PostController extends Controller
 
         if ($request->postponed_to == "") {
             $data['postponed_to'] = Carbon::now()->format('Y-m-d H:i:s');
-        }
-
-        if ($request->input('image')) {
-            $data['image'] = $request->input('image');
-        } else {
-            $data['image'] = null;
         }
 
         try {
