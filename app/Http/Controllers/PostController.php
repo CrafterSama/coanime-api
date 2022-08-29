@@ -1015,6 +1015,9 @@ class PostController extends Controller
 
         foreach ($posts as $post) {
             $post->image = str_replace('https://coanime.net/', 'https://api.coanime.net/storage/', $post->image);
+            $post->content = str_replace('https://coanime.net/images/', 'https://api.coanime.net/storage/images/', $post->content);
+            $post->content = str_replace('https://images.coanime.net/images/', 'https://api.coanime.net/storage/images/', $post->content);
+            $post->content = str_replace('http://images.coanime.net/images/', 'https://api.coanime.net/storage/images/', $post->content);
             $post->save();
         }
         foreach($titles as $title) {
