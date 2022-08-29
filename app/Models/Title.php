@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Title extends Model
 {
@@ -82,23 +83,13 @@ class Title extends Model
         return $this->hasMany(Related::class);
     }
 
-    public function getFirstDateAttribute()
+    public function getBroadTimeAttribute($value)
     {
-        return $this->broad_time->format('d/m/Y');
+        return Carbon::parse($value)->format('Y-m-d');
     }
-
-    public function getFirstDateYearAttribute()
+    
+    public function getBroadFinishAttribute($value)
     {
-        return $this->broad_time->format('Y');
-    }
-
-    public function getLastDateAttribute()
-    {
-        return $this->broad_finish->format('d/m/Y');
-    }
-
-    public function getLastDateYearAttribute()
-    {
-        return $this->broad_finish->format('Y');
+        return Carbon::parse($value)->format('Y-m-d');
     }
 }

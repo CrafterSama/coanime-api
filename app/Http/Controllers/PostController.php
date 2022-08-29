@@ -1006,4 +1006,34 @@ class PostController extends Controller
 
         //return view('dashboard.posts.home', compact('posts'));
     }
+
+    public function changeImagesPath(Request $request) {
+        $posts = Post::all();
+        $titles = Title::with('images')->get();
+        $users = User::all();
+        $magazines = Magazine::all();
+
+        foreach ($posts as $post) {
+            $post->image = str_replace('https://coanime.net/', 'https://api.coanime.net/storage/', $post->image);
+            $post->save();
+        }
+        foreach($titles as $title) {
+            if ($title->images) {
+                $data = TitleImage::find($title->images->id);
+                $data->name = str_replace('https://coanime.net/images/encyclopedia/titles/https://coanime.net/', 'https://api.coanime.net/storage/', $data->name);
+                $data->name = str_replace('https://coanime.net/', 'https://api.coanime.net/storage/', $data->name);
+                $data->thumbnail = str_replace('https://coanime.net/', 'https://api.coanime.net/storage/', $data->thumbnail);
+                $data->save();
+            }
+        }
+        foreach($users as $user) {
+            $user->profile_photo_path = str_replace('https://coanime.net/', 'https://api.coanime.net/storage/', $user->profile_photo_path);
+            $user->save();
+        }
+
+        return response()->json(array(
+            'code' => 200,
+            'message' => 'Image URL for Posts Changed Successfully!!',
+        ), 200);
+    }
 }

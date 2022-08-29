@@ -21,7 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
-
+use Illuminate\Validation\Rule;
 class TitleController extends Controller
 {
 
@@ -33,32 +33,32 @@ class TitleController extends Controller
      */
     public function index(Request $request)
     {
-      if ($titles = Title::search($request->name)->with('images', 'rating', 'type', 'genres', 'users')->orderBy('name', 'asc')->simplePaginate()) {
-          $types = TitleType::orderBy('name', 'asc')->get();
-          $genres = Genre::orderBy('name', 'asc')->get();
-          return response()->json(array(
-              'code' => 200,
-              'message' => [ 
-                  'type' => 'success',
-                  'text' => 'Resultados encontrados'
-              ],
-              'title' => 'Coanime.net - Lista de Titulos',
-              'description' => 'Lista de titulos enla enciclopedia de coanime.net',
-              'result' => $titles,
-              'types' => $types,
-              'genres' => $genres,
-          ), 200);
-      } else {
-          return response()->json(array(
-              'code' => 404,
-              'message' => [
-                  'type' => 'error',
-                  'text' => 'No se encontraron resultados'
-              ],
-              'title' => 'Coanime.net - Lista de Titulos - Titulos No encontrados',
-              'description' => 'Lista de titulos enla enciclopedia de coanime.net',
-          ), 404);
-      }
+        if ($titles = Title::search($request->name)->with('images', 'rating', 'type', 'genres', 'users')->orderBy('created_at', 'desc')->paginate()) {
+            $types = TitleType::orderBy('name', 'asc')->get();
+            $genres = Genre::orderBy('name', 'asc')->get();
+            return response()->json(array(
+                'code' => 200,
+                'message' => [ 
+                    'type' => 'success',
+                    'text' => 'Resultados encontrados'
+                ],
+                'title' => 'Coanime.net - Lista de Títulos',
+                'description' => 'Lista de títulos en la enciclopedia de Coanime.net',
+                'result' => $titles,
+                'types' => $types,
+                'genres' => $genres,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [
+                    'type' => 'error',
+                    'text' => 'No se encontraron resultados'
+                ],
+                'title' => 'Coanime.net - Lista de Títulos - Títulos No encontrados',
+                'description' => 'Lista de títulos en la enciclopedia de Coanime.net',
+            ), 404);
+        }
     }
 
 
@@ -77,8 +77,8 @@ class TitleController extends Controller
                 return response()->json(array(
                     'code' => 200,
                     'message' => Helper::successMessage('Resultados encontrados'),
-                    'title' => 'Coanime.net - Titulos',
-                    'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
+                    'title' => 'Coanime.net - Títulos',
+                    'descripcion' => 'Títulos de la Enciclopedia, estos están compuestos por títulos de TV, Mangas, Películas, Lives Actions, Doramas, Video Juegos, entre otros',
                     'result' => $titles,
                     'types' => $types,
                     'genres' => $genres
@@ -105,6 +105,39 @@ class TitleController extends Controller
     }
 
     /**
+     * Get all the Data in JSON format to create a Title.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function create(Request $request)
+    {
+        try {
+            $ratings = Ratings::all();
+            $genres = Genre::all();
+            $types = TitleType::all();
+            return response()->json(array(
+                'code' => 200,
+                'message' => array(
+                    'type' => 'Success',
+                    'text' => 'Titulo encontrado',
+                ),
+                'genres' => $genres,
+                'types' => $types,
+                'ratings' => $ratings,
+            ), 200);
+        } catch (\Exception $e) {
+            return response()->json(array(
+                'code' => 404,
+                'message' => array(
+                    'type' => 'Error',
+                    'text' => 'No se encontraron resultados, Error: ' . $e->getMessage(),
+                ),
+            ), 404);
+        }
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -115,11 +148,8 @@ class TitleController extends Controller
         if (Title::where('name', '=', $request->get('name'))->where('type_id', '=', $request->get('type_id'))->count() > 0) {
             return response()->json(array(
                 'code' => 403,
-                'message' => 'Not Found',
-                'title' => 'Coanime.net - Titulos - Titulo ya existe',
-                'description' => 'La serie que trata de guardar ya esta en nuestros archivos',
-            ));
-            //return redirect()->back();
+                'message' => Helper::errorMessage('El titulo ya existe'),
+            ), 403);
         } else {
             $this->validate($request, [
                 'name' => 'required',
@@ -128,11 +158,11 @@ class TitleController extends Controller
                 'sinopsis' => 'required',
                 'episodies' => 'numeric',
                 'just_year' => 'required',
-                'broad_time' => 'required|date_format:"Y-m-d H:i:s"',
-                'broad_finish' => 'date_format:"Y-m-d H:i:s"',
+                'broad_time' => 'required|date_format:"Y-m-d"',
+                'broad_finish' => 'date_format:"Y-m-d"',
                 'genre_id' => 'required',
                 'rating_id' => 'required',
-                'image-client' => 'required|max:1024|mimes:jpeg,gif,bmp,png|dimensions:min_width=300,min_height=400',
+                'images' => 'required',
             ]);
 
             if (empty($request['broad_finish'])) {
@@ -145,49 +175,6 @@ class TitleController extends Controller
 
             $data = new Title;
 
-            $file = $request->file('image-client');
-
-            //Creamos una instancia de la libreria instalada
-            $image = Image::make($request->file('image-client')->getRealPath());
-
-            //Ruta donde queremos guardar las imagenes
-            $originalPath = public_path() . '/images/encyclopedia/titles/';
-
-            //Ruta donde se guardaran los Thumbnails
-            $thumbnailPath = public_path() . '/images/encyclopedia/titles/thumbnails/';
-
-            $tName = TitleType::find($request['type_id']);
-
-            // Guardar Original
-            $fileName = hash('sha256', Str::slug($request['name']) . strval(time()));
-
-            $watermark = Image::make(public_path() . '/images/logo_homepage.png');
-
-            $watermark->opacity(30);
-
-            if (($image->width() * .20) < 300) {
-                if (($image->width() * .20) < 150) {
-                    $watermark->resize(100, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                } else {
-                    $watermark->resize(($image->width() * .20), null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                }
-            }
-
-            $image->insert($watermark, 'bottom-right', 10, 10);
-
-            $image->save($originalPath . $fileName . '.jpg');
-
-            // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-            $image->resize(300, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-            // Guardar
-            $image->save($thumbnailPath . 'thumb-' . $fileName . '.jpg');
-
             $request['user_id'] = Auth::user()->id;
             $request['slug'] = Str::slug($request['name']);
 
@@ -195,15 +182,12 @@ class TitleController extends Controller
                 $request['slug'] = Str::slug($request['name']) . '-01';
             }
 
-            $request['images'] = 'https://coanime.net/images/encyclopedia/titles/' . $fileName . '.jpg';
-            $request['thumbnail'] = 'https://coanime.net/images/encyclopedia/titles/thumbnails/thumb-' . $fileName . '.jpg';
-
             $data = $request->all();
 
             if ($data = Title::create($data)) {
                 $images = $data->images ?: new TitleImage;
                 $images->name = $request['images'];
-                $images->thumbnail = $request['thumbnail'];
+                $images->thumbnail = $request['images'];
                 $data->images()->save($images);
                 $data->genres()->sync($request['genre_id']);
                 return response()->json(array(
@@ -217,14 +201,14 @@ class TitleController extends Controller
                 ), 200);
             } else {
                 return response()->json(array(
-                    'code' => 403,
+                    'code' => 400,
                     'message' => array(
                         'type' => 'Error',
                         'text' => 'No se pudo agregar el titulo',
                     ),
                     'title' => 'Coanime.net - Titulos - Titulo no Agregado',
                     'description' => 'El titulo no se ha podido agregar',
-                ), 403);
+                ), 400);
             }
         }
     }
@@ -236,21 +220,22 @@ class TitleController extends Controller
      * @param  string  $slug
      * @return \Illuminate\Http\Response|mixed
      */
-    public function show($type, $slug)
+    public function show(Request $request, $id)
     {
-        if (!empty($type) || !empty($slug)){
-            // TODO: Agregar/comprobar unicidad del campo slug
-            $type_id = TitleType::whereSlug($type)->pluck('id');
-            $title = Title::whereSlug($slug)->where('type_id', $type_id)->firstOrFail();
+        if ($title = Title::with('genres', 'type', 'images', 'users', 'rating')->find($id)) {
+            $ratings = Ratings::all();
+            $genres = Genre::all();
+            $types = TitleType::all();
             return response()->json(array(
                 'code' => 200,
                 'message' => array(
                     'type' => 'Success',
                     'text' => 'Titulo encontrado',
                 ),
-                'title' => 'Coanime.net - Titulos - ' . $title->name,
-                'description' => Str::words($title->sinopsis, 20),
                 'data' => $title,
+                'genres' => $genres,
+                'types' => $types,
+                'ratings' => $ratings,
             ), 200);
         } else {
             return response()->json(array(
@@ -433,7 +418,7 @@ class TitleController extends Controller
             ), 404);
         }
     }
-
+    
     public function apiTitlesByType($type)
     {
         $type_id = TitleType::where('slug', '=', $type)->pluck('id');
@@ -535,11 +520,11 @@ class TitleController extends Controller
             'sinopsis' => 'required',
             'episodies' => 'numeric',
             'just_year' => 'required',
-            'broad_time' => 'required|date_format:"Y-m-d H:i:s"',
-            'broad_finish' => 'date_format:"Y-m-d H:i:s"',
+            'broad_time' => 'required|date_format:"Y-m-d"',
+            'broad_finish' => Rule::excludeIf(isset($request->broad_finish)), 'date_format:"Y-m-d"',
             'genre_id' => 'required',
             'rating_id' => 'required',
-            'image-client' => 'max:1024|mimes:jpeg,gif,bmp,png|dimensions:min_width=300,min_height=400',
+            'images' => 'string',
         ]);
 
         if (empty($request['broad_finish'])) :
@@ -551,74 +536,42 @@ class TitleController extends Controller
         endif;
 
         $data = Title::find($id);
-
-        if ($request->file('image-client')) {
-            $file = $request->file('image-client');
-            //Creamos una instancia de la libreria instalada
-            $image = Image::make($request->file('image-client')->getRealPath());
-            //Ruta donde queremos guardar las imagenes
-            $originalPath = public_path() . '/images/encyclopedia/titles/';
-            //Ruta donde se guardaran los Thumbnails
-            $thumbnailPath = public_path() . '/images/encyclopedia/titles/thumbnails/';
-            $tName = $data->type->name;
-            // Guardar Original
-            $fileName = hash('sha256', Str::slug($request['name']) . strval(time()));
-
-            $watermark = Image::make(public_path() . '/images/logo_homepage.png');
-
-            $watermark->opacity(30);
-
-            if (($image->width() * .20) < 300) {
-                if (($image->width() * .20) < 150) {
-                    $watermark->resize(100, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                } else {
-                    $watermark->resize(($image->width() * .20), null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                }
-            }
-
-            $image->insert($watermark, 'bottom-right', 10, 10);
-
-            $image->save($originalPath . $fileName . '.jpg');
-
-            // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-            $image->resize(300, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-            // Guardar
-            $image->save($thumbnailPath . 'thumb-' . $fileName . '.jpg');
-
-            $request['images'] = 'https://coanime.net/images/encyclopedia/titles/' . $fileName . '.jpg';
-            $request['thumbnail'] = 'https://coanime.net/images/encyclopedia/titles/thumbnails/thumb-' . $fileName . '.jpg';
-        } else {
-            $request['images'] = null;
-            $request['thumbnail'] = null;
-        }
-
         $request['user_id'] = $data['user_id'];
         $request['edited_by'] = Auth::user()->id;
         $request['slug'] = Str::slug($request['name']);
 
-        //dd($request);
-
         if ($data->update($request->all())) {
-            if ($request->file('image-client')) {
+            if ($request->images) {
                 if (TitleImage::where('title_id', $id)->count() > 0) {
-                    $images = $data->images ?: TitleImage::where('title_id', $id);
+                    $images = TitleImage::where('title_id', $id);
                 } else {
-                    $images = $data->images ?: new TitleImage;
+                    $images = new TitleImage;
                 }
                 $images->name = $request['images'];
-                $images->thumbnail = $request['thumbnail'];
+                $images->thumbnail = $request['images'];
                 $data->images()->save($images);
             }
+
             $data->genres()->sync($request['genre_id']);
-            return redirect()->to('dashboard/titles'); 
+
+            return response()->json(array(
+                'code' => 200,
+                'message' => array(
+                    'type' => 'Success',
+                    'text' => 'Titulo actualizado',
+                ),
+                'title' => 'Coanime.net - Titulos - ' . $request['name'],
+                'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $request['name'],
+                'result' => $data,
+            ), 200);
         } else {
-            return back();
+            return response()->json(array(
+                'code' => 404,
+                'message' => array(
+                    'type' => 'Error',
+                    'text' => 'Titulo no pudo ser actualizado',
+                ),
+            ), 404);
         }
     }
 
@@ -652,11 +605,11 @@ class TitleController extends Controller
         }
     }
 
-    public function name()
+/*    public function name()
     {
         $title = Title::where('name', 'like', '%' . $value . '%')->get();
         return view('titles.details', ['title', $title]);
-    }
+    }*/
 
     public function slugs()
     {

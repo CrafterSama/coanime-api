@@ -40,6 +40,7 @@ Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('p
 Route::prefix('external/')->group(function () {
   Route::get('home', [PostController::class, 'index'])->name('home');
   Route::get('get-titles', [TitleController::class, 'getAllTitles']);
+  Route::get('change-images-path', [PostController::class, 'changeImagesPath']);
 
   // ** Get Endpoints **
   Route::get('articles', [PostController::class, 'posts'])->name('api.articles');  
@@ -107,6 +108,7 @@ Route::middleware(['auth'])->group(function () {
 
     // ** Auth Titles Endpoints **
     Route::get('titles', [TitleController::class, 'index'])->name('titles');
+    Route::get('titles/create', [TitleController::class, 'create']);
     Route::get('titles/{id}', [TitleController::class, 'show']);
     Route::put('titles/{id}', [TitleController::class, 'update']);
     Route::post('titles', [TitleController::class, 'store']);
