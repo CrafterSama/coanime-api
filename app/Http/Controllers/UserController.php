@@ -18,6 +18,8 @@ use App\Models\Event;
 use App\Models\Role;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Hash;
 use Image;
 
 class UserController extends Controller
@@ -113,6 +115,21 @@ class UserController extends Controller
     public function updateMe(Request $request)
     {
         $user = User::find(Auth::user()->id);
+        if (!empty($request->password)) {
+            $request->validate([
+                'password' => [
+                    'required',
+                    'string',
+                    Password::min(8)
+                        ->mixedCase()
+                        ->numbers()
+                        ->symbols()
+                        ->uncompromised(),
+                    'confirmed'
+                ],
+            ]);
+            $user->password = Hash::make($request->password);
+        }
         $user->name = $request->name;
         $user->username = $request->username;
         $user->bio = $request->bio;
@@ -145,10 +162,10 @@ class UserController extends Controller
             }
         } catch (\Exception $e) {
             return response()->json(array(
-                'code' => 500,
+                'code' => 403,
                 'message' => Helper::errorMessage('Something went wrong '. $e->getMessage()),
                 'result' => [],
-            ), 500);
+            ), 403);
         }
     }
 
