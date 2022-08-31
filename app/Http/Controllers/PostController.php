@@ -179,7 +179,7 @@ class PostController extends Controller
             ->orWhere('postponed_to', null)
             ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
-            ->paginate(10);
+            ->paginate(8);
         return $posts;
     }
     
