@@ -43,7 +43,8 @@ Route::prefix('external/')->group(function () {
   Route::get('change-images-path', [PostController::class, 'changeImagesPath']);
 
   // ** Get Endpoints **
-  Route::get('articles', [PostController::class, 'posts'])->name('api.articles');  
+  Route::get('articles', [PostController::class, 'posts'])->name('api.articles');
+  Route::get('articles-japan', [PostController::class, 'postsJapan'])->name('api.articles');
   Route::get('articles/{slug}', [PostController::class, 'showApi'])->name('api.articles.show');
 
   Route::get('categories', [PostController::class, 'categories'])->name('api.categories');

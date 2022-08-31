@@ -118,9 +118,26 @@ class PostController extends Controller
     public function posts(Request $request)
     {
         $carbon = new Carbon;
+        $news = Post::search($request->name)
+            ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
+            ->with('users', 'categories', 'titles', 'tags')
+            ->where('approved', 'yes')
+            ->where('draft', '0')
+            ->whereNotIn('category_id', [10])
+            ->where('postponed_to', '<=', Carbon::now())
+            ->orWhere('postponed_to', null)
+            ->where('image', '!=', null)
+            ->orderBy('postponed_to', 'desc')
+            ->take(4)->get();
+
+        $ids = [];
+        foreach ($news as $p) {
+            $ids[] = $p->id;
+        }
 
         $posts = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
+            ->whereNotIn('id', $ids)
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->where('category_id', '!=', 10)
@@ -128,7 +145,41 @@ class PostController extends Controller
             ->orWhere('postponed_to', null)
             ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
-            ->paginate(30);
+            ->paginate(15           );
+        return $posts;
+    }
+    
+    public function postsJapan(Request $request)
+    {
+        $carbon = new Carbon;
+        $news = Post::search($request->name)
+            ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
+            ->with('users', 'categories', 'titles', 'tags')
+            ->where('approved', 'yes')
+            ->where('draft', '0')
+            ->whereNotIn('category_id', [10])
+            ->where('postponed_to', '<=', Carbon::now())
+            ->orWhere('postponed_to', null)
+            ->where('image', '!=', null)
+            ->orderBy('postponed_to', 'desc')
+            ->take(4)->get();
+
+        $ids = [];
+        foreach ($news as $p) {
+            $ids[] = $p->id;
+        }
+
+        $posts = Post::search($request->name)
+            ->with('users', 'categories', 'titles', 'tags')
+            ->whereNotIn('id', $ids)
+            ->where('approved', 'yes')
+            ->where('draft', '0')
+            ->whereIn('category_id', [5,8])
+            ->where('postponed_to', '<=', $carbon->now())
+            ->orWhere('postponed_to', null)
+            ->where('image', '!=', null)
+            ->orderBy('postponed_to', 'desc')
+            ->paginate(10);
         return $posts;
     }
     
