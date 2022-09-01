@@ -399,9 +399,15 @@ class PostController extends Controller
         $data['user_id'] = $currentUser;
         $data['slug'] = Str::slug($data['title']);
 
-        if (Post::where('slug', 'like', $data['slug'])->count() > 0) {
-            $data['slug'] = Str::slug($data['title']) . '1';
+        if ($request->slug) {
+            $data['slug'] = $request->slug;
+        } else {
+            if (Post::where('slug', 'like', $data['slug'])->count() > 0) {
+                $data['slug'] = Str::slug($data['title']) . '1';
+            }
+            $data['slug'] = Str::slug($data['title']);
         }
+
 
         if ($request->postponed_to == "") {
             $data['postponed_to'] = Carbon::now()->format('Y-m-d H:i:s');
@@ -932,7 +938,15 @@ class PostController extends Controller
         $post = $request->all();
         $currentUser = Auth::user()->id;
         $data['edited_by'] = $currentUser;
-        $data['slug'] = Str::slug($post['title']);
+
+        if ($request->slug) {
+            $data['slug'] = $request->slug;
+        } else {
+            if (Post::where('slug', 'like', $data['slug'])->count() > 0) {
+                $data['slug'] = Str::slug($data['title']) . '1';
+            }
+            $data['slug'] = Str::slug($data['title']);
+        }
 
         if ($request->postponed_to == "") {
             $data['postponed_to'] = Carbon::now()->format('Y-m-d H:i:s');
