@@ -557,6 +557,7 @@ class TitleController extends Controller
             $request['user_id'] = $data['user_id'];
             $request['edited_by'] = Auth::user()->id;
             $request['slug'] = Str::slug($request['name']);
+            $images = null;
     
             if ($data->update($request->all())) {
                 if ($request->images) {
