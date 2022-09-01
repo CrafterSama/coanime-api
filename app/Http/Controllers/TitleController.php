@@ -536,20 +536,23 @@ class TitleController extends Controller
                 'episodies' => 'numeric',
                 'just_year' => 'required',
                 'broad_time' => 'required|date_format:"Y-m-d"',
-                'broad_finish' => Rule::excludeIf(isset($request->broad_finish)), 'date_format:"Y-m-d"',
                 'genre_id' => 'required',
                 'rating_id' => 'required',
                 'images' => 'string',
             ]);
-    
-            if (empty($request['broad_finish'])) :
-                $request['broad_finish'] = null;
-            endif;
-    
+
+            if ($request->broadFinish) {
+                $this->validate($request, [
+                    'broadFinish' => 'date_format:"Y-m-d"',
+                ]);
+            } else {
+                $request->broadFinish = null;
+            }
+
             if (empty($request['episodies'])) :
                 $request['episodies'] = '0';
             endif;
-    
+
             $data = Title::find($id);
             $request['user_id'] = $data['user_id'];
             $request['edited_by'] = Auth::user()->id;
