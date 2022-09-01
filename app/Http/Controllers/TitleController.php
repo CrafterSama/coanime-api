@@ -541,12 +541,12 @@ class TitleController extends Controller
                 'images' => 'string',
             ]);
 
-            if ($request->broadFinish) {
+            if ($request['broad_finish']) {
                 $this->validate($request, [
-                    'broadFinish' => 'date_format:"Y-m-d"',
+                    'broad_finish' => 'date_format:"Y-m-d"',
                 ]);
             } else {
-                $request->broadFinish = null;
+                $request['broad_finish'] = null;
             }
 
             if (empty($request['episodies'])) :
