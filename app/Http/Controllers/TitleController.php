@@ -404,12 +404,21 @@ class TitleController extends Controller
             $description = $title->pluck('sinopsis');
             $title = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->findOrFail($id);
 
+            $meta = [
+                'statuses' => [
+                    'emision' => 'En Emisión',
+                    'finalizado' => 'Finalizado',
+                    'estreno' => 'Estreno',
+                ]
+            ];
+
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage('Titulo encontrado'),
                 'title' => 'Coanime.net - Titulos - ' . $name->first(),
                 'description' => Str::words(htmlentities(strip_tags($description->first())), 20),
                 'result' => $title->first(),
+                'meta' => $meta,
             ), 200);
         } else {
             return response()->json(array(
@@ -419,13 +428,14 @@ class TitleController extends Controller
         }
     }
     
-    public function apiTitlesByType($type)
+    public function apiShowTitlesByType($type)
     {
         $type_id = TitleType::where('slug', '=', $type)->pluck('id');
         $name = TitleType::where('slug', '=', $type)->pluck('name');
         $id = Title::where('type_id', $type_id)->pluck('id');
         $titles = Title::where('type_id', $type_id)->with('images', 'rating', 'type', 'genres')->orderBy('name', 'asc')->paginate(30);
         $types = TitleType::orderBy('name', 'asc')->get();
+        $genres = Genre::orderBy('name', 'asc')->get();
 
         return response()->json(array(
             'code' => 200,
@@ -437,10 +447,11 @@ class TitleController extends Controller
             'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $name->first(),
             'result' => $titles,
             'types' => $types,
+            'genres' => $genres
         ), 200);
     }
 
-    public function apiAllByGenre($genre)
+    public function apiShowTitlesByGenre($genre)
     {
         $genre_id = Genre::where('slug', '=', $genre)->pluck('id');
         $name = Genre::where('slug', '=', $genre)->pluck('name');
@@ -450,6 +461,7 @@ class TitleController extends Controller
         })->with('images', 'rating', 'type', 'genres')->orderBy('name', 'asc')->paginate(30);
 
         $genres = Genre::orderBy('name', 'asc')->get();
+        $types = TitleType::orderBy('name', 'asc')->get();
 
         return response()->json(array(
             'code' => 200,
@@ -459,8 +471,9 @@ class TitleController extends Controller
             ),
             'title' => 'Coanime.net - Titulos - ' . $name->first(),
             'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $name->first(),
-            'titles' => $titles,
+            'result' => $titles,
             'genres' => $genres,
+            'types' => $types,
         ), 200);
     }
 

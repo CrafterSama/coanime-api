@@ -56,7 +56,7 @@ Route::prefix('external/')->group(function () {
   Route::get('ecma', [EncyclopediaController::class, 'index']);
 
   Route::get('titles', [TitleController::class, 'apiTitles']);
-  Route::get('titles/{type}', [TitleController::class, 'apiTitlesByType']);
+  Route::get('titles/{type}', [TitleController::class, 'apiShowTitlesByType']);
   Route::get('titles/{type}/{slug}', [TitleController::class, 'apiShowTitle']);
   Route::get('titles/{type}/{slug}/posts', [TitleController::class, 'postsTitle']);
 
@@ -65,7 +65,8 @@ Route::prefix('external/')->group(function () {
   Route::get('search/magazine/{name}', [MagazineController::class, 'apiIndex']);
   Route::get('search/companies/{name}', [CompanyController::class, 'apiIndex']);
 
-  Route::get('genres/{slug}', [TitleController::class, 'apiAllByGenre']);
+  Route::get('genres', [TitleController::class, 'apiAllByGenre']);
+  Route::get('genres/{slug}', [TitleController::class, 'apiShowTitlesByGenre']);
 
   Route::get('events', [EventController::class, 'index']);
   Route::get('events/{slug}', [EventController::class, 'apiShow']);
