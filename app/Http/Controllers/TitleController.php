@@ -526,65 +526,76 @@ class TitleController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $this->validate($request, [
-            'name' => 'required',
-            'other_titles' => 'required',
-            'type_id' => 'required',
-            'sinopsis' => 'required',
-            'episodies' => 'numeric',
-            'just_year' => 'required',
-            'broad_time' => 'required|date_format:"Y-m-d"',
-            'broad_finish' => Rule::excludeIf(isset($request->broad_finish)), 'date_format:"Y-m-d"',
-            'genre_id' => 'required',
-            'rating_id' => 'required',
-            'images' => 'string',
-        ]);
+        try {
 
-        if (empty($request['broad_finish'])) :
-            $request['broad_finish'] = null;
-        endif;
-
-        if (empty($request['episodies'])) :
-            $request['episodies'] = '0';
-        endif;
-
-        $data = Title::find($id);
-        $request['user_id'] = $data['user_id'];
-        $request['edited_by'] = Auth::user()->id;
-        $request['slug'] = Str::slug($request['name']);
-
-        if ($data->update($request->all())) {
-            if ($request->images) {
-                if (TitleImage::where('title_id', $id)->count() > 0) {
-                    $images = TitleImage::where('title_id', $id);
-                } else {
-                    $images = new TitleImage;
+            $this->validate($request, [
+                'name' => 'required',
+                'other_titles' => 'required',
+                'type_id' => 'required',
+                'sinopsis' => 'required',
+                'episodies' => 'numeric',
+                'just_year' => 'required',
+                'broad_time' => 'required|date_format:"Y-m-d"',
+                'broad_finish' => Rule::excludeIf(isset($request->broad_finish)), 'date_format:"Y-m-d"',
+                'genre_id' => 'required',
+                'rating_id' => 'required',
+                'images' => 'string',
+            ]);
+    
+            if (empty($request['broad_finish'])) :
+                $request['broad_finish'] = null;
+            endif;
+    
+            if (empty($request['episodies'])) :
+                $request['episodies'] = '0';
+            endif;
+    
+            $data = Title::find($id);
+            $request['user_id'] = $data['user_id'];
+            $request['edited_by'] = Auth::user()->id;
+            $request['slug'] = Str::slug($request['name']);
+    
+            if ($data->update($request->all())) {
+                if ($request->images) {
+                    if (TitleImage::where('title_id', $id)->count() > 0) {
+                        $images = TitleImage::where('title_id', $id);
+                    } else {
+                        $images = new TitleImage;
+                    }
+                    $images->name = $request['images'];
+                    $images->thumbnail = $request['images'];
+                    $data->images()->save($images);
                 }
-                $images->name = $request['images'];
-                $images->thumbnail = $request['images'];
-                $data->images()->save($images);
+    
+                $data->genres()->sync($request['genre_id']);
+    
+                return response()->json(array(
+                    'code' => 200,
+                    'message' => array(
+                        'type' => 'Success',
+                        'text' => 'Titulo actualizado',
+                    ),
+                    'title' => 'Coanime.net - Titulos - ' . $request['name'],
+                    'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $request['name'],
+                    'result' => $data,
+                ), 200);
+            } else {
+                return response()->json(array(
+                    'code' => 404,
+                    'message' => array(
+                        'type' => 'Error',
+                        'text' => 'Titulo no pudo ser actualizado',
+                    ),
+                ), 404);
             }
-
-            $data->genres()->sync($request['genre_id']);
-
+        } catch (\Exception $e) {
             return response()->json(array(
-                'code' => 200,
-                'message' => array(
-                    'type' => 'Success',
-                    'text' => 'Titulo actualizado',
-                ),
-                'title' => 'Coanime.net - Titulos - ' . $request['name'],
-                'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $request['name'],
-                'result' => $data,
-            ), 200);
-        } else {
-            return response()->json(array(
-                'code' => 404,
+                'code' => 500,
                 'message' => array(
                     'type' => 'Error',
-                    'text' => 'Titulo no pudo ser actualizado',
+                    'text' => 'Error al tratar de guardar. Error: ' . $e->getMessage(),
                 ),
-            ), 404);
+            ), 500);
         }
     }
 
