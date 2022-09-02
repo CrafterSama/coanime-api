@@ -170,7 +170,7 @@ class TitleController extends Controller
             }
 
             if (empty($request['episodies'])) {
-                $request['episodies'] = null;
+                $request['episodies'] = 0;
             }
 
             $data = new Title;
