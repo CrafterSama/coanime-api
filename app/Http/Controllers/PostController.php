@@ -37,16 +37,16 @@ class PostController extends Controller
     {
         try {
             $categories = $request->category ? [$request->category] : [1,2,3,4,5,6,7,8,11,12,13];
+            $carbon = Carbon::now();
 
             $relevants = Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
+                ->whereBetween('postponed_to', [Carbon::now()->subDays(7), Carbon::now()])
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->whereIn('category_id', $categories)
                 ->where('view_counter', '>', 5)
-                ->whereBetween('postponed_to', [Carbon::now()->subDays(7), Carbon::now()])
-                ->orWhere('postponed_to', '!=', null)
                 ->where('image', '!=', null)
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
