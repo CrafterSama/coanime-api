@@ -36,15 +36,16 @@ class PostController extends Controller
     public function index(Request $request)
     {
         try {
+            $categories = $request->category ? [$request->category] : [1,2,3,4,5,6,7,8,11,12,13];
 
             $relevants = Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
                 ->where('approved', 'yes')
                 ->where('draft', '0')
-                ->whereNotIn('category_id', [10])
+                ->whereIn('category_id', $categories)
                 ->where('view_counter', '>', 5)
-                ->whereBetween('postponed_to', [Carbon::now()->subMonths(36), Carbon::now()])
+                ->whereBetween('postponed_to', [Carbon::now()->subDays(7), Carbon::now()])
                 ->orWhere('postponed_to', '!=', null)
                 ->where('image', '!=', null)
                 ->orderBy('view_counter', 'desc')
@@ -68,7 +69,7 @@ class PostController extends Controller
                 ->with('users', 'categories', 'titles', 'tags')
                 ->where('approved', 'yes')
                 ->where('draft', '0')
-                ->whereNotIn('category_id', [10])
+                ->whereIn('category_id', $categories)
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
                 ->where('image', '!=', null)
@@ -117,13 +118,13 @@ class PostController extends Controller
      */
     public function posts(Request $request)
     {
-        $carbon = new Carbon;
+        $categories = $request->category ? [$request->category] : [1,2,3,4,5,6,7,8,11,12,13];
         $news = Post::search($request->name)
             ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
             ->with('users', 'categories', 'titles', 'tags')
             ->where('approved', 'yes')
             ->where('draft', '0')
-            ->whereNotIn('category_id', [10])
+            ->whereIn('category_id', $categories)
             ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
             ->where('image', '!=', null)
@@ -140,12 +141,12 @@ class PostController extends Controller
             ->whereNotIn('id', $ids)
             ->where('approved', 'yes')
             ->where('draft', '0')
-            ->where('category_id', '!=', 10)
-            ->where('postponed_to', '<=', $carbon->now())
+            ->whereIn('category_id', $categories)
+            ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
             ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
-            ->paginate(15           );
+            ->paginate(15);
         return $posts;
     }
     
@@ -175,7 +176,7 @@ class PostController extends Controller
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->whereIn('category_id', [5,8])
-            ->where('postponed_to', '<=', $carbon->now())
+            ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
             ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
@@ -233,11 +234,11 @@ class PostController extends Controller
             ->where('category_id', '!=', 10)
             ->where('category_id', $category)
             ->where('draft', '0')
-            ->where('postponed_to', '<=', $carbon->now())
+            ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
             ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
-            ->paginate(30);
+            ->paginate(15);
         return $posts;
     }
 
@@ -508,7 +509,7 @@ class PostController extends Controller
     {
         try {
             $category_id = Category::where('slug', '=', $category)->pluck('id');
-            $category_name = Category::where('slug', '=', $category)->pluck('name');
+            $category_name = Category::where('slug', '=', $category)->pluck('name')->first();
 
             $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
