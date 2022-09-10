@@ -29,7 +29,7 @@ class TitleStatistics extends Model
 		}
 
 		public function statistics() {
-			return $this->belongsTo(Statistic::class, 'statistics_id', 'id');
+			return $this->belongsTo(Statistics::class, 'statistics_id', 'id');
 		}
 
 	}

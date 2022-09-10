@@ -73,9 +73,9 @@ class User extends Authenticatable
         return $this->hasMany(Title::class)->orderBy('id', 'desc');
     }
     
-    public function statistics()
+    public function titleStatistics()
     {
-        return $this->hasOne(TitleStatistics::class);
+        return $this->hasOne(TitleStatistics::class)->with('titles', 'statistics');
     }
     
     public function rates()

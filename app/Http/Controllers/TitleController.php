@@ -370,7 +370,7 @@ class TitleController extends Controller
                     'type' => 'Success',
                     'text' => 'Estadística actualizada',
                 ),
-                'result' => $data,
+                'result' => $stats,
             ), 200);
         } catch (\Exception $e) {
             return response()->json(array(
@@ -404,9 +404,9 @@ class TitleController extends Controller
                 'code' => 200,
                 'message' => array(
                     'type' => 'Success',
-                    'text' => 'Estadística actualizada',
+                    'text' => 'Rate actualizado',
                 ),
-                'result' => $data,
+                'result' => $rates,
             ), 200);
         } catch (\Exception $e) {
             return response()->json(array(
@@ -447,6 +447,46 @@ class TitleController extends Controller
                 ),
             ), 404);
         }
+    }
+
+    public function userTitleList(Request $request)
+    {
+        $data = User::find(Auth::user()->id)->get();
+        $titles = TitleStatistics::where('user_id', $data->pluck('id')->first())->with('titles', 'statistics')->get();
+        return response()->json(array(
+            'code' => 200,
+            'message' => array(
+                'type' => 'Success',
+                'text' => 'Titulos en tu Lista encontrados',
+            ),
+            'list' => $titles,
+        ), 200);
+    }
+
+    public function statisticsByUser(Request $request)
+    {
+        $statistics = TitleStatistics::where('user_id', $request->user)->where('title_id', $request->title)->with('statistics')->get();
+        return response()->json(array(
+            'code' => 200,
+            'message' => array(
+                'type' => 'Success',
+                'text' => 'Estadistica Encontrada',
+            ),
+            'data' => $statistics->first(),
+        ), 200);
+    }
+
+    public function ratesByUser(Request $request)
+    {
+        $rates = TitleRate::where('user_id', $request->user)->where('title_id', $request->title)->with('rates')->get();
+        return response()->json(array(
+            'code' => 200,
+            'message' => array(
+                'type' => 'Success',
+                'text' => 'Rate Encontrado',
+            ),
+            'data' => $rates->first(),
+        ), 200);
     }
 
     /**
