@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Carbon;
 
 class Title extends Model
@@ -71,6 +72,16 @@ class Title extends Model
     public function genres(): BelongsToMany
     {
         return $this->belongsToMany(Genre::class);
+    }
+    
+    public function statistics(): HasOne
+    {
+        return $this->hasOne(TitleStatistics::class);
+    }
+
+    public function rates(): HasOne
+    {
+        return $this->hasOne(TitleRate::class);
     }
 
     public function posts(): BelongsToMany

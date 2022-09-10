@@ -72,6 +72,16 @@ class User extends Authenticatable
     {
         return $this->hasMany(Title::class)->orderBy('id', 'desc');
     }
+    
+    public function statistics()
+    {
+        return $this->hasOne(TitleStatistics::class);
+    }
+    
+    public function rates()
+    {
+        return $this->hasOne(TitleRate::class);
+    }
 
     public function isAdmin()
     {

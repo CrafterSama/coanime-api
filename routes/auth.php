@@ -59,6 +59,10 @@ Route::prefix('external/')->group(function () {
   Route::get('titles/{type}', [TitleController::class, 'apiShowTitlesByType']);
   Route::get('titles/{type}/{slug}', [TitleController::class, 'apiShowTitle']);
   Route::get('titles/{type}/{slug}/posts', [TitleController::class, 'postsTitle']);
+  
+  Route::post('titles/{title_id}/{statistics_id}/stats', [TitleController::class, 'updateStatistics']);
+  Route::post('titles/{title_id}/{rate_id}/rates', [TitleController::class, 'updateRates']);
+
 
   Route::get('search/titles/{name}', [TitleController::class, 'apiSearchTitles']);
   Route::get('search/people/{name}', [PeopleController::class, 'apiIndex']);
