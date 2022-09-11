@@ -143,8 +143,8 @@ class UserController extends Controller
         if ($request->profile_photo_path) {
             $user->profile_photo_path = $request->profile_photo_path;
         }
-        if ($request->cover_photo_path) {
-            $user->cover_photo_path = $request->cover_photo_path;
+        if ($request->profile_cover_path) {
+            $user->profile_cover_path = $request->profile_cover_path;
         }
         try {
             if ($user->save()) {

@@ -25,7 +25,7 @@ class TitleStatistics extends Model
 		}
 
 		public function titles() {
-			return $this->belongsTo(Title::class, 'title_id', 'id');
+			return $this->belongsTo(Title::class, 'title_id', 'id')->with('genres', 'type', 'images');
 		}
 
 		public function statistics() {

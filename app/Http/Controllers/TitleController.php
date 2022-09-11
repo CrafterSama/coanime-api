@@ -451,8 +451,8 @@ class TitleController extends Controller
 
     public function userTitleList(Request $request)
     {
-        $data = User::find(Auth::user()->id)->get();
-        $titles = TitleStatistics::where('user_id', $data->pluck('id')->first())->with('titles', 'statistics')->get();
+        $titles = TitleStatistics::where('user_id', Auth::user()->id)->with('titles', 'statistics')->paginate();
+        //$titles = TitleStatistics::where('user_id', $request->user)->with('titles', 'statistics')->paginate();
         return response()->json(array(
             'code' => 200,
             'message' => array(
