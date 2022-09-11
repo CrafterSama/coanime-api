@@ -459,6 +459,9 @@ class TitleController extends Controller
                 'type' => 'Success',
                 'text' => 'Titulos en tu Lista encontrados',
             ),
+            'title' => 'Coanime.net - Titulos - Lista de Titulos',
+            'descripcion' => 'Tu Lista de Titulos, los puedes agregar a la lista a traves de las Watch Options',
+            'keywords' => 'Lista de Titulos, Titulos, Lista, Titulos en tu Lista, lista anime, lista manga, lista ova, lista película, lista especial, lista ona, lista ovas, lista películas, lista especiales, lista onas',
             'list' => $titles,
         ), 200);
     }
