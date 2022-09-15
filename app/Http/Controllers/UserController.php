@@ -97,8 +97,8 @@ class UserController extends Controller
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage('User found'),
-                'title' => 'Coanime.net - Profile',
-                'description' => 'This is the User Profile',
+                'title' => 'Coanime.net - Profile edition',
+                'description' => 'This is to Edit the User Profile',
                 'result' => $user,
             ), 200);
         } else {
@@ -290,24 +290,38 @@ class UserController extends Controller
         }
     }
 
-    public function apiProfile(Request $request, $slug = null, $id = null)
+    public function apiProfile(Request $request)
     {
-        if (User::where('slug', '=', $slug)->pluck('id')->count() > 0) {
-            $id = User::whereSlug($slug)->pluck('id')->first();
-            $user = User::with('roles')->find($id);
+        try {
+            if (User::whereSlug($request->slug)->pluck('id')->count() > 0) {
+                $id = User::whereSlug($request->slug)->pluck('id')->first();
+                $user = User::with('roles')->find($id);
 
+                return response()->json(array(
+                    'code' => 200,
+                    'message' => Helper::successMessage('User found'),
+                    'title' => 'Coanime.net - Perfil - ' . $user->name,
+                    'description' => 'Perfil de ' . $user->name . ' en Coanime.net',
+                    'result' => $user
+                ), 200);
+                //return view('users.details', compact('user', 'carbon'));
+            } else {
+                return response()->json(array(
+                    'code' => 404,
+                    'message' => Helper::errorMessage('User not found'),
+                    'title' => 'Coanime.net - Perfil no enontrado - ' . $request->slug,
+                    'description' => 'No se consiguio el perfil de ' . $request->slug . ' en Coanime.net',
+                    'result' => $request->slug
+                ), 404);
+            }
+        } catch (\Exception $e) {
             return response()->json(array(
-                'status' => 'Success',
-                'message' => 'Usuario encontrado',
-                'data' => $user
-            ), 200);
-            //return view('users.details', compact('user', 'carbon'));
-        } else {
-            return response()->json(array(
-                'status' => 'error',
-                'message' => 'Usuario no encontrado',
-                'user' => $slug
-            ), 404);
+                'code' => 500,
+                'message' => Helper::errorMessage('Internal Server Error, Error: ' . $e->getMessage()),
+                'title' => 'Coanime.net - Error Interno',
+                'description' => 'Error Interno en Coanime.net',
+                'data' => $e
+            ), 500);
         }
     }
 
@@ -315,15 +329,17 @@ class UserController extends Controller
     {
 
         if (Post::where('user_id', $id)->count() > 0) {
-            $posts = Post::where('user_id', $id)->paginate(10);
+            $posts = Post::where('user_id', $id)/*->where('view_counter', '>', 300)*/->where('image', '!=', null)->where('image', '=', 'https://api.coanime.net/storage/images/posts/')->with('categories')->paginate();
             return response()->json(array(
-                'message' => 'Success',
-                'quantity' => $posts->count(),
-                'data' => $posts,
+                'code' => 200,
+                'message' => Helper::successMessage('Posts founds'),
+                'result' => $posts,
             ), 200);
         } else {
             return response()->json(array(
-                'message' => 'Not Found!'
+                'code' => 404,
+                'message' => Helper::errorMessage('Posts not founds'),
+                'result' => null,
             ), 404);
         }
     }
