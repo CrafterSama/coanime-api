@@ -329,7 +329,7 @@ class UserController extends Controller
     {
 
         if (Post::where('user_id', $id)->count() > 0) {
-            $posts = Post::where('user_id', $id)/*->where('view_counter', '>', 300)*/->where('image', '!=', null)->where('image', '=', 'https://api.coanime.net/storage/images/posts/')->with('categories')->paginate();
+            $posts = Post::where('user_id', $id)->where('view_counter', '>', 50)->where('image', '!=', null)->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')->with('categories')->orderBy('postponed_to', 'desc')->paginate();
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage('Posts founds'),
@@ -348,15 +348,17 @@ class UserController extends Controller
     {
 
         if (Title::where('user_id', $id)->count() > 0) {
-            $titles = Title::where('user_id', $id)->paginate(10);
+            $titles = Title::where('user_id', $id)->with('images', 'rating', 'type', 'genres')->orderBy('created_at', 'desc')->paginate();
             return response()->json(array(
-                'message' => 'Success',
-                'quantity' => $titles->count(),
-                'data' => $titles,
+                'code' => 200,
+                'message' => Helper::successMessage('Titles founds'),
+                'result' => $titles,
             ), 200);
         } else {
             return response()->json(array(
-                'message' => 'Not Found!'
+                'code' => 404,
+                'message' => Helper::errorMessage('Titles not founds'),
+                'result' => null,
             ), 404);
         }
     }
