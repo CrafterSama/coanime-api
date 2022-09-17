@@ -823,8 +823,9 @@ class PostController extends Controller
             $otherArticles = Post::select('id', 'title', 'category_id', 'slug', 'image')->with('categories')
                 ->where('category_id', '=', $post->category_id)
                 ->where('view_counter', '>', '100')
+                ->where('image', '!=', null)
+                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
                 ->whereNotIn('id', [$post->id])
-                ->whereNotIn('image', ['https://coanime.net/images/posts/'])
                 ->orderBy('postponed_to', 'desc')
                 ->get();
             if ($otherArticles->count() > 2) {

@@ -13,7 +13,9 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Product;
 
 class Helper extends Model
 {
@@ -216,7 +218,7 @@ class Helper extends Model
                                         // don't use, couldn't find what we need
                                         unset($video_id);
                                     }
-                                } catch (Exception $e) {
+                                } catch (\Exception $e) {
                                     unset($video_id);
                                 }
                             }
@@ -277,7 +279,7 @@ class Helper extends Model
         foreach ($json as $j) {
             $jdata = $j['response']['anime'];
             $data['name'] = $jdata['nombre'];
-            $data['slug'] = str_slug($jdata['nombre']);
+            $data['slug'] = Str::slug($jdata['nombre']);
             $data['sinopsis'] = $jdata['sinopsis'];
             $data['episodies'] = $jdata['episodios'];
             $data['user_id'] = 1;
@@ -313,7 +315,7 @@ class Helper extends Model
     public static function createSlug($title, $id = 0)
     {
         // Normalize the title
-        $slug = str_slug($title);
+        $slug = Str::slug($title);
         // Get any that could possibly be related.
         // This cuts the queries down by doing it once.
         $allSlugs = getRelatedSlugs($slug, $id);

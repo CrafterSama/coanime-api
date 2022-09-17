@@ -328,8 +328,9 @@ class UserController extends Controller
     public function postsProfile(Request $request, $id)
     {
 
+        $posts = Post::where('user_id', $id)->where('view_counter', '>', 50)->where('image', '!=', null)->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')->with('categories')->orderBy('postponed_to', 'desc')->paginate();
+
         if (Post::where('user_id', $id)->count() > 0) {
-            $posts = Post::where('user_id', $id)->where('view_counter', '>', 50)->where('image', '!=', null)->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')->with('categories')->orderBy('postponed_to', 'desc')->paginate();
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage('Posts founds'),
@@ -337,18 +338,19 @@ class UserController extends Controller
             ), 200);
         } else {
             return response()->json(array(
-                'code' => 404,
+                'code' => 200,
                 'message' => Helper::errorMessage('Posts not founds'),
-                'result' => null,
-            ), 404);
+                'result' => $posts,
+            ), 200);
         }
     }
 
     public function titlesProfile(Request $request, $id)
     {
 
+        $titles = Title::where('user_id', $id)->with('images', 'rating', 'type', 'genres')->orderBy('created_at', 'desc')->paginate();
+        
         if (Title::where('user_id', $id)->count() > 0) {
-            $titles = Title::where('user_id', $id)->with('images', 'rating', 'type', 'genres')->orderBy('created_at', 'desc')->paginate();
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage('Titles founds'),
@@ -356,10 +358,10 @@ class UserController extends Controller
             ), 200);
         } else {
             return response()->json(array(
-                'code' => 404,
+                'code' => 200,
                 'message' => Helper::errorMessage('Titles not founds'),
-                'result' => null,
-            ), 404);
+                'result' => $titles,
+            ), 200);
         }
     }
 
