@@ -42,44 +42,44 @@ class PostController extends Controller
             $relevants = Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
+                ->whereIn('category_id', $categories)
                 ->whereBetween('postponed_to', [Carbon::now()->subDays(3), Carbon::now()])
+                ->where('image', '!=', null)
                 ->where('approved', 'yes')
                 ->where('draft', '0')
-                ->whereIn('category_id', $categories)
                 ->where('view_counter', '>', 5)
-                ->where('image', '!=', null)
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
                 ->get();
     
-            $videos = Post::search($request->name)
+            /*$videos = Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
-                ->where('category_id', 13)
+                ->where('image', '!=', null)
                 ->where('approved', 'yes')
+                ->where('category_id', 13)
                 ->where('draft', '0')
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to','!=', null)
-                ->where('image', '!=', null)
                 ->orderBy('postponed_to', 'desc')
-                ->take(5)->get();
+                ->take(5)->get();*/
     
             $news = Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
-                ->where('approved', 'yes')
-                ->where('draft', '0')
                 ->whereIn('category_id', $categories)
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
                 ->where('image', '!=', null)
+                ->where('approved', 'yes')
+                ->where('draft', '0')
                 ->orderBy('postponed_to', 'desc')
                 ->take(4)->get();
     
-            $events = Event::with('users', 'city', 'country')
+            /*$events = Event::with('users', 'city', 'country')
                 ->where('date_start', '>=', Carbon::now())
                 ->orderBy('date_start', 'asc')
-                ->get();
+                ->get();*/
     
             $keywords = [];
             foreach ($news as $p) {
@@ -100,9 +100,9 @@ class PostController extends Controller
                 'title' => 'Coanime.net - Noticias y Enciclopedia de Cultura Asiática, Manga y Anime',
                 'description' => 'Encuentra las noticias más recientes de anime, manga, video juegos y más. Puedes encontrar información  de eventos realizados en Hispanoamérica y de las series, manga, seiyus o compañías encargadas en nuestra Enciclopedia.',
                 'keywords' => $keywords,
-                'events' => $events,
+                /*'events' => $events,*/
                 'relevants' => $relevants,
-                'videos' => $videos,
+                /*'videos' => $videos,*/
                 'broadcast' => $broadcast['data'],
                 'result' => $news
             ), 200);
@@ -144,17 +144,17 @@ class PostController extends Controller
         $posts = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
             ->whereNotIn('id', $ids)
+            ->where('image', '!=', null)
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->whereIn('category_id', $categories)
             ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
-            ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
             ->paginate(15);
         return $posts;
     }
-    
+
     public function postsJapan(Request $request)
     {
         $carbon = new Carbon;
@@ -162,11 +162,11 @@ class PostController extends Controller
             ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
             ->with('users', 'categories', 'titles', 'tags')
             ->where('approved', 'yes')
+            ->where('image', '!=', null)
             ->where('draft', '0')
             ->whereNotIn('category_id', [10])
             ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
-            ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
             ->take(4)->get();
 
@@ -235,13 +235,12 @@ class PostController extends Controller
         //dd($category);
         $posts = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
-            ->where('approved', 'yes')
-            ->where('category_id', '!=', 10)
-            ->where('category_id', $category)
-            ->where('draft', '0')
+            ->where('image', '!=', null)
             ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
-            ->where('image', '!=', null)
+            ->where('category_id', $category)
+/*            ->where('approved', 'yes')
+            ->where('draft', '0')*/
             ->orderBy('postponed_to', 'desc')
             ->paginate(15);
         return $posts;
@@ -510,10 +509,10 @@ class PostController extends Controller
      * @param  str  $type
      * @return \Illuminate\Http\Response
      */
-    public function showAllByCategory($category)
+    public function showAllByCategory(Request $request, $category)
     {
         try {
-            $category_id = Category::where('slug', '=', $category)->pluck('id');
+            $category_id = Category::where('slug', '=', $category)->pluck('id')->first();
             $category_name = Category::where('slug', '=', $category)->pluck('name')->first();
 
             $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
@@ -532,37 +531,42 @@ class PostController extends Controller
 
             $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
+                ->where('image', '!=', null)
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->whereNotIn('category_id', [10])
                 ->where('category_id', $category_id)
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
-                ->where('image', '!=', null)
                 ->orderBy('postponed_to', 'desc')
                 ->take(4)
                 ->get();
 
             $keywords = [];
-                foreach ($news as $p) {
-                    foreach ($p->tags as $tag) {
-                        $keywords[] = $tag->name;
-                    }
+            foreach ($news as $p) {
+                foreach ($p->tags as $tag) {
+                    $keywords[] = $tag->name;
                 }
+            }
 
-                $keywords = implode(', ', $keywords);
+            $keywords = implode(', ', $keywords);
 
-                return response()->json(array(
-                    'code' => 200,
-                    'message' => 'Success',
-                    'title' => 'Coanime.net - Noticias relacionadas con ' . $category_name,
-                    'description' => 'Posts y noticias relacionados con la categoria ' . $category_name,
-                    'keywords' => $keywords,
-                    /*'events' => $events,*/
-                    'relevants' => $relevants,
-                    /*'videos' => $videos,*/
-                    'result' => $news
-                ), 200);
+            $broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
+            $json = file_get_contents($broadcastUrl);
+            $broadcast = json_decode($json, true);
+
+            return response()->json(array(
+                'code' => 200,
+                'message' => 'Success',
+                'title' => 'Coanime.net - Noticias relacionadas con ' . $category_name,
+                'description' => 'Posts y noticias relacionados con la categoria ' . $category_name,
+                'keywords' => $keywords,
+                'broadcast' => $broadcast['data'],
+                /*'events' => $events,*/
+                'relevants' => $relevants,
+                /*'videos' => $videos,*/
+                'result' => $news
+            ), 200);
         } catch (\Exception $e) {
             return response()->json(array(
                 'code' => 500,
@@ -1079,9 +1083,11 @@ class PostController extends Controller
 
         foreach ($posts as $post) {
             $post->image = str_replace('https://coanime.net/', 'https://api.coanime.net/storage/', $post->image);
+            $post->image = str_replace('https://coanime.net/images/posts/', 'https://api.coanime.net/storage/images/posts', $post->image);
             $post->content = str_replace('https://coanime.net/images/', 'https://api.coanime.net/storage/images/', $post->content);
             $post->content = str_replace('https://images.coanime.net/images/', 'https://api.coanime.net/storage/images/', $post->content);
             $post->content = str_replace('http://images.coanime.net/images/', 'https://api.coanime.net/storage/images/', $post->content);
+            $post->content = str_replace('https://coanime.net/images/posts/', 'https://api.coanime.net/storage/images/', $post->content);
             $post->save();
         }
         foreach($titles as $title) {

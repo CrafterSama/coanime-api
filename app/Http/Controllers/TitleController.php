@@ -158,6 +158,36 @@ class TitleController extends Controller
         'rx' => 6,
     ];
 
+    private $typeById = [
+        'tv' => 1,
+        'manga' => 2,
+        'movie' => 3,
+        'ova' => 4,
+        'manhwa' => 5,
+        'manhua' => 6,
+        'ona' => 10,
+        'light novel' => 11,
+        'special' => 13,
+        'one-shot' => 14,
+        'doujinshi' => 15,
+        'novel' => 16,
+    ];
+
+    private $typeTranslations = [
+        'tv' => 'tv',
+        'manga' => 'manga',
+        'pelicula' => 'movie',
+        'ova' => 'ova',
+        'manhwa' => 'manhwa',
+        'manhua' => 'manhua',
+        'ona' => 'ona',
+        'novela-ligera' => 'light novel',
+        'especial' => 'special',
+        'one-shot' => 'one-shot',
+        'doujinshi' => 'doujinshi',
+        'novela' => 'novel',
+    ];
+
     /**
      * Display a listing of titles serie.
      *
@@ -769,92 +799,99 @@ class TitleController extends Controller
         $title = Title::where('slug', '=', $slug)->where('type_id', $type_id);
         $thisTitle = Title::findOrFail($title->pluck('id'))->firstOrFail();
         $jikan = new MalClient;
-        $cloudTitleTemp = collect($jikan->getAnimeSearch(new AnimeSearchRequest($thisTitle->name), 1)->getResults());
-        $cloudTitleTemp = $cloudTitleTemp->filter(function ($value, $key) use ($type) {
-            return strtolower($value->getType()) == $type;
-        })->first();
-        $cloudTitle = $jikan->getAnime(new \Jikan\Request\Anime\AnimeRequest($cloudTitleTemp->getMalId()));
+        $cloudTitlesTemp = collect($jikan->getAnimeSearch(new AnimeSearchRequest($thisTitle->name), 1)->getResults());
+        $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value, $key) use ($type, $title) {
+            return strtolower($value->getTitle()) === strtolower($title->pluck('name')->first());
+        });
+        //dd($cloudTitlesTemp);
+        $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value, $key) use ($type, $title) {
+            return strtolower($value->getType()) === $this->typeTranslations[$type];
+        });
+        $cloudTitleTemp = $cloudTitlesTemp->first();
+        $cloudTitle = $cloudTitleTemp?->getMalId() ? $jikan->getAnime(new \Jikan\Request\Anime\AnimeRequest($cloudTitleTemp->getMalId())) : null;
         //dd($cloudTitle);
-
-        if(empty($thisTitle->other_titles)) {
-            $thisTitle->other_titles = $cloudTitle->getTitleJapanese() . ' (Japonés), ' . $cloudTitle->getTitleEnglish() . ' (Inglés)';
-            $thisTitle->save();
-        }
-
-        if (empty($thisTitle->sinopsis) || $thisTitle->sinopsis == 'Sinopsis no disponible' || $thisTitle->sinopsis == 'Pendiente de agregar sinopsis...') {
-            $thisTitle->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
-            $thisTitle->save();
-        }
-
-        if ((empty($thisTitle->trailer_url) || $thisTitle->trailer_url === null || $thisTitle->trailer_url === '') && $cloudTitle->getTrailer()->getUrl() !== null) {
-            $thisTitle->trailer_url = $cloudTitle->getTrailer()->getUrl();
-            $thisTitle->save();
-        }
-
-        if (($thisTitle->broad_time < Carbon::now() && $thisTitle->broad_finish > Carbon::now()) || ($thisTitle->broad_finish === null)) {
-            $thisTitle->status = 'En emisión';
-            $thisTitle->save();
-        } elseif ($thisTitle->broad_time > Carbon::now()) {
-            $thisTitle->status = 'Estreno';
-            $thisTitle->save();
-        } elseif ($thisTitle->broad_finish < Carbon::now()) {
-            $thisTitle->status = 'Finalizado';
-            $thisTitle->save();
-        }
-        
-        if (!$thisTitle->status) {
-            $thisTitle->status = $this->status[$cloudTitle->getStatus()];
-            $thisTitle->save();
-        }
-        
-        if (!$thisTitle->rating_id || $thisTitle->rating_id === 7) {
-            $thisTitle->rating_id = $this->rating[strtolower($cloudTitle->getRating())] ?? 7;
-            $thisTitle->save();
-        }
-
-        if ($thisTitle->episodies === 0 || $thisTitle->episodies === null || empty($thisTitle->episodies)) {
-            $thisTitle->episodies = $cloudTitle->getEpisodes();
-            $thisTitle->save();
-        }
 
         if ($title->count() > 0) {
             $id = $title->pluck('id');
             $name = $title->pluck('name');
             $description = $title->pluck('sinopsis');
             $title = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->findOrFail($id)->first();
-            
-            if (!$title->images) {
-                $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl();
-                $processingImage = file_get_contents($imageUrl);
-                $image = Image::make($processingImage);
-                $fileName = hash('sha256', strval(time()));
-                $image->encode('webp', 100);
 
-                if ($image->width() > 2560) {
-                    $image->resize(2560, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                }
-
-                $path = '/titles/';
-
-                $filePath = $path . $fileName . '.webp';
-                $imageUrl = Storage::disk('s3')->put($filePath, $image);
-                $imageUrl = Storage::disk('s3')->url($filePath);
-                $images = new TitleImage;
-                $images->create([
-                    'title_id' => $thisTitle->id,
-                    'name' => $imageUrl,
-                    'thumbnail' => $imageUrl,
-                ]);
+            if (($thisTitle->broad_time < Carbon::now() && $thisTitle->broad_finish > Carbon::now()) || ($thisTitle->broad_finish === null)) {
+                $thisTitle->status = 'En emisión';
+                $thisTitle->save();
+            } elseif ($thisTitle->broad_time > Carbon::now()) {
+                $thisTitle->status = 'Estreno';
+                $thisTitle->save();
+            } elseif ($thisTitle->broad_finish < Carbon::now()) {
+                $thisTitle->status = 'Finalizado';
+                $thisTitle->save();
             }
 
-            if ($title->genres->count() === 0) {
-                $newGenres = [];
-                foreach ($cloudTitle->getGenres() as $key => $gen) {
-                    $newGenres[] = $this->genres[strtolower($gen->getName())];
+            if ($cloudTitle?->getTitles() !== null) {
+                if(empty($thisTitle->other_titles)) {
+                    $thisTitle->other_titles = $cloudTitle->getTitleJapanese() . ' (Japonés), ' . $cloudTitle->getTitleEnglish() . ' (Inglés)';
+                    $thisTitle->save();
                 }
-                $title->genres()->sync($newGenres);
+    
+                if (empty($title->sinopsis) || $thisTitle->sinopsis == 'Sinopsis no disponible' || $thisTitle->sinopsis == 'Pendiente de agregar sinopsis...') {
+                    $thisTitle->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
+                    $thisTitle->save();
+                }
+    
+                if ((empty($thisTitle->trailer_url) || $thisTitle->trailer_url === null || $thisTitle->trailer_url === '') && $cloudTitle->getTrailer()->getUrl() !== null) {
+                    $thisTitle->trailer_url = $cloudTitle->getTrailer()->getUrl();
+                    $thisTitle->save();
+                }
+    
+                if (!$thisTitle->status) {
+                    $thisTitle->status = $this->status[$cloudTitle->getStatus()];
+                    $thisTitle->save();
+                }
+    
+                if (!$thisTitle->rating_id || $thisTitle->rating_id === 7) {
+                    $thisTitle->rating_id = $this->rating[strtolower($cloudTitle->getRating())] ?? 7;
+                    $thisTitle->save();
+                }
+    
+                if ($thisTitle->episodies === 0 || $thisTitle->episodies === null || empty($thisTitle->episodies)) {
+                    $thisTitle->episodies = $cloudTitle->getEpisodes();
+                    $thisTitle->save();
+                }
+    
+                if (!$title->images) {
+                    $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl();
+                    $processingImage = file_get_contents($imageUrl);
+                    $image = Image::make($processingImage);
+                    $fileName = hash('sha256', strval(time()));
+                    $image->encode('webp', 100);
+    
+                    if ($image->width() > 2560) {
+                        $image->resize(2560, null, function ($constraint) {
+                            $constraint->aspectRatio();
+                        });
+                    }
+    
+                    $path = '/titles/';
+    
+                    $filePath = $path . $fileName . '.webp';
+                    $imageUrl = Storage::disk('s3')->put($filePath, $image);
+                    $imageUrl = Storage::disk('s3')->url($filePath);
+                    $images = new TitleImage;
+                    $images->create([
+                        'title_id' => $thisTitle->id,
+                        'name' => $imageUrl,
+                        'thumbnail' => $imageUrl,
+                    ]);
+                }
+    
+                if ($title->genres->count() === 0) {
+                    $newGenres = [];
+                    foreach ($cloudTitle->getGenres() as $key => $gen) {
+                        $newGenres[] = $this->genres[strtolower($gen->getName())];
+                    }
+                    $title->genres()->sync($newGenres);
+                }
             }
 
             $rates = Rate::all();
@@ -1019,11 +1056,11 @@ class TitleController extends Controller
                 $titleStatus = '';
 
                 foreach ($value['themes'] as $key => $theme) {
-                    $titleGenres[] = $genres[strtolower($theme['name'])];
+                    $titleGenres[] = $this->genres[strtolower($theme['name'])];
                 }
 
                 foreach ($value['genres'] as $key => $gen) {
-                    $titleGenres[] = $genres[strtolower($gen['name'])];
+                    $titleGenres[] = $this->genres[strtolower($gen['name'])];
                 }
 
                 if ($value['status'] === 'Currently Airing') {
