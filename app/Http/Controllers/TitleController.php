@@ -22,12 +22,141 @@ use App\Models\TitleStatistics;
 use App\Models\Helper;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
+use Jikan\JikanPHP\Client;
+use Jikan\MyAnimeList\MalClient;
+use Jikan\Request\Search\AnimeSearchRequest;
+use GoogleTranslate;
+use Exception;
+use Image;
+
 class TitleController extends Controller
 {
+    private $genres = [
+        'adventure' => 1,
+        'comedy' => 2,
+        'romance' => 3,
+        'drama' => 4,
+        'sci-fi' => 5,
+        'action' => 7,
+        'magic' => 8,
+        'psychological' => 9,
+        'horror' => 10,
+        'mystery' => 11,
+        'supernatural' => 12,
+        'erotic' => 13,
+        'fantasy' => 14,
+        'slice of life' => 15,
+        'thriller' => 16,
+        'suspense' => 16,
+        'mecha' => 17,
+        'historical' => 18,
+        'ecchi' => 19,
+        'cooking' => 20,
+        'shojo' => 21,
+        'detectives' => 22,
+        'seinen' => 23,
+        'maids' => 24,
+        'moe' => 25,
+        'shounen' => 26,
+        'school life' => 27,
+        'school' => 27,
+        'gore' => 28,
+        'harem' => 29,
+        'yuri' => 30,
+        'girls love' => 30,
+        'yaoi' => 31,
+        'boys love' => 31,
+        'sports' => 32,
+        'team sports' => 32,
+        'strategy game' => 40,
+        'martial arts' => 43,
+        'survival' => 45,
+        'shounen ai' => 50,
+        'shoujo ai' => 51,
+        'josei' => 52,
+        'doujinshi' => 53,
+        'music' => 54,
+        'spacial' => 55,
+        'gothic' => 56,
+        'dark fantasy' => 57,
+        'demons' => 58,
+        'smut' => 59,
+        'sentai' => 60,
+        'parody' => 61,
+        'super powers' => 62,
+        'super power' => 62,
+        'superhero' => 62,
+        'military' => 63,
+        'samurai' => 64,
+        "childs" => 65,
+        'video games' => 66,
+        'video game' => 66,
+        'police' => 67,
+        'vampires' => 68,
+        'racing' => 69,
+        'monsters' => 70,
+        'isekai' => 71,
+        'monster girls' => 72,
+        'delinquents' => 74,
+        'reverse harem' => 75,
+        'office workers' => 76,
+        'tragedy' => 77,
+        'crime' => 78,
+        'magical girls' => 79,
+        'medical' => 80,
+        'philosophical' => 81,
+        'wuxia' => 82,
+        'aliens' => 83,
+        'animals' => 84,
+        'crossdressing' => 85,
+        'genderswap' => 86,
+        'ghosts' => 87,
+        'gyaru' => 88,
+        'incest' => 89,
+        'loli' => 90,
+        'mafia' => 91,
+        'ninja' => 92,
+        'post-apocalyptic' => 93,
+        'music' => 94,
+        'reincarnation' => 95,
+        'shota' => 96,
+        'time travel' => 97,
+        'traditional games' => 98,
+        'villainess' => 99,
+        'virtual reality' => 100,
+        'zombies' => 101,
+        'romantic subtext' => 102,
+        'mythology' => 103,
+        'high stakes game' => 104,
+        'love polygon' => 105,
+    ];
+
+    private $status = [
+        'Currently Airing' => 'En emisión',
+        'Finished Airing' => 'Finalizado',
+        'Not yet aired' => 'Estreno',
+    ];
+
+    private $rating = [
+        'g - all ages' => 1,
+        'g' => 1,
+        'pg - children' => 2,
+        'pg' => 2,
+        'pg-13 - teens 13 or older' => 3,
+        'pg-13' => 3,
+        'r - 17+ (violence & profanity)' => 4,
+        'r' => 4,
+        'r+ - mild nudity' => 5,
+        'r+' => 5,
+        'rx - hentai' => 6,
+        'rx' => 6,
+    ];
 
     /**
      * Display a listing of titles serie.
@@ -638,12 +767,96 @@ class TitleController extends Controller
     {
         $type_id = TitleType::where('slug', '=', $type)->pluck('id');
         $title = Title::where('slug', '=', $slug)->where('type_id', $type_id);
+        $thisTitle = Title::findOrFail($title->pluck('id'))->firstOrFail();
+        $jikan = new MalClient;
+        $cloudTitleTemp = collect($jikan->getAnimeSearch(new AnimeSearchRequest($thisTitle->name), 1)->getResults());
+        $cloudTitleTemp = $cloudTitleTemp->filter(function ($value, $key) use ($type) {
+            return strtolower($value->getType()) == $type;
+        })->first();
+        $cloudTitle = $jikan->getAnime(new \Jikan\Request\Anime\AnimeRequest($cloudTitleTemp->getMalId()));
+        //dd($cloudTitle);
+
+        if(empty($thisTitle->other_titles)) {
+            $thisTitle->other_titles = $cloudTitle->getTitleJapanese() . ' (Japonés), ' . $cloudTitle->getTitleEnglish() . ' (Inglés)';
+            $thisTitle->save();
+        }
+
+        if (empty($thisTitle->sinopsis) || $thisTitle->sinopsis == 'Sinopsis no disponible' || $thisTitle->sinopsis == 'Pendiente de agregar sinopsis...') {
+            $thisTitle->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
+            $thisTitle->save();
+        }
+
+        if ((empty($thisTitle->trailer_url) || $thisTitle->trailer_url === null || $thisTitle->trailer_url === '') && $cloudTitle->getTrailer()->getUrl() !== null) {
+            $thisTitle->trailer_url = $cloudTitle->getTrailer()->getUrl();
+            $thisTitle->save();
+        }
+
+        if (($thisTitle->broad_time < Carbon::now() && $thisTitle->broad_finish > Carbon::now()) || ($thisTitle->broad_finish === null)) {
+            $thisTitle->status = 'En emisión';
+            $thisTitle->save();
+        } elseif ($thisTitle->broad_time > Carbon::now()) {
+            $thisTitle->status = 'Estreno';
+            $thisTitle->save();
+        } elseif ($thisTitle->broad_finish < Carbon::now()) {
+            $thisTitle->status = 'Finalizado';
+            $thisTitle->save();
+        }
+        
+        if (!$thisTitle->status) {
+            $thisTitle->status = $this->status[$cloudTitle->getStatus()];
+            $thisTitle->save();
+        }
+        
+        if (!$thisTitle->rating_id || $thisTitle->rating_id === 7) {
+            $thisTitle->rating_id = $this->rating[strtolower($cloudTitle->getRating())] ?? 7;
+            $thisTitle->save();
+        }
+
+        if ($thisTitle->episodies === 0 || $thisTitle->episodies === null || empty($thisTitle->episodies)) {
+            $thisTitle->episodies = $cloudTitle->getEpisodes();
+            $thisTitle->save();
+        }
 
         if ($title->count() > 0) {
             $id = $title->pluck('id');
             $name = $title->pluck('name');
             $description = $title->pluck('sinopsis');
-            $title = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->findOrFail($id);
+            $title = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->findOrFail($id)->first();
+            
+            if (!$title->images) {
+                $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl();
+                $processingImage = file_get_contents($imageUrl);
+                $image = Image::make($processingImage);
+                $fileName = hash('sha256', strval(time()));
+                $image->encode('webp', 100);
+
+                if ($image->width() > 2560) {
+                    $image->resize(2560, null, function ($constraint) {
+                        $constraint->aspectRatio();
+                    });
+                }
+
+                $path = '/titles/';
+
+                $filePath = $path . $fileName . '.webp';
+                $imageUrl = Storage::disk('s3')->put($filePath, $image);
+                $imageUrl = Storage::disk('s3')->url($filePath);
+                $images = new TitleImage;
+                $images->create([
+                    'title_id' => $thisTitle->id,
+                    'name' => $imageUrl,
+                    'thumbnail' => $imageUrl,
+                ]);
+            }
+
+            if ($title->genres->count() === 0) {
+                $newGenres = [];
+                foreach ($cloudTitle->getGenres() as $key => $gen) {
+                    $newGenres[] = $this->genres[strtolower($gen->getName())];
+                }
+                $title->genres()->sync($newGenres);
+            }
+
             $rates = Rate::all();
             $statistics = Statistics::all();
 
@@ -660,7 +873,7 @@ class TitleController extends Controller
                 'message' => Helper::successMessage('Titulo encontrado'),
                 'title' => 'Coanime.net - Titulos - ' . $name->first(),
                 'description' => Str::words(htmlentities(strip_tags($description->first())), 20),
-                'result' => $title->first(),
+                'result' => $title,
                 'rates' => $rates,
                 'statistics' => $statistics,
                 'meta' => $meta,
@@ -760,5 +973,127 @@ class TitleController extends Controller
             ), 404);
         }
         /* return view('web.home', compact('posts')); */
+    }
+
+    public function consumeMangas(Request $equest)
+    {
+        // make a list of genres in english with their respectie id
+        
+
+        $type = [
+            'tv' => 1,
+            'manga' => 2,
+            'movie' => 3,
+            'ova' => 4,
+            'manhwa' => 5,
+            'manhua' => 6,
+            'ona' => 10,
+            'light novel' => 11,
+            'special' => 13,
+            'one-shot' => 14,
+            'doujinshi' => 15,
+            'novel' => 16,
+        ];
+
+        $rating = [
+            'g - all ages' => 1,
+            'pg - children' => 2,
+            'pg-13 - teens 13 or older' => 3,
+            'r - 17+ (violence & profanity)' => 4,
+            'r+ - mild nudity' => 5,
+            'rx - hentai' => 6,
+        ];
+
+        /*$broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
+        $json = file_get_contents($broadcastUrl);
+        $data = json_decode($json, true);
+        dd(collect($data));*/
+
+        for ($i = 20; $i <= 22; $i++) {
+            $url = 'https://api.jikan.moe/v4/seasons/20' . $i . '/winter';
+            $json = file_get_contents($url);
+            $results = json_decode($json, true);
+            foreach ($results['data'] as $key => $value) {
+
+                $titleGenres = [];
+                $titleStatus = '';
+
+                foreach ($value['themes'] as $key => $theme) {
+                    $titleGenres[] = $genres[strtolower($theme['name'])];
+                }
+
+                foreach ($value['genres'] as $key => $gen) {
+                    $titleGenres[] = $genres[strtolower($gen['name'])];
+                }
+
+                if ($value['status'] === 'Currently Airing') {
+                    $titleStatus = 'En emisión';
+                } elseif ($value['status'] === 'Finished Airing') {
+                    $titleStatus = 'Finalizado';
+                } elseif ($value['status'] === 'Not yet aired') {
+                    $titleStatus = 'Estreno';
+                }
+
+                // [Written by MAL Rewrite]
+                $synopsis = $value['synopsis'] ? GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $value['synopsis']), 'es') : null;
+
+                $imageUrl = $value['images']['webp']['large_image_url'];
+                $processingImage = file_get_contents($imageUrl);
+                $image = Image::make($processingImage);
+                $fileName = hash('sha256', strval(time()));
+                $image->encode('webp', 100);
+
+                if ($image->width() > 2560) {
+                    $image->resize(2560, null, function ($constraint) {
+                        $constraint->aspectRatio();
+                    });
+                }
+
+                $path = '/titles/';
+
+                $filePath = $path . $fileName . '.webp';
+                $imageUrl = Storage::disk('s3')->put($filePath, $image);
+                $imageUrl = Storage::disk('s3')->url($filePath);
+                //dd($imageUrl);
+
+                $title = new Title();
+                $title->name = $value['title'];
+                $title->slug = Str::slug($value['title']);
+                $title->sinopsis = $synopsis ?: 'Sin sinopsis';
+                $title->status = $titleStatus;
+                $title->other_titles = $value['title_english'] . ' (Inglés), '. $value['title_japanese'] . ' (Japonés)';
+                $title->status = $titleStatus;
+                $title->broad_time = $value['aired']['from'] ?: null;
+                $title->broad_finish = $value['aired']['to'] ?: null;
+                $title->episodies = $value['episodes'] ? $value['episodes'] : 0;
+                $title->type_id = $type[strtolower($value['type'])];
+                $title->trailer_url = $value['trailer']['url'] ?: null;
+                $title->rating_id = $value['rating'] ? $rating[strtolower($value['rating'])] : 7;
+                $title->just_year = 'false';
+                $title->user_id = 1;
+                $title->image_url = $imageUrl;
+                $title->genre = $titleGenres;
+                var_dump($title);
+                if (Title::where('slug', $title->slug)->first()) {
+                    echo 'Ya existe';
+                } else {
+                    $images = new TitleImage;
+                    $images->name = $imageUrl;
+                    $images->thumbnail = $imageUrl;
+                    $title->save();
+                    $title->images()->save($images);
+                    $title->genres()->sync($titleGenres);
+                    echo 'Guardado';
+                }
+            }
+        }
+
+        /*return response()->json(array(
+            'code' => 200,
+            'message' => array(
+                'type' => 'Success',
+                'text' => 'Mangas consumidos hasta la pagina 10',
+            ),
+        ), 200);*/
     }
 }

@@ -87,6 +87,10 @@ class PostController extends Controller
                     $keywords[] = $tag->name;
                 }
             }
+
+            $broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
+            $json = file_get_contents($broadcastUrl);
+            $broadcast = json_decode($json, true);
     
             $keywords = implode(', ', $keywords);
     
@@ -99,6 +103,7 @@ class PostController extends Controller
                 'events' => $events,
                 'relevants' => $relevants,
                 'videos' => $videos,
+                'broadcast' => $broadcast['data'],
                 'result' => $news
             ), 200);
         } catch (Exception $e) {
@@ -811,11 +816,11 @@ class PostController extends Controller
                 }
                 $keywords = implode(',', $keywords);
             } else {
-              $string = $post->slug;
-              $postTags = explode("-", $string);
-              $excludedWords = array('la', 'el', 'lo', 'un', 'los', 'las', 'una', 'sus', 'su', 'de', 'del', 'a', 'ha', 'con', 'unos', 'unas', 'y', 'para', 'pero', 'le', 'cual', 'ellos', 'ellas', 'por', 'este', 'esta', 'han', 'ah', 'se', 'al', 'mas', 'nos', 'como', 'que', 'es', 'esto', 'asi', 'te', 'ya', 'en');
-              $keywords = array_diff($postTags, $excludedWords);
-              $keywords = implode(',', $keywords);
+                $string = $post->slug;
+                $postTags = explode("-", $string);
+                $excludedWords = array('la', 'el', 'lo', 'un', 'los', 'las', 'una', 'sus', 'su', 'de', 'del', 'a', 'ha', 'con', 'unos', 'unas', 'y', 'para', 'pero', 'le', 'cual', 'ellos', 'ellas', 'por', 'este', 'esta', 'han', 'ah', 'se', 'al', 'mas', 'nos', 'como', 'que', 'es', 'esto', 'asi', 'te', 'ya', 'en');
+                $keywords = array_diff($postTags, $excludedWords);
+                $keywords = implode(',', $keywords);
             }
 
             $post->increment('view_counter');
@@ -1063,11 +1068,10 @@ class PostController extends Controller
             'description' => 'Coanime.net - Post Eliminados que aun existen en el Sistema',
             'result' => $posts,
         ), 200);
-
-        //return view('dashboard.posts.home', compact('posts'));
     }
 
-    public function changeImagesPath(Request $request) {
+    public function changeImagesPath(Request $request)
+    {
         $posts = Post::all();
         $titles = Title::with('images')->get();
         $users = User::all();

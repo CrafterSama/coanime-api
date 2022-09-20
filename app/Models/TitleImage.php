@@ -14,7 +14,7 @@ class TitleImage extends Model {
 	 */
 	protected $table = 'titles_image';
 	protected $dates = ['deleted_at', 'created_at', 'updated_at'];
-	protected $fillable = ['name', 'title_id'];
+	protected $fillable = ['name', 'title_id', 'thumbnail'];
 
 	public function titles() {
 		return $this->belongsTo(Title::class, 'title_id', 'id');

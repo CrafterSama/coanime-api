@@ -100,6 +100,8 @@ Route::prefix('external/')->group(function () {
   Route::get('random-image', [PostController::class, 'getRandomPostImage']);
   Route::get('random-image-title/{slug}', [PostController::class, 'getRandomPostImageByTitle']);
 
+  Route::get('save-mangas', [TitleController::class, 'consumeMangas']);
+
   // ** Posts Endpoints **
 
   Route::post('vote', [PostVoteController::class, 'vote']);
