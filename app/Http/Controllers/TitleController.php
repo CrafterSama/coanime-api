@@ -134,6 +134,10 @@ class TitleController extends Controller
         'mythology' => 103,
         'high stakes game' => 104,
         'love polygon' => 105,
+        'avant garde' => 106,
+        'otaku culture' => 107,
+        'gourmet' => 108,
+        'hentai' => 109,
     ];
 
     private $status = [
@@ -1039,98 +1043,100 @@ class TitleController extends Controller
         /* return view('web.home', compact('posts')); */
     }
 
-    public function consumeMangas(Request $equest)
+    public function consumeMangas(Request $request)
     {
-        /*$broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
-        $json = file_get_contents($broadcastUrl);
-        $data = json_decode($json, true);
-        dd(collect($data));*/
+        try {
 
-        for ($i = 20; $i <= 22; $i++) {
-            $url = 'https://api.jikan.moe/v4/seasons/20' . $i . '/winter';
-            $json = file_get_contents($url);
-            $results = json_decode($json, true);
-            foreach ($results['data'] as $key => $value) {
-
-                $titleGenres = [];
-                $titleStatus = '';
-
-                foreach ($value['themes'] as $key => $theme) {
-                    $titleGenres[] = $this->genres[strtolower($theme['name'])];
-                }
-
-                foreach ($value['genres'] as $key => $gen) {
-                    $titleGenres[] = $this->genres[strtolower($gen['name'])];
-                }
-
-                if ($value['status'] === 'Currently Airing') {
-                    $titleStatus = 'En emisión';
-                } elseif ($value['status'] === 'Finished Airing') {
-                    $titleStatus = 'Finalizado';
-                } elseif ($value['status'] === 'Not yet aired') {
-                    $titleStatus = 'Estreno';
-                }
-
-                // [Written by MAL Rewrite]
-                $synopsis = $value['synopsis'] ? GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $value['synopsis']), 'es') : null;
-
-                $imageUrl = $value['images']['webp']['large_image_url'];
-                $processingImage = file_get_contents($imageUrl);
-                $image = Image::make($processingImage);
-                $fileName = hash('sha256', strval(time()));
-                $image->encode('webp', 100);
-
-                if ($image->width() > 2560) {
-                    $image->resize(2560, null, function ($constraint) {
-                        $constraint->aspectRatio();
-                    });
-                }
-
-                $path = '/titles/';
-
-                $filePath = $path . $fileName . '.webp';
-                $imageUrl = Storage::disk('s3')->put($filePath, $image);
-                $imageUrl = Storage::disk('s3')->url($filePath);
-                //dd($imageUrl);
-
-                $title = new Title();
-                $title->name = $value['title'];
-                $title->slug = Str::slug($value['title']);
-                $title->sinopsis = $synopsis ?: 'Sin sinopsis';
-                $title->status = $titleStatus;
-                $title->other_titles = $value['title_english'] . ' (Inglés), '. $value['title_japanese'] . ' (Japonés)';
-                $title->status = $titleStatus;
-                $title->broad_time = $value['aired']['from'] ?: null;
-                $title->broad_finish = $value['aired']['to'] ?: null;
-                $title->episodies = $value['episodes'] ? $value['episodes'] : 0;
-                $title->type_id = $type[strtolower($value['type'])];
-                $title->trailer_url = $value['trailer']['url'] ?: null;
-                $title->rating_id = $value['rating'] ? $rating[strtolower($value['rating'])] : 7;
-                $title->just_year = 'false';
+            $jikan = Client::create();
+            $page = intval($request->get('page')) ?? 1;
+            //dd($page);
+            $results = $jikan->getSeasonUpcoming(['page' => $page]);
+            $proccess = [];
+            $proccess[] = '<p>Pagina ' . $page . '</p>';
+            foreach ($results->getData() as $key => $value) {
+                //dd($value);
+                $title = new Title;
+                $newGenres = [];
+                $title->name = $value->getTitle();
+                $title->slug = Str::slug($value->getTitle());
                 $title->user_id = 1;
-                $title->image_url = $imageUrl;
-                $title->genre = $titleGenres;
-                var_dump($title);
+                $title->just_year = 'false';
                 if (Title::where('slug', $title->slug)->first()) {
-                    echo 'Ya existe';
+                    $proccess[] = '<p>' . $title->name . ' Ya existe</p>';
+                } elseif($value->getType() === null) {
+                    $proccess[] = '<p>' . $title->name . ' No tiene determinado el Tipo</p>';
                 } else {
-                    $images = new TitleImage;
-                    $images->name = $imageUrl;
-                    $images->thumbnail = $imageUrl;
+                    $proccess[] = '<p>' . $title->name . ' Procesando</p>';
+                    if(empty($title->other_titles)) {
+                        $title->other_titles .= $value->getTitleJapanese() ? $value->getTitleJapanese() . ' (Japonés)' : '';
+                        $title->other_titles .= $value->getTitleEnglish() ? ', ' . $value->getTitleEnglish() . ' (Inglés)' : '';
+                    }
+    
+                    if (empty($title->sinopsis) || $title->sinopsis == 'Sinopsis no disponible' || $title->sinopsis == 'Pendiente de agregar sinopsis...') {
+                        $title->sinopsis = $value->getSynopsis() ? GoogleTranslate::trans(str_replace('[Written by MAL Rewite]', '', $value->getSynopsis()), 'es') : 'Sinopsis en Proceso';
+                    }
+    
+                    if ((empty($title->trailer_url) || $title->trailer_url === null || $title->trailer_url === '') && $value->getTrailer()->getUrl() !== null) {
+                        $title->trailer_url = $value->getTrailer()->getUrl();
+                    }
+    
+                    if (!$title->status || $this->status[$value->getStatus()] !== $title->status) {
+                        $title->status = $this->status[$value->getStatus()];
+                    }
+    
+                    if (!$title->type) {
+                        $title->type_id = $this->typeById[strtolower($value->getType())];
+                    }
+    
+                    if (!$title->rating_id || $title->rating_id === 7) {
+                        $title->rating_id = $this->rating[strtolower($value->getRating())] ?? 7;
+                    }
+    
+                    if ($title->episodies === 0 || $title->episodies === null || empty($title->episodies)) {
+                        $title->episodies = $value->getEpisodes();
+                    }
+    
+                    if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
+                        $title->broad_time = $value->getAired()->getFrom();
+                    }
+    
+                    if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
+                        $title->broad_finish = $value->getAired()->getTo();
+                    }
+    
                     $title->save();
-                    $title->images()->save($images);
-                    $title->genres()->sync($titleGenres);
-                    echo 'Guardado';
+    
+                    if ($title->genres->count() === 0) {
+                        foreach ($value->getGenres() as $key => $gen) {
+                            if ($gen !== '' || $gen !== null) {
+                                $newGenres[] = $this->genres[strtolower($gen->getName())];
+                            }
+                        }
+                        $title->genres()->sync($newGenres);
+                    }
+    
+                    $title->save();
+                    $proccess[] = '<p>' . $title->name . ' Guardado</p>';
                 }
             }
+            return response()->json(array(
+                'code' => 200,
+                'message' => array(
+                    'type' => 'Success',
+                    'text' => 'Titulos de la pagina ' . $page . ' Guardados',
+                ),
+                'data' => $proccess,
+            ), 200);
+        } catch (\Exception $e) {
+            return response()->json(array(
+                'code' => 500,
+                'message' => array(
+                    'type' => 'Error',
+                    'text' => 'Error al procesar la pagina ' . $page,
+                ),
+                'data' => $e->getMessage(),
+            ), 500);
         }
 
-        /*return response()->json(array(
-            'code' => 200,
-            'message' => array(
-                'type' => 'Success',
-                'text' => 'Mangas consumidos hasta la pagina 10',
-            ),
-        ), 200);*/
     }
 }

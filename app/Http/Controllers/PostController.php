@@ -94,6 +94,8 @@ class PostController extends Controller
             $json = file_get_contents($broadcastUrl);
             $broadcast = json_decode($json, true);
 
+            $upcoming = Title::with('images', 'type')->where('broad_time','>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->get();
+
             return response()->json(array(
                 'code' => 200,
                 'message' => 'Success',
@@ -104,6 +106,7 @@ class PostController extends Controller
                 'relevants' => $relevants,
                 /*'videos' => $videos,*/
                 'broadcast' => $broadcast['data'],
+                'upcoming' => $upcoming,
                 'result' => $news
             ), 200);
         } catch (Exception $e) {
@@ -113,8 +116,6 @@ class PostController extends Controller
                 'error' => $e->getMessage()
             ), 500);
         }
-        
-        /*return view('web.home', compact('relevants', 'news', 'videos', 'events', 'keywords', 'carbon'));*/
     }
 
     /**
