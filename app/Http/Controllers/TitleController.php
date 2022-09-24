@@ -29,11 +29,10 @@ use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Jikan\JikanPHP\Client;
-use Jikan\MyAnimeList\MalClient;
-use Jikan\Request\Search\AnimeSearchRequest;
 use GoogleTranslate;
 use Exception;
 use Image;
+use Termwind\Components\Dd;
 
 class TitleController extends Controller
 {
@@ -171,6 +170,21 @@ class TitleController extends Controller
         'one-shot' => 14,
         'doujinshi' => 15,
         'novel' => 16,
+    ];
+
+    private $typeInCloud = [
+        'tv',
+        'manga',
+        'movie',
+        'ova',
+        'manhwa',
+        'manhua',
+        'ona',
+        'light novel',
+        'special',
+        'one-shot',
+        'doujinshi',
+        'novel',
     ];
 
     private $typeTranslations = [
@@ -798,18 +812,18 @@ class TitleController extends Controller
         $type_id = TitleType::where('slug', '=', $type)->pluck('id');
         $title = Title::where('slug', '=', $slug)->where('type_id', $type_id);
         $thisTitle = Title::findOrFail($title->pluck('id'))->firstOrFail();
-        $jikan = new MalClient;
-        $cloudTitlesTemp = collect($jikan->getAnimeSearch(new AnimeSearchRequest($thisTitle->name), 1)->getResults());
-        $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value, $key) use ($type, $title) {
+        $jikan = Client::create();
+        $cloudTitlesTemp = collect($jikan->getAnimeSearch(['q' => $title->pluck('name')->first(), 'type' => $type])->getData());
+        $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($title) {
             return strtolower($value->getTitle()) === strtolower($title->pluck('name')->first());
         });
-        //dd($cloudTitlesTemp);
-        $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value, $key) use ($type, $title) {
+        $cloudTitlesTemp = in_array(strtolower($type), $this->typeInCloud) ? $cloudTitlesTemp->filter(function ($value) use ($type) {
             return strtolower($value->getType()) === $this->typeTranslations[$type];
-        });
-        $cloudTitleTemp = $cloudTitlesTemp->first();
-        $cloudTitle = $cloudTitleTemp?->getMalId() ? $jikan->getAnime(new \Jikan\Request\Anime\AnimeRequest($cloudTitleTemp->getMalId())) : null;
+        }) : null;
+        
+        $cloudTitle = $cloudTitlesTemp?->first() ?: null;
         //dd($cloudTitle);
+        
 
         if ($title->count() > 0) {
             $id = $title->pluck('id');
@@ -828,9 +842,12 @@ class TitleController extends Controller
                 $thisTitle->save();
             }
 
-            if ($cloudTitle?->getTitles() !== null) {
+            if ($cloudTitle?->getTitle() !== null) {
+
                 if(empty($thisTitle->other_titles)) {
-                    $thisTitle->other_titles = $cloudTitle->getTitleJapanese() . ' (Japonés), ' . $cloudTitle->getTitleEnglish() . ' (Inglés)';
+
+                    $thisTitle->other_titles .= $cloudTitle->getTitleJapanese() ? $cloudTitle->getTitleJapanese() . ' (Japonés)' : '';
+                    $thisTitle->other_titles .= $cloudTitle->getTitleEnglish() ? ', ' . $cloudTitle->getTitleEnglish() . ' (Inglés)' : '';
                     $thisTitle->save();
                 }
     
@@ -844,7 +861,7 @@ class TitleController extends Controller
                     $thisTitle->save();
                 }
     
-                if (!$thisTitle->status) {
+                if (!$thisTitle->status || $this->status[$cloudTitle->getStatus()] !== $thisTitle->status) {
                     $thisTitle->status = $this->status[$cloudTitle->getStatus()];
                     $thisTitle->save();
                 }
@@ -856,6 +873,16 @@ class TitleController extends Controller
     
                 if ($thisTitle->episodies === 0 || $thisTitle->episodies === null || empty($thisTitle->episodies)) {
                     $thisTitle->episodies = $cloudTitle->getEpisodes();
+                    $thisTitle->save();
+                }
+
+                if ($thisTitle->broad_time === null || $thisTitle->broad_time === '0000-00-00 00:00:00') {
+                    $thisTitle->broad_time = $cloudTitle->getAired()->getFrom();
+                    $thisTitle->save();
+                }
+
+                if ($thisTitle->broad_finish === null || $thisTitle->broad_finish === '0000-00-00 00:00:00') {
+                    $thisTitle->broad_finish = $cloudTitle->getAired()->getTo();
                     $thisTitle->save();
                 }
     
@@ -1014,33 +1041,6 @@ class TitleController extends Controller
 
     public function consumeMangas(Request $equest)
     {
-        // make a list of genres in english with their respectie id
-        
-
-        $type = [
-            'tv' => 1,
-            'manga' => 2,
-            'movie' => 3,
-            'ova' => 4,
-            'manhwa' => 5,
-            'manhua' => 6,
-            'ona' => 10,
-            'light novel' => 11,
-            'special' => 13,
-            'one-shot' => 14,
-            'doujinshi' => 15,
-            'novel' => 16,
-        ];
-
-        $rating = [
-            'g - all ages' => 1,
-            'pg - children' => 2,
-            'pg-13 - teens 13 or older' => 3,
-            'r - 17+ (violence & profanity)' => 4,
-            'r+ - mild nudity' => 5,
-            'rx - hentai' => 6,
-        ];
-
         /*$broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
         $json = file_get_contents($broadcastUrl);
         $data = json_decode($json, true);

@@ -7,7 +7,7 @@
     "require": {
         "php": "^8.0.2",
         "algolia/scout-extended": "^2.0",
-        "guzzlehttp/guzzle": "^7.2",
+        "guzzlehttp/guzzle": "^7.5",
         "intervention/image": "^2.7",
         "jikan-me/jikan": "^3.3",
         "jikan/jikan-php": "^4.0",

@@ -16,6 +16,7 @@ use App\Models\TitleType;
 use App\Models\User;
 use App\Models\Helper;
 use Carbon\Carbon;
+use Jikan\JikanPHP\Client;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -87,18 +88,17 @@ class PostController extends Controller
                     $keywords[] = $tag->name;
                 }
             }
+            $keywords = implode(', ', $keywords);
 
             $broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
             $json = file_get_contents($broadcastUrl);
             $broadcast = json_decode($json, true);
-    
-            $keywords = implode(', ', $keywords);
-    
+
             return response()->json(array(
                 'code' => 200,
                 'message' => 'Success',
-                'title' => 'Coanime.net - Noticias y Enciclopedia de Cultura Asiática, Manga y Anime',
-                'description' => 'Encuentra las noticias más recientes de anime, manga, video juegos y más. Puedes encontrar información  de eventos realizados en Hispanoamérica y de las series, manga, seiyus o compañías encargadas en nuestra Enciclopedia.',
+                'title' => 'Coanime.net - ' . $relevants[0]->title . ' - Noticias y Enciclopedia de Cultura Asiática, Manga y Anime',
+                'description' => $relevants[0]->excerpt . ' - Encuentra las noticias de anime, manga, video juegos y más`.',
                 'keywords' => $keywords,
                 /*'events' => $events,*/
                 'relevants' => $relevants,
