@@ -628,8 +628,12 @@ class TitleController extends Controller
 
     public function userTitleList(Request $request)
     {
+        $abandoned = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '1')->paginate();
+        $stopped = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '2')->paginate();
+        $wantWatch = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '3')->paginate();
+        $watching = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '4')->paginate();
+        $watched = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '5')->paginate();
         $titles = TitleStatistics::where('user_id', Auth::user()->id)->with('titles', 'statistics')->paginate();
-        //$titles = TitleStatistics::where('user_id', $request->user)->with('titles', 'statistics')->paginate();
         return response()->json(array(
             'code' => 200,
             'message' => array(
@@ -639,7 +643,12 @@ class TitleController extends Controller
             'title' => 'Coanime.net - Titulos - Lista de Titulos',
             'descripcion' => 'Tu Lista de Titulos, los puedes agregar a la lista a traves de las Watch Options',
             'keywords' => 'Lista de Titulos, Titulos, Lista, Titulos en tu Lista, lista anime, lista manga, lista ova, lista película, lista especial, lista ona, lista ovas, lista películas, lista especiales, lista onas',
-            'result' => $titles,
+            'results' => $titles,
+            'abandoned' => $abandoned,
+            'stopped' => $stopped,
+            'wantWatch' => $wantWatch,
+            'watching' => $watching,
+            'watched' => $watched,
         ), 200);
     }
 
