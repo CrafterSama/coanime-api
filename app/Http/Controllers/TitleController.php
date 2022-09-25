@@ -633,7 +633,7 @@ class TitleController extends Controller
         $wantWatch = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '3')->paginate();
         $watching = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '4')->paginate();
         $watched = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '5')->paginate();
-        $titles = TitleStatistics::where('user_id', Auth::user()->id)->with('titles', 'statistics')->paginate();
+        $titles = TitleStatistics::where('user_id', Auth::user()->id)->with('titles', 'statistics')->orderBy('created_at', 'desc')->paginate(500);
         return response()->json(array(
             'code' => 200,
             'message' => array(
@@ -822,27 +822,28 @@ class TitleController extends Controller
 
     public function apiShowTitle($type, $slug)
     {
-        $type_id = TitleType::where('slug', '=', $type)->pluck('id');
-        $title = Title::where('slug', '=', $slug)->where('type_id', $type_id);
-        $thisTitle = Title::findOrFail($title->pluck('id'))->firstOrFail();
         $jikan = Client::create();
-        $cloudTitlesTemp = collect($jikan->getAnimeSearch(['q' => $title->pluck('name')->first(), 'type' => $type])->getData());
-        $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($title) {
-            return strtolower($value->getTitle()) === strtolower($title->pluck('name')->first());
-        });
-        $cloudTitlesTemp = in_array(strtolower($type), $this->typeInCloud) ? $cloudTitlesTemp->filter(function ($value) use ($type) {
-            return strtolower($value->getType()) === $this->typeTranslations[$type];
-        }) : null;
+        $type_id = TitleType::where('slug', '=', $type)->pluck('id')->first();
+        $title = Title::where('type_id', $type_id)->where('slug', '=', $slug)->first();
+        //dd($title->name);
+        //dd($thisTitle);
+        if ($title?->id !== null) {
+            $thisTitle = Title::find($title->id);
+            $cloudTitlesTemp = collect($jikan->getAnimeSearch(['q' => $title->name, 'type' => $type])->getData());
+            $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($title) {
+                return strtolower($value->getTitle()) === strtolower($title->name);
+            });
+            $cloudTitlesTemp = in_array(strtolower($type), $this->typeInCloud) ? $cloudTitlesTemp->filter(function ($value) use ($type) {
+                return strtolower($value->getType()) === $this->typeTranslations[$type];
+            }) : null;
+            $cloudTitle = $cloudTitlesTemp?->first() ?: null;
+            //dd($cloudTitle);
         
-        $cloudTitle = $cloudTitlesTemp?->first() ?: null;
-        //dd($cloudTitle);
-        
-
-        if ($title->count() > 0) {
-            $id = $title->pluck('id');
-            $name = $title->pluck('name');
-            $description = $title->pluck('sinopsis');
-            $title = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->findOrFail($id)->first();
+            $id = $title->id;
+            $name = $title->name;
+            $description = $title->sinopsis;
+            $title = $title->load('images', 'rating', 'type', 'genres', 'users', 'posts');
+            //dd($title);
 
             if (($thisTitle->broad_time < Carbon::now() && $thisTitle->broad_finish > Carbon::now()) || ($thisTitle->broad_finish === null)) {
                 $thisTitle->status = 'En emisión';
@@ -944,12 +945,12 @@ class TitleController extends Controller
                     'estreno' => 'Estreno',
                 ],
             ];
-
+            ///dd($title);
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage('Titulo encontrado'),
-                'title' => 'Coanime.net - Titulos - ' . $name->first(),
-                'description' => Str::words(htmlentities(strip_tags($description->first())), 20),
+                'title' => 'Coanime.net - Titulos - ' . $name,
+                'description' => Str::words(htmlentities(strip_tags($description)), 20),
                 'result' => $title,
                 'rates' => $rates,
                 'statistics' => $statistics,
@@ -959,7 +960,7 @@ class TitleController extends Controller
             return response()->json(array(
                 'code' => 404,
                 'message' => Helper::errorMessage('Titulo no encontrado'),
-            ), 404);
+            ), 200);
         }
     }
 
