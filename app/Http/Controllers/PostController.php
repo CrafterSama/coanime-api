@@ -205,9 +205,11 @@ class PostController extends Controller
     
     public function apiSearchPosts(Request $request)
     {
+        $categories = $request->category ? [$request->category] : [1,2,3,4,5,6,7,8,11,12,13];
         if ($request->name && $posts = Post::search($request->name)
             ->select('title', 'slug', 'category_id', 'image', 'postponed_to')
             ->with('categories')
+            ->whereIn('category_id', $categories)
             ->where('posts.approved', 'yes')
             ->where('posts.draft', '0')
             ->where('postponed_to', '<=', Carbon::now())
