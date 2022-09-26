@@ -102,6 +102,7 @@ Route::prefix('external/')->group(function () {
 
   Route::get('save-mangas', [TitleController::class, 'consumeMangas']);
 
+  Route::get('posts-search', [PostController::class, 'apiSearchPosts']);
   // ** Posts Endpoints **
 
   Route::post('vote', [PostVoteController::class, 'vote']);

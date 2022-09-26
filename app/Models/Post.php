@@ -28,9 +28,7 @@ class Post extends Model
 
     public function scopeSearch($query, $name)
     {
-        return $query->where('title', 'like', '%' . $name . '%')
-            ->orWhere('excerpt', 'like', '%' . $name . '%')
-            ->orWhere('content', 'like', '%' . $name . '%');
+        return $query->where('title', 'like', '%' . $name . '%');
     }
 
     public function scopeNotPagesCategories($query, $category)

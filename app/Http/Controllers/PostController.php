@@ -202,6 +202,30 @@ class PostController extends Controller
             ->paginate();
         return $posts;
     }
+    
+    public function apiSearchPosts(Request $request)
+    {
+        if ($request->name && $posts = Post::search($request->name)
+            ->select('title', 'slug', 'category_id', 'image', 'postponed_to')
+            ->with('categories')
+            ->where('posts.approved', 'yes')
+            ->where('posts.draft', '0')
+            ->where('postponed_to', '<=', Carbon::now())
+            ->orderBy('postponed_to', 'desc')
+            ->paginate()) {
+                return response()->json(array(
+                    'code' => 200,
+                    'message' => 'Success',
+                    'result' => $posts
+                ), 200);
+            } else {
+                return response()->json(array(
+                    'code' => 404,
+                    'message' => 'Not Found',
+                    'error' => 'No se encontraron resultados'
+                ), 404);
+            }
+    }
 
     /**
      * All the Categories

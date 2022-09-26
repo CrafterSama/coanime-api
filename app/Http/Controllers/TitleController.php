@@ -254,7 +254,7 @@ class TitleController extends Controller
         $types = TitleType::orderBy('name', 'asc')->get();
         $genres = Genre::orderBy('name', 'asc')->get();
         try {
-            if ($titles = Title::titles($request->name)->with('images', 'type', 'genres')->orderBy('name', 'asc')->paginate(30)) {
+            if ($titles = Title::titles($request->name)->with('images', 'type', 'genres')->orderBy('name', 'asc')->paginate(10)) {
                 return response()->json(array(
                     'code' => 200,
                     'message' => Helper::successMessage('Resultados encontrados'),
@@ -281,7 +281,7 @@ class TitleController extends Controller
                 'message' => Helper::errorMessage('Error al buscar los titulos ' . $e->getMessage()),
                 'title' => 'Coanime.net - Titulos - Titulos No encontrados',
                 'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
-            ), 404);
+            ), 500);
         }
     }
 
