@@ -831,6 +831,7 @@ class TitleController extends Controller
             $thisTitle = Title::find($title->id);
             $cloudTitlesTemp = collect($jikan->getAnimeSearch(['q' => $title->name, 'type' => $type])->getData());
 
+            //dd($cloudTitlesTemp);
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($title) {
                 return strtolower($value->getTitle()) === strtolower($title->name);
             });
@@ -840,7 +841,6 @@ class TitleController extends Controller
             });
 
             $cloudTitle = $cloudTitlesTemp?->first() ?: null;
-            //dd($cloudTitle);
 
             $id = $title->id;
             $name = $title->name;
