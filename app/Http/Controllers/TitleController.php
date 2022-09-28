@@ -916,7 +916,7 @@ class TitleController extends Controller
                         'name' => $imageUrl,
                         'thumbnail' => $imageUrl,
                     ]);
-                    dd($images);
+                    //dd($images);
                 }
                 
                 if ($title->genres->count() === 0) {
