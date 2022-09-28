@@ -28,7 +28,9 @@ class Post extends Model
 
     public function scopeSearch($query, $name)
     {
-        return $query->where('title', 'like', '%' . $name . '%');
+        return $query->where('title', 'like', '%' . $name . '%')->with('tags', function ($q) use ($name) {
+            $q->where('name', 'like', '%' . $name . '%');
+        });
     }
 
     public function scopeNotPagesCategories($query, $category)

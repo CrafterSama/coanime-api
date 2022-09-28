@@ -830,31 +830,23 @@ class TitleController extends Controller
         if ($title?->id !== null) {
             $thisTitle = Title::find($title->id);
             $cloudTitlesTemp = collect($jikan->getAnimeSearch(['q' => $title->name, 'type' => $type])->getData());
+
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($title) {
                 return strtolower($value->getTitle()) === strtolower($title->name);
             });
-            $cloudTitlesTemp = in_array(strtolower($type), $this->typeInCloud) ? $cloudTitlesTemp->filter(function ($value) use ($type) {
+
+            $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($type) {
                 return strtolower($value->getType()) === $this->typeTranslations[$type];
-            }) : null;
+            });
+
             $cloudTitle = $cloudTitlesTemp?->first() ?: null;
             //dd($cloudTitle);
-        
+
             $id = $title->id;
             $name = $title->name;
             $description = $title->sinopsis;
             $title = $title->load('images', 'rating', 'type', 'genres', 'users', 'posts');
             //dd($title);
-
-            if (($thisTitle->broad_time < Carbon::now() && $thisTitle->broad_finish > Carbon::now()) || ($thisTitle->broad_finish === null)) {
-                $thisTitle->status = 'En emisión';
-                $thisTitle->save();
-            } elseif ($thisTitle->broad_time > Carbon::now()) {
-                $thisTitle->status = 'Estreno';
-                $thisTitle->save();
-            } elseif ($thisTitle->broad_finish < Carbon::now()) {
-                $thisTitle->status = 'Finalizado';
-                $thisTitle->save();
-            }
 
             if ($cloudTitle?->getTitle() !== null) {
 
@@ -906,15 +898,15 @@ class TitleController extends Controller
                     $image = Image::make($processingImage);
                     $fileName = hash('sha256', strval(time()));
                     $image->encode('webp', 100);
-    
+                    
                     if ($image->width() > 2560) {
                         $image->resize(2560, null, function ($constraint) {
                             $constraint->aspectRatio();
                         });
                     }
-    
+                    
                     $path = '/titles/';
-    
+                    
                     $filePath = $path . $fileName . '.webp';
                     $imageUrl = Storage::disk('s3')->put($filePath, $image);
                     $imageUrl = Storage::disk('s3')->url($filePath);
@@ -924,8 +916,9 @@ class TitleController extends Controller
                         'name' => $imageUrl,
                         'thumbnail' => $imageUrl,
                     ]);
+                    dd($images);
                 }
-    
+                
                 if ($title->genres->count() === 0) {
                     $newGenres = [];
                     foreach ($cloudTitle->getGenres() as $key => $gen) {
@@ -1083,7 +1076,7 @@ class TitleController extends Controller
                     }
     
                     if (empty($title->sinopsis) || $title->sinopsis == 'Sinopsis no disponible' || $title->sinopsis == 'Pendiente de agregar sinopsis...') {
-                        $title->sinopsis = $value->getSynopsis() ? GoogleTranslate::trans(str_replace('[Written by MAL Rewite]', '', $value->getSynopsis()), 'es') : 'Sinopsis en Proceso';
+                        $title->sinopsis = $value->getSynopsis() ? GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $value->getSynopsis()), 'es') : 'Sinopsis en Proceso';
                     }
     
                     if ((empty($title->trailer_url) || $title->trailer_url === null || $title->trailer_url === '') && $value->getTrailer()->getUrl() !== null) {
