@@ -48,7 +48,7 @@ class TitleController extends Controller
         'horror' => 10,
         'mystery' => 11,
         'supernatural' => 12,
-        'erotic' => 13,
+        'erotica' => 13,
         'fantasy' => 14,
         'slice of life' => 15,
         'thriller' => 16,
