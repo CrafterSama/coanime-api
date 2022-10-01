@@ -862,7 +862,7 @@ class TitleController extends Controller
             });
             
             $cloudTitle = $cloudTitlesTemp?->first() ?: null;
-            dd($cloudTitle);
+            //dd($cloudTitle);
 
             $id = $title->id;
             $name = $title->name;
