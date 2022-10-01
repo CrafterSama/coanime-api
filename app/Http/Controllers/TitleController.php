@@ -817,7 +817,29 @@ class TitleController extends Controller
                 'message' => Helper::errorMessage('No se encontraron titulos'),
             ), 404);
         }
-
+    }
+    
+    public function apiTitlesUpcoming(Request $request)
+    {
+        if ($titles = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->where('broad_time','>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->paginate()) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => Helper::successMessage('Titulos encontrados'),
+                'title' => 'Coanime.net - Titulos - Próximos Estrenos',
+                'descripcion' => 'Titulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, entre otros que estan por estrenarse',
+                'keywords' => 'TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, ona, ova, doujinshi, one shot, entre otros',
+                'result' => $titles,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => Helper::errorMessage('No se encontraron titulos'),
+                'title' => 'Coanime.net - Titulos - Próximos Estrenos',
+                'descripcion' => 'Titulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, entre otros que estan por estrenarse',
+                'keywords' => 'TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, ona, ova, doujinshi, one shot, entre otros',
+                'result' => array(),
+            ), 404);
+        }
     }
 
     public function apiShowTitle($type, $slug)
@@ -825,22 +847,22 @@ class TitleController extends Controller
         $jikan = Client::create();
         $type_id = TitleType::where('slug', '=', $type)->pluck('id')->first();
         $title = Title::where('type_id', $type_id)->where('slug', '=', $slug)->first();
-        //dd($title->name);
+        //dd($title);
         //dd($thisTitle);
         if ($title?->id !== null) {
             $thisTitle = Title::find($title->id);
             $cloudTitlesTemp = collect($jikan->getAnimeSearch(['q' => $title->name, 'type' => $type])->getData());
 
-            //dd($cloudTitlesTemp);
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($title) {
                 return strtolower($value->getTitle()) === strtolower($title->name);
             });
-
+            
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($type) {
                 return strtolower($value->getType()) === $this->typeTranslations[$type];
             });
-
+            
             $cloudTitle = $cloudTitlesTemp?->first() ?: null;
+            dd($cloudTitle);
 
             $id = $title->id;
             $name = $title->name;
@@ -893,30 +915,31 @@ class TitleController extends Controller
                 }
     
                 if (!$title->images) {
-                    $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl();
-                    $processingImage = file_get_contents($imageUrl);
-                    $image = Image::make($processingImage);
-                    $fileName = hash('sha256', strval(time()));
-                    $image->encode('webp', 100);
-                    
-                    if ($image->width() > 2560) {
-                        $image->resize(2560, null, function ($constraint) {
-                            $constraint->aspectRatio();
-                        });
+                    $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl() || $cloudTitle->getImages()->getWebp()->getLargeImageUrl() !== 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-256.png' ? $cloudTitle->getImages()->getWebp()->getLargeImageUrl() : null;
+                    if ($imageUrl) {
+                        $processingImage = file_get_contents($imageUrl);
+                        $image = Image::make($processingImage);
+                        $fileName = hash('sha256', strval(time()));
+                        $image->encode('webp', 100);
+                        
+                        if ($image->width() > 2560) {
+                            $image->resize(2560, null, function ($constraint) {
+                                $constraint->aspectRatio();
+                            });
+                        }
+                        
+                        $path = '/titles/';
+                        
+                        $filePath = $path . $fileName . '.webp';
+                        $imageUrl = Storage::disk('s3')->put($filePath, $image);
+                        $imageUrl = Storage::disk('s3')->url($filePath);
+                        $images = new TitleImage;
+                        $images->create([
+                            'title_id' => $thisTitle->id,
+                            'name' => $imageUrl,
+                            'thumbnail' => $imageUrl,
+                        ]);
                     }
-                    
-                    $path = '/titles/';
-                    
-                    $filePath = $path . $fileName . '.webp';
-                    $imageUrl = Storage::disk('s3')->put($filePath, $image);
-                    $imageUrl = Storage::disk('s3')->url($filePath);
-                    $images = new TitleImage;
-                    $images->create([
-                        'title_id' => $thisTitle->id,
-                        'name' => $imageUrl,
-                        'thumbnail' => $imageUrl,
-                    ]);
-                    //dd($images);
                 }
                 
                 if ($title->genres->count() === 0) {

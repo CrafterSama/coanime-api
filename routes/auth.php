@@ -56,6 +56,7 @@ Route::prefix('external/')->group(function () {
   Route::get('ecma', [EncyclopediaController::class, 'index']);
 
   Route::get('titles', [TitleController::class, 'apiTitles']);
+  Route::get('titles/upcoming', [TitleController::class, 'apiTitlesUpcoming']);
   Route::get('titles/{type}', [TitleController::class, 'apiShowTitlesByType']);
   Route::get('titles/{type}/{slug}', [TitleController::class, 'apiShowTitle']);
   Route::get('titles/{type}/{slug}/posts', [TitleController::class, 'postsTitle']);
