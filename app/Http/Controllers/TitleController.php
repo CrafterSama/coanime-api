@@ -914,8 +914,8 @@ class TitleController extends Controller
                     $thisTitle->save();
                 }
     
-                if (!$title->images) {
-                    $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl() || $cloudTitle->getImages()->getWebp()->getLargeImageUrl() !== 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-256.png' ? $cloudTitle->getImages()->getWebp()->getLargeImageUrl() : null;
+                if (!$title->images || $title?->images?->name === null || $title?->images?->name === '') {
+                    $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl() === 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-256.png' ? null : $cloudTitle->getImages()->getWebp()->getLargeImageUrl();
                     if ($imageUrl) {
                         $processingImage = file_get_contents($imageUrl);
                         $image = Image::make($processingImage);
