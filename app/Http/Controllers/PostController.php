@@ -140,12 +140,12 @@ class PostController extends Controller
         $posts = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
             ->whereNotIn('id', $ids)
-            ->where('image', '!=', null)
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->whereIn('category_id', $categories)
             ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
+            ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
             ->paginate(15);
             //dd($posts);
