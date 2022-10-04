@@ -90,11 +90,11 @@ class PostController extends Controller
             }
             $keywords = implode(', ', $keywords);
 
-            /*$broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
+            $broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
             $json = file_get_contents($broadcastUrl);
-            $broadcast = json_decode($json, true);*/
+            $broadcast = json_decode($json, true);
 
-            $upcoming = Title::with('images', 'type')->where('broad_time','>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->get();
+            /*$upcoming = Title::with('images', 'type')->where('broad_time','>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->get();*/
             
             return response()->json(array(
                 'code' => 200,
@@ -105,8 +105,8 @@ class PostController extends Controller
                 /*'events' => $events,*/
                 'relevants' => $relevants,
                 /*'videos' => $videos,*/
-                /*'broadcast' => $broadcast['data'],*/
-                'upcoming' => $upcoming,
+                'broadcast' => $broadcast['data'],
+                /*'upcoming' => $upcoming,*/
                 'result' => $news
             ), 200);
         } catch (Exception $e) {
