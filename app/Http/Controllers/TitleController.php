@@ -1089,7 +1089,7 @@ class TitleController extends Controller
                 $title->just_year = 'false';
                 if (Title::where('slug', $title->slug)->first()) {
                     $proccess[] = '<p>' . $title->name . ' Ya existe</p>';
-                } elseif($value->getType() === null || $value->getType() === 'Unknown') {
+                } elseif  ($value->getType() === null || $value->getType() === 'Unknown' || $value->getType() === 'Music') {
                     $proccess[] = '<p>' . $title->name . ' No tiene determinado el Tipo</p>';
                 } else {
                     $proccess[] = '<p>' . $title->name . ' Procesando</p>';
@@ -1111,7 +1111,6 @@ class TitleController extends Controller
                     }
                     
                     if (!$title->type) {
-                        //dd($value->getType());
                         $title->type_id = $this->typeById[strtolower($value->getType())];
                     }
     
