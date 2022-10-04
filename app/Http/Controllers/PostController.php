@@ -121,21 +121,21 @@ class PostController extends Controller
         $categoryId = Category::where('slug', $request->category)->pluck('id')->first();
         $categories = $request->category ? [$categoryId] : [1,2,3,4,5,6,7,8,11,12,13];
         $news = Post::search($request->name)
-            ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
-            ->with('users', 'categories', 'titles', 'tags')
-            ->where('approved', 'yes')
-            ->where('draft', '0')
-            ->whereIn('category_id', $categories)
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
-            ->where('image', '!=', null)
-            ->orderBy('postponed_to', 'desc')
-            ->take(4)->get();
+        ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
+        ->with('users', 'categories', 'titles', 'tags')
+        ->where('approved', 'yes')
+        ->where('draft', '0')
+        ->whereIn('category_id', $categories)
+        ->where('postponed_to', '<=', Carbon::now())
+        ->orWhere('postponed_to', null)
+        ->where('image', '!=', null)
+        ->orderBy('postponed_to', 'desc')
+        ->take(4)->get();
 
-        $ids = [];
-        foreach ($news as $p) {
-            $ids[] = $p->id;
-        }
+            $ids = [];
+            foreach ($news as $p) {
+                $ids[] = $p->id;
+            }
 
         $posts = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
@@ -148,11 +148,12 @@ class PostController extends Controller
             ->orWhere('postponed_to', null)
             ->orderBy('postponed_to', 'desc')
             ->paginate(15);
-        return $posts;
-    }
-
-    public function postsJapan(Request $request)
-    {
+            //dd($posts);
+            return $posts;
+        }
+        
+        public function postsJapan(Request $request)
+        {
         $carbon = new Carbon;
         $news = Post::search($request->name)
             ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
