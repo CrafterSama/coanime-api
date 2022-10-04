@@ -105,7 +105,7 @@ class PostController extends Controller
                 /*'events' => $events,*/
                 'relevants' => $relevants,
                 /*'videos' => $videos,*/
-                'broadcast' => $broadcast['data'],
+                /*'broadcast' => $broadcast['data'],*/
                 'upcoming' => $upcoming,
                 'result' => $news
             ), 200);
