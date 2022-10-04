@@ -38,7 +38,6 @@ class PostController extends Controller
     {
         try {
             $categories = $request->category ? [$request->category] : [1,2,3,4,5,6,7,8,11,12,13];
-            $carbon = Carbon::now();
 
             $relevants = Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
@@ -52,19 +51,7 @@ class PostController extends Controller
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
                 ->get();
-    
-            /*$videos = Post::search($request->name)
-                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
-                ->with('users', 'categories', 'titles', 'tags')
-                ->where('image', '!=', null)
-                ->where('approved', 'yes')
-                ->where('category_id', 13)
-                ->where('draft', '0')
-                ->where('postponed_to', '<=', Carbon::now())
-                ->orWhere('postponed_to','!=', null)
-                ->orderBy('postponed_to', 'desc')
-                ->take(5)->get();*/
-    
+
             $news = Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
@@ -76,12 +63,7 @@ class PostController extends Controller
                 ->where('draft', '0')
                 ->orderBy('postponed_to', 'desc')
                 ->take(4)->get();
-    
-            /*$events = Event::with('users', 'city', 'country')
-                ->where('date_start', '>=', Carbon::now())
-                ->orderBy('date_start', 'asc')
-                ->get();*/
-    
+
             $keywords = [];
             foreach ($news as $p) {
                 foreach ($p->tags as $tag) {
@@ -95,16 +77,14 @@ class PostController extends Controller
             $broadcast = json_decode($json, true);
 
             $upcoming = Title::with('images', 'type')->where('broad_time','>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->get();
-            
+
             return response()->json(array(
                 'code' => 200,
                 'message' => 'Success',
                 'title' => 'Coanime.net - ' . $news[0]->title . ' - Noticias y Enciclopedia de Cultura Asiática, Manga y Anime',
                 'description' => $news[0]->excerpt . ' - Encuentra las noticias de anime, manga, video juegos y más`.',
                 'keywords' => $keywords,
-                /*'events' => $events,*/
                 'relevants' => $relevants,
-                /*'videos' => $videos,*/
                 'broadcast' => $broadcast['data'],
                 'upcoming' => $upcoming,
                 'result' => $news
