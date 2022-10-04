@@ -1089,7 +1089,7 @@ class TitleController extends Controller
                 $title->just_year = 'false';
                 if (Title::where('slug', $title->slug)->first()) {
                     $proccess[] = '<p>' . $title->name . ' Ya existe</p>';
-                } elseif($value->getType() === null) {
+                } elseif($value->getType() === null || $value->getType() === 'Unknown') {
                     $proccess[] = '<p>' . $title->name . ' No tiene determinado el Tipo</p>';
                 } else {
                     $proccess[] = '<p>' . $title->name . ' Procesando</p>';
@@ -1097,20 +1097,21 @@ class TitleController extends Controller
                         $title->other_titles .= $value->getTitleJapanese() ? $value->getTitleJapanese() . ' (Japonés)' : '';
                         $title->other_titles .= $value->getTitleEnglish() ? ', ' . $value->getTitleEnglish() . ' (Inglés)' : '';
                     }
-    
+                    
                     if (empty($title->sinopsis) || $title->sinopsis == 'Sinopsis no disponible' || $title->sinopsis == 'Pendiente de agregar sinopsis...') {
                         $title->sinopsis = $value->getSynopsis() ? GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $value->getSynopsis()), 'es') : 'Sinopsis en Proceso';
                     }
-    
+                    
                     if ((empty($title->trailer_url) || $title->trailer_url === null || $title->trailer_url === '') && $value->getTrailer()->getUrl() !== null) {
                         $title->trailer_url = $value->getTrailer()->getUrl();
                     }
-    
+                    
                     if (!$title->status || $this->status[$value->getStatus()] !== $title->status) {
                         $title->status = $this->status[$value->getStatus()];
                     }
-    
+                    
                     if (!$title->type) {
+                        //dd($value->getType());
                         $title->type_id = $this->typeById[strtolower($value->getType())];
                     }
     
@@ -1129,7 +1130,6 @@ class TitleController extends Controller
                     if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
                         $title->broad_finish = $value->getAired()->getTo();
                     }
-    
                     $title->save();
     
                     if ($title->genres->count() === 0) {
