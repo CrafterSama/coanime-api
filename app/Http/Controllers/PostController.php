@@ -90,9 +90,9 @@ class PostController extends Controller
             }
             $keywords = implode(', ', $keywords);
 
-            $broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
+            /*$broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
             $json = file_get_contents($broadcastUrl);
-            $broadcast = json_decode($json, true);
+            $broadcast = json_decode($json, true);*/
 
             $upcoming = Title::with('images', 'type')->where('broad_time','>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->get();
             
