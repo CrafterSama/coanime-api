@@ -99,8 +99,8 @@ class PostController extends Controller
             return response()->json(array(
                 'code' => 200,
                 'message' => 'Success',
-                'title' => 'Coanime.net - ' . $relevants[0]->title . ' - Noticias y Enciclopedia de Cultura Asiática, Manga y Anime',
-                'description' => $relevants[0]->excerpt . ' - Encuentra las noticias de anime, manga, video juegos y más`.',
+                'title' => 'Coanime.net - ' . $news[0]->title . ' - Noticias y Enciclopedia de Cultura Asiática, Manga y Anime',
+                'description' => $news[0]->excerpt . ' - Encuentra las noticias de anime, manga, video juegos y más`.',
                 'keywords' => $keywords,
                 /*'events' => $events,*/
                 'relevants' => $relevants,
