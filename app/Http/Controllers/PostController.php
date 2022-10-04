@@ -37,9 +37,23 @@ class PostController extends Controller
     public function index(Request $request)
     {
         try {
-            $categories = $request->category ? [$request->category] : [1,2,3,4,5,6,7,8,11,12,13];
+            $categoryId = Category::where('slug', $request->category)->pluck('id')->first();
+            $categories = $request->category ? [$categoryId] : [1,2,3,4,5,6,7,8,11,12,13];
 
-            $relevants = Post::search($request->name)
+            $relevants = $request->category
+            ? Post::search($request->name)
+                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
+                ->with('categories', 'tags', 'users')
+                ->where('approved', 'yes')
+                ->where('draft', '0')
+                ->whereIn('category_id', $categories)
+                ->where('postponed_to', '<=', Carbon::now())
+                ->orWhere('postponed_to', null)
+                ->where('image', '!=', null)
+                ->orderBy('view_counter', 'desc')
+                ->take(3)
+                ->get()
+            : Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
                 ->whereIn('category_id', $categories)
@@ -56,9 +70,9 @@ class PostController extends Controller
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
                 ->whereIn('category_id', $categories)
+                ->where('image', '!=', null)
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
-                ->where('image', '!=', null)
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->orderBy('postponed_to', 'desc')
@@ -104,7 +118,8 @@ class PostController extends Controller
      */
     public function posts(Request $request)
     {
-        $categories = $request->category ? [$request->category] : [1,2,3,4,5,6,7,8,11,12,13];
+        $categoryId = Category::where('slug', $request->category)->pluck('id')->first();
+        $categories = $request->category ? [$categoryId] : [1,2,3,4,5,6,7,8,11,12,13];
         $news = Post::search($request->name)
             ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
             ->with('users', 'categories', 'titles', 'tags')
