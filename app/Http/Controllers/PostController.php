@@ -97,6 +97,7 @@ class PostController extends Controller
                 'message' => 'Success',
                 'title' => 'Coanime.net - ' . $news[0]->title . ' - Noticias y Enciclopedia de Cultura Asiática, Manga y Anime',
                 'description' => $news[0]->excerpt . ' - Encuentra las noticias de anime, manga, video juegos y más`.',
+                'image' => $news[0]->image,
                 'keywords' => $keywords,
                 'relevants' => $relevants,
                 'broadcast' => $broadcast['data'],
