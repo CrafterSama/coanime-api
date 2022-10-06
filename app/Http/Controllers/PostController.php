@@ -90,7 +90,7 @@ class PostController extends Controller
             $json = file_get_contents($broadcastUrl);
             $broadcast = json_decode($json, true);
 
-            $upcoming = Title::with('images', 'type')->where('broad_time','>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->get();
+            $upcoming = Title::with('images', 'type')->where('broad_time','>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(50)->get();
 
             return response()->json(array(
                 'code' => 200,
