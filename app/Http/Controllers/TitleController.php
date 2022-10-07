@@ -1075,8 +1075,10 @@ class TitleController extends Controller
 
             $jikan = Client::create();
             $page = intval($request->get('page')) ?? 1;
+            $year = intval($request->get('year')) ?? 2019;
+            $season = $request->get('season') ?? 'winter';
             //dd($page);
-            $results = $jikan->getSeasonUpcoming(['page' => $page]);
+            $results = $jikan->getSeason($year, $season, ['page' => $page]);
             $proccess = [];
             $proccess[] = '<p>Pagina ' . $page . '</p>';
             foreach ($results->getData() as $key => $value) {
