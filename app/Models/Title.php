@@ -32,9 +32,9 @@ class Title extends Model
 
     public function scopeSearch($query, $name)
     {
-        return $query->where('name', 'like', $name . '%')
-            ->orWhere('other_titles', 'like', $name . '%')
-            ->orWhere('sinopsis', 'like', $name . '%');
+        return $query->where('name', 'like', '%' . $name . '%')
+            ->orWhere('other_titles', 'like', '%' . $name . '%')
+            ->orWhere('sinopsis', 'like', '%' . $name . '%');
     }
 
     public static function scopeTitles($query, $name)

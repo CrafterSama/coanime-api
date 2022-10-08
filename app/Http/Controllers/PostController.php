@@ -50,6 +50,7 @@ class PostController extends Controller
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
                 ->where('image', '!=', null)
+                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
                 ->get()
@@ -59,6 +60,7 @@ class PostController extends Controller
                 ->whereIn('category_id', $categories)
                 ->whereBetween('postponed_to', [Carbon::now()->subDays(3), Carbon::now()])
                 ->where('image', '!=', null)
+                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->where('view_counter', '>', 5)
@@ -71,6 +73,7 @@ class PostController extends Controller
                 ->with('users', 'categories', 'titles', 'tags')
                 ->whereIn('category_id', $categories)
                 ->where('image', '!=', null)
+                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
                 ->where('postponed_to', '<=', Carbon::now())
                 ->orWhere('postponed_to', null)
                 ->where('approved', 'yes')
@@ -130,6 +133,7 @@ class PostController extends Controller
         ->where('postponed_to', '<=', Carbon::now())
         ->orWhere('postponed_to', null)
         ->where('image', '!=', null)
+        ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
         ->orderBy('postponed_to', 'desc')
         ->take(4)->get();
 

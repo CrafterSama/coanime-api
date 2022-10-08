@@ -29,6 +29,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Jikan\JikanPHP\Client;
+use Goutte\Client as GoutteClient;
 use GoogleTranslate;
 use Exception;
 use Image;
@@ -1165,5 +1166,28 @@ class TitleController extends Controller
             ), 500);
         }
 
+    }
+
+    public function consumeAnimes(Request $request)
+    {
+        $client = new GoutteClient;
+        $page = $client->request('GET', 'https://jkanime.net/directorio/');
+        $result = [];
+        $page->filter('div.card.mb-3.custom_item2')->each(function ($node) use ($client) {
+            $node->filter('a')->each(function ($node) use ($client) {
+                $url = $node->attr('href');
+                $page = $client->request('GET', $url);
+                $result[] = $page;
+            });
+        });
+
+        return response()->json(array(
+            'code' => 200,
+            'message' => array(
+                'type' => 'Success',
+                'text' => 'Pagina Cargada',
+            ),
+            'data' => $result,
+        ), 200);
     }
 }
