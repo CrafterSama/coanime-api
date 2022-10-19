@@ -880,7 +880,7 @@ class TitleController extends Controller
                     $thisTitle->save();
                 }
     
-                if (empty($title->sinopsis) || $thisTitle->sinopsis == 'Sinopsis no disponible' || $thisTitle->sinopsis == 'Pendiente de agregar sinopsis...') {
+                if (empty($title->sinopsis) || $thisTitle->sinopsis == 'Sinopsis no disponible' || $thisTitle->sinopsis == 'Pendiente de agregar sinopsis...' || $thisTitle->sinopsis == 'Sinopsis no disponible.' || $thisTitle->sinopsis == 'Sinopsis en Proceso') {
                     $thisTitle->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
                     $thisTitle->save();
                 }
