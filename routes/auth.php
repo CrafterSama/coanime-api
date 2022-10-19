@@ -113,6 +113,9 @@ Route::prefix('external/')->group(function () {
 
 Route::middleware(['auth'])->group(function () {
   Route::prefix('internal/')->group(function () {
+    // ** Posts Endpoints **
+    Route::get('dashboard', [PostController::class, 'dashboard'])->name('dashboard');
+
     // ** Auth Posts Endpoints **
     Route::get('posts-dashboard', [PostController::class, 'postsDashboard'])->name('posts-dashboard');
     Route::get('posts/{id}', [PostController::class, 'show']);

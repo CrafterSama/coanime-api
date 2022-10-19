@@ -1102,6 +1102,26 @@ class PostController extends Controller
         ), 200);
     }
 
+    public function dashboard(Request $request)
+    {
+        $postsCount = Post::count();
+        $titlesCount = Title::count();
+        $mostVisitedPost = Post::orderBy('view_counter', 'desc')->first();
+        $mostPostsCategory = Category::withCount('posts')->orderBy('posts_count', 'desc')->first();
+
+        return response()->json(array(
+            'code' => 200,
+            'message' => 'success',
+            'title' => 'Coanime.net - Dashboard',
+            'description' => 'Dashboard',
+            'posts_count' => $postsCount,
+            'titles_count' => $titlesCount,
+            'most_visited_post' => $mostVisitedPost,
+            'most_posts_category' => $mostPostsCategory,
+        ), 200);
+    }
+
+
     public function changeImagesPath(Request $request)
     {
         $posts = Post::all();
