@@ -123,7 +123,7 @@ class PostController extends Controller
     public function posts(Request $request)
     {
         $categoryId = Category::where('slug', $request->category)->pluck('id')->first();
-        $categories = $request->category ? [$categoryId] : [1,2,3,4,5,6,7,8,11,12,13];
+        $categories = $request->category ? [$categoryId] : [1,2,3,4,5,6,7,8,11];
         $news = Post::search($request->name)
         ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
         ->with('users', 'categories', 'titles', 'tags')
@@ -182,7 +182,7 @@ class PostController extends Controller
             ->whereNotIn('id', $ids)
             ->where('approved', 'yes')
             ->where('draft', '0')
-            ->whereIn('category_id', [5,8])
+            ->whereIn('category_id', [1])
             ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
             ->where('image', '!=', null)
@@ -267,7 +267,7 @@ class PostController extends Controller
             ->where('postponed_to', '<=', Carbon::now())
             ->orWhere('postponed_to', null)
             ->where('category_id', $category)
-/*            ->where('approved', 'yes')
+            /*->where('approved', 'yes')
             ->where('draft', '0')*/
             ->orderBy('postponed_to', 'desc')
             ->paginate(15);
