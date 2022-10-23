@@ -62,9 +62,9 @@ Route::prefix('external/')->group(function () {
   Route::get('titles/{type}/{slug}/posts', [TitleController::class, 'postsTitle']);
 
   Route::get('animes', [TitleController::class, 'consumeAnimes']);
-  
+
   Route::get('user/title-list', [TitleController::class, 'userTitleList']);
-  
+
   Route::post('titles/{title_id}/{statistics_id}/stats', [TitleController::class, 'updateStatistics']);
   Route::post('titles/{title_id}/{rate_id}/rates', [TitleController::class, 'updateRates']);
 
@@ -82,7 +82,7 @@ Route::prefix('external/')->group(function () {
 
   Route::get('events', [EventController::class, 'index']);
   Route::get('events/{slug}', [EventController::class, 'apiShow']);
-  
+
   Route::get('people', [PeopleController::class, 'apiIndex']);
   Route::get('people/{slug}', [PeopleController::class, 'apiShow']);
 
@@ -103,7 +103,8 @@ Route::prefix('external/')->group(function () {
   Route::get('random-image', [PostController::class, 'getRandomPostImage']);
   Route::get('random-image-title/{slug}', [PostController::class, 'getRandomPostImageByTitle']);
 
-  Route::get('save-mangas', [TitleController::class, 'consumeMangas']);
+  Route::get('add-titles-season', [TitleController::class, 'saveTitlesBySeason']);
+  Route::get('add-titles-alphabetic', [TitleController::class, 'saveTitlesByAlphabetic']);
 
   Route::get('posts-search', [PostController::class, 'apiSearchPosts']);
   // ** Posts Endpoints **
@@ -121,7 +122,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('posts/{id}', [PostController::class, 'show']);
     Route::put('posts/{id}', [PostController::class, 'update']);
     Route::post('posts', [PostController::class, 'store']);
-    
+
     // ** Auth Upload Image Endpoints **
     Route::post('upload-images', [ImageController::class, 'store']);
 
@@ -131,25 +132,25 @@ Route::middleware(['auth'])->group(function () {
     Route::get('titles/{id}', [TitleController::class, 'show']);
     Route::put('titles/{id}', [TitleController::class, 'update']);
     Route::post('titles', [TitleController::class, 'store']);
-    
+
     // ** Auth People Endpoints **
     Route::get('people', [PeopleController::class, 'index'])->name('people');
     Route::get('people/{id}', [PeopleController::class, 'show']);
     Route::put('people/{id}', [PeopleController::class, 'update']);
     Route::post('people', [PeopleController::class, 'store']);
-    
+
     // ** Auth Magazine Endpoints **
     Route::get('magazine', [MagazineController::class, 'index'])->name('magazine');
     Route::get('magazine/{id}', [MagazineController::class, 'show']);
     Route::put('magazine/{id}', [MagazineController::class, 'update']);
     Route::post('magazine', [MagazineController::class, 'store']);
-    
+
     // ** Auth Events Endpoints **
     Route::get('events', [EventController::class, 'index'])->name('events');
     Route::get('events/{id}', [EventController::class, 'show']);
     Route::put('events/{id}', [EventController::class, 'show']);
     Route::post('events', [EventController::class, 'store']);
-    
+
     // ** Auth Company Endpoints **
     Route::get('companies', [CompanyController::class, 'index'])->name('companies');
     Route::get('companies/{id}', [CompanyController::class, 'show']);

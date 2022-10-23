@@ -73,7 +73,7 @@ class Title extends Model
     {
         return $this->belongsToMany(Genre::class);
     }
-    
+
     public function statistics(): HasOne
     {
         return $this->hasOne(TitleStatistics::class);
@@ -101,7 +101,7 @@ class Title extends Model
         }
         return Carbon::parse($value)->format('Y-m-d');
     }
-    
+
     public function getBroadFinishAttribute($value)
     {
         if($value === null) {
