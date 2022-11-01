@@ -38,7 +38,7 @@ class PostController extends Controller
     {
         try {
             $categoryId = Category::where('slug', $request->category)->pluck('id')->first();
-            $categories = $request->category ? [$categoryId] : [1,2,3,4,5,6,7,8,11,12,13];
+            $categories = $request->category ? [$categoryId] : [1,2,3,4,5,6,7,8,9,11];
 
             $relevants = $request->category
             ? Post::search($request->name)
@@ -98,8 +98,8 @@ class PostController extends Controller
             return response()->json(array(
                 'code' => 200,
                 'message' => 'Success',
-                'title' => 'Coanime.net - ' . $news[0]->title . ' - Noticias y Enciclopedia de Cultura Asiática, Manga y Anime',
-                'description' => $news[0]->excerpt . ' - Encuentra las noticias de anime, manga, video juegos y más`.',
+                'title' => 'Coanime.net - Noticias de anime y manga, enciclopedia de anime y manga',
+                'description' => 'Encuentra las noticias de anime, manga, video juegos y más`.',
                 'image' => $news[0]->image,
                 'keywords' => $keywords,
                 'relevants' => $relevants,
@@ -123,7 +123,7 @@ class PostController extends Controller
     public function posts(Request $request)
     {
         $categoryId = Category::where('slug', $request->category)->pluck('id')->first();
-        $categories = $request->category ? [$categoryId] : [1,2,3,4,5,6,7,8,11];
+        $categories = $request->category ? [$categoryId] : [1,2,3,4,5,6,7,8,9,11];
         $news = Post::search($request->name)
         ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
         ->with('users', 'categories', 'titles', 'tags')
@@ -156,7 +156,7 @@ class PostController extends Controller
             //dd($posts);
             return $posts;
         }
-        
+
         public function postsJapan(Request $request)
         {
         $carbon = new Carbon;
@@ -190,7 +190,7 @@ class PostController extends Controller
             ->paginate(8);
         return $posts;
     }
-    
+
     public function postsDashboard(Request $request)
     {
         $carbon = new Carbon;
@@ -203,7 +203,7 @@ class PostController extends Controller
             ->paginate();
         return $posts;
     }
-    
+
     public function apiSearchPosts(Request $request)
     {
         $categories = $request->category ? [$request->category] : [1,2,3,4,5,6,7,8,11,12,13];
@@ -234,7 +234,7 @@ class PostController extends Controller
      * All the Categories
      *
      */
-    public function categories(Request $request) 
+    public function categories(Request $request)
     {
         try {
             $categories = Category::all();
@@ -326,8 +326,8 @@ class PostController extends Controller
             ), 200);
         } catch (Exception $e) {
             return response()->json(array(
-                'code' => 404, 
-                'message' => 'Error, Not Found', 
+                'code' => 404,
+                'message' => 'Error, Not Found',
                 'error' => $e->getMessage()
             ), 404);
         }
@@ -369,7 +369,7 @@ class PostController extends Controller
                         'text' => 'Imagen encontrada',
                     ),
                     'url' => $randomImage
-                ), 200); 
+                ), 200);
             } else {
                 return response()->json(array(
                     'code' => 404,
@@ -655,7 +655,7 @@ class PostController extends Controller
         $categories = Category::orderBy('name', 'asc')->get();
 
         $tags = Tag::orderBy('name', 'asc')->get();
-        
+
         return response()->json(array(
             'code' => 200,
             'message' => 'Success!!',
@@ -941,7 +941,7 @@ class PostController extends Controller
         $categories = Category::pluck('name', 'id');
         $tags = Tag::pluck('name', 'id');
         $selected = $post->tags()->pluck('tag_id')->toArray();
-        
+
         return response()->json(array(
             'code' => 200,
             'message' => 'Success',
