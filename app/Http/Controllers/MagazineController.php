@@ -26,7 +26,7 @@ class MagazineController extends Controller
         if ($magazine->count() > 0) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Resultados encontrados'
                 ],
@@ -37,7 +37,7 @@ class MagazineController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'Sin Resultados'
                 ],
@@ -58,7 +58,7 @@ class MagazineController extends Controller
         if ($magazine->count() > 0) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Resultados encontrados'
                 ],
@@ -69,7 +69,40 @@ class MagazineController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
+                    'type' => 'error',
+                    'text' => 'Sin Resultados'
+                ],
+                'title' => 'Coanime.net - Lista de Revistas',
+                'description' => 'Lista de revistas en la enciclopedia de coanime.net',
+            ), 404);
+        }
+    }
+
+    /**
+     * Display a listing of the resource by slug.
+     *
+     * @return \Illuminate\Http\Response|mixed
+     */
+    public function apiIndexByDemography(Request $request, $slug)
+    {
+        $type = MagazineType::where('slug', $slug)->first()->id;
+        $magazine = Magazine::search($request->name)->where('type_id', $type)->with('type', 'image', 'release', 'country')->orderBy('name', 'asc')->paginate(30);
+        if ($magazine->count() > 0) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => [
+                    'type' => 'success',
+                    'text' => 'Resultados encontrados'
+                ],
+                'title' => 'Coanime.net - Lista de Revistas',
+                'description' => 'Lista de revistas en la enciclopedia de coanime.net',
+                'result' => $magazine,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [
                     'type' => 'error',
                     'text' => 'Sin Resultados'
                 ],
@@ -143,7 +176,7 @@ class MagazineController extends Controller
             $data->image()->save($image);
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Revista creada correctamente'
                 ],
@@ -154,7 +187,7 @@ class MagazineController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'Error al crear la revista'
                 ],
@@ -178,7 +211,7 @@ class MagazineController extends Controller
         if ($mgz->count() > 0) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Revista encontrada'
                 ],
@@ -189,7 +222,7 @@ class MagazineController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'Revista no encontrada'
                 ],
@@ -212,7 +245,7 @@ class MagazineController extends Controller
         if($mgz->count() > 0) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Revista encontrada'
                 ],
@@ -223,7 +256,7 @@ class MagazineController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'Revista no encontrada'
                 ],
@@ -287,7 +320,7 @@ class MagazineController extends Controller
         $request['user_id'] = Auth::user()->id;
         $request['slug'] = Str::slug($request['name']);
         /*if(Magazine::where('slug','like', $request['slug'])->count() > 0):
-                        $request['slug'] = Str::slug($request['name']).'-01';
+            $request['slug'] = Str::slug($request['name']).'-01';
         */
 
         if ($data->update($request->all())) {
@@ -296,10 +329,10 @@ class MagazineController extends Controller
                 $image->name = $request['images'];
                 $data->image()->save($image);
             }
-            
+
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Revista actualizada correctamente'
                 ],
@@ -310,7 +343,7 @@ class MagazineController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'Error al actualizar la revista'
                 ],
@@ -333,7 +366,7 @@ class MagazineController extends Controller
         if ($magazine->delete()) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Revista eliminada correctamente'
                 ],
@@ -344,7 +377,7 @@ class MagazineController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'Error al eliminar la revista'
                 ],

@@ -87,6 +87,7 @@ Route::prefix('external/')->group(function () {
   Route::get('people/{slug}', [PeopleController::class, 'apiShow']);
 
   Route::get('magazine', [MagazineController::class, 'apiIndex']);
+  Route::get('magazine/demography/{slug}', [MagazineController::class, 'apiIndexByDemography']);
   Route::get('magazine/{slug}', [MagazineController::class, 'apiShow']);
 
   Route::get('companies', [CompanyController::class, 'apiIndex']);
