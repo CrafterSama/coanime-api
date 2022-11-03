@@ -116,6 +116,89 @@ class PostController extends Controller
         }
     }
 
+        /**
+     * Get all items of the resource by tags.
+     *
+     * @param  str  $type
+     * @return \Illuminate\Http\Response
+     */
+    public function showAllByTag(Request $request, $tag)
+    {
+        try {
+
+            $tag_id = Tag::where('slug', '=', $tag)->pluck('id');
+            $categories = [1,2,3,4,5,6,7,8,9,11];
+
+            /* $posts = Post::whereHas('tags', function ($q) use ($tag_id) {
+                $q->where('tag_id', $tag_id);
+            })->with('users', 'categories', 'tags')->orderBy('postponed_to', 'desc')->simplePaginate(); */
+
+            $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
+                ->whereHas('tags', function ($q) use ($tag_id) {
+                    $q->where('tag_id', $tag_id);
+                })
+                ->with('categories', 'tags', 'users')
+                ->whereIn('category_id', $categories)
+                ->whereBetween('postponed_to', [Carbon::now()->subDays(3), Carbon::now()])
+                ->where('image', '!=', null)
+                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+                ->where('approved', 'yes')
+                ->where('draft', '0')
+                ->where('view_counter', '>', 5)
+                ->orderBy('view_counter', 'desc')
+                ->take(3)
+                ->get();
+
+            $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
+                ->whereHas('tags', function ($q) use ($tag_id) {
+                    $q->where('tag_id', $tag_id);
+                })
+                ->with('users', 'categories', 'titles', 'tags')
+                ->whereIn('category_id', $categories)
+                ->where('image', '!=', null)
+                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+                ->where('postponed_to', '<=', Carbon::now())
+                ->orWhere('postponed_to', null)
+                ->where('approved', 'yes')
+                ->where('draft', '0')
+                ->orderBy('postponed_to', 'desc')
+                ->take(4)->get();
+
+            $keywords = [];
+            foreach ($news as $p) {
+                foreach ($p->tags as $tag) {
+                    $keywords[] = $tag->name;
+                }
+            }
+            $keywords = implode(', ', $keywords);
+
+            $broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
+            $json = file_get_contents($broadcastUrl);
+            $broadcast = json_decode($json, true);
+
+            $upcoming = Title::with('images', 'type')->where('broad_time','>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(10)->get();
+
+            return response()->json(array(
+                'code' => 200,
+                'message' => 'Success',
+                'title' => 'Coanime.net - Noticias de anime y manga, enciclopedia de anime y manga',
+                'description' => 'Encuentra las noticias de anime, manga, video juegos y más`.',
+                'image' => $news[0]->image,
+                'keywords' => $keywords,
+                'relevants' => $relevants,
+                'broadcast' => $broadcast['data'],
+                'upcoming' => $upcoming,
+                'result' => $news
+            ), 200);
+        } catch (Exception $e) {
+            return response()->json(array(
+                'code' => 500,
+                'message' => 'Error to obtain data',
+                'error' => $e->getMessage()
+            ), 500);
+        }
+    }
+
     /**
      * All the Articles
      *
@@ -143,22 +226,68 @@ class PostController extends Controller
             }
 
         $posts = Post::search($request->name)
-            ->with('users', 'categories', 'titles', 'tags')
-            ->whereNotIn('id', $ids)
-            ->where('approved', 'yes')
-            ->where('draft', '0')
-            ->whereIn('category_id', $categories)
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
-            ->where('image', '!=', null)
-            ->orderBy('postponed_to', 'desc')
-            ->paginate(15);
-            //dd($posts);
-            return $posts;
+        ->with('users', 'categories', 'titles', 'tags')
+        ->whereNotIn('id', $ids)
+        ->where('approved', 'yes')
+        ->where('draft', '0')
+        ->whereIn('category_id', $categories)
+        ->where('postponed_to', '<=', Carbon::now())
+        ->orWhere('postponed_to', null)
+        ->where('image', '!=', null)
+        ->orderBy('postponed_to', 'desc')
+        ->paginate(15);
+        //dd($posts);
+        return $posts;
+    }
+
+    /**
+     * All the Articles
+     *
+     */
+    public function postsByTags(Request $request, $tag)
+    {
+        $tag_id = Tag::where('slug', '=', $tag)->pluck('id');
+        $categories = [1,2,3,4,5,6,7,8,9,11];
+        $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
+        ->whereHas('tags', function ($q) use ($tag_id) {
+            $q->where('tag_id', $tag_id);
+        })
+        ->with('users', 'categories', 'titles', 'tags')
+        ->whereIn('category_id', $categories)
+        ->where('image', '!=', null)
+        ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+        ->where('postponed_to', '<=', Carbon::now())
+        ->orWhere('postponed_to', null)
+        ->where('approved', 'yes')
+        ->where('draft', '0')
+        ->orderBy('postponed_to', 'desc')
+        ->take(4)->get();
+
+        $ids = [];
+        foreach ($news as $p) {
+            $ids[] = $p->id;
         }
 
-        public function postsJapan(Request $request)
-        {
+        $posts = Post::search($request->name)
+        ->whereHas('tags', function ($q) use ($tag_id) {
+            $q->where('tag_id', $tag_id);
+        })
+        ->with('users', 'categories', 'titles', 'tags')
+        ->whereNotIn('id', $ids)
+        ->where('approved', 'yes')
+        ->where('draft', '0')
+        ->whereIn('category_id', $categories)
+        ->where('postponed_to', '<=', Carbon::now())
+        ->orWhere('postponed_to', null)
+        ->where('image', '!=', null)
+        ->orderBy('postponed_to', 'desc')
+        ->paginate(15);
+
+        return $posts;
+    }
+
+    public function postsJapan(Request $request)
+    {
         $carbon = new Carbon;
         $news = Post::search($request->name)
             ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
@@ -601,70 +730,6 @@ class PostController extends Controller
                 'message' => $e->getMessage(),
             ));
         }
-    }
-
-    /**
-     * Get all items of the resource by tags.
-     *
-     * @param  str  $type
-     * @return \Illuminate\Http\Response
-     */
-    public function showAllByTag($tag)
-    {
-        $carbon = new Carbon;
-
-        $tag_id = Tag::where('slug', '=', $tag)->pluck('id');
-
-        /* $posts = Post::whereHas('tags', function ($q) use ($tag_id) {
-            $q->where('tag_id', $tag_id);
-        })->with('users', 'categories', 'tags')->orderBy('postponed_to', 'desc')->simplePaginate(); */
-
-        $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
-            ->whereHas('tags', function ($q) use ($tag_id) {
-                $q->where('tag_id', $tag_id);
-            })
-            ->with('categories', 'tags', 'users')
-            ->where('approved', 'yes')
-            ->where('draft', '0')
-            ->whereNotIn('category_id', [10])
-            ->where('view_counter', '>', 50)
-            ->whereBetween('postponed_to', [Carbon::now()->subMonths(12), Carbon::now()])
-            ->orWhere('postponed_to', null)
-            ->where('image', '!=', null)
-            /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
-            ->orderBy('view_counter', 'desc')
-            ->take(3)
-            ->get();
-
-        $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
-            ->whereHas('tags', function ($q) use ($tag_id) {
-                $q->where('tag_id', $tag_id);
-            })
-            ->with('users', 'categories', 'titles', 'tags')
-            ->where('approved', 'yes')
-            ->where('draft', '0')
-            ->whereNotIn('category_id', [10])
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
-            ->orWhere('image', '!=', null)
-            /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
-            ->orderBy('postponed_to', 'desc')
-            ->take(4)
-            ->get();
-
-        $categories = Category::orderBy('name', 'asc')->get();
-
-        $tags = Tag::orderBy('name', 'asc')->get();
-
-        return response()->json(array(
-            'code' => 200,
-            'message' => 'Success!!',
-            'relevants' => $relevants,
-            'news' => $news,
-            'categories' => $categories,
-            'tags' => $tags,
-        ), 200);
-        //return view('web.home', compact('relevants', 'news', 'tags', 'categories', 'carbon'));
     }
 
     /**

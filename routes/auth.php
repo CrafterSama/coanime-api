@@ -51,7 +51,8 @@ Route::prefix('external/')->group(function () {
   Route::get('categories/{category}', [PostController::class, 'showAllByCategory'])->name('api.home.category');
   Route::get('categories/articles/{category}', [PostController::class, 'postsByCategory'])->name('api.articles.category');
 
-  Route::get('tags/{tag}', [PostController::class, 'ShowAllByTag'])->name('api.articles.tag');
+  Route::get('home/tags/{tag}', [PostController::class, 'ShowAllByTag'])->name('api.articles.tag');
+  Route::get('articles/tags/{tag}', [PostController::class, 'postsByTags'])->name('api.articles.tag');
 
   Route::get('ecma', [EncyclopediaController::class, 'index']);
 
