@@ -25,7 +25,7 @@ class EventController extends Controller
         if($events->count() > 0) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Lista de Eventos Encontrada'
                 ],
@@ -36,7 +36,42 @@ class EventController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
+                    'type' => 'error',
+                    'text' => 'No se encontraron Eventos'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => [],
+            ), 404);
+        }
+    }
+
+    /**
+     * Display a listing of the resource By Country.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function indexByCountry(Request $request, $slug)
+    {
+        $country = Country::where('name', ucfirst($slug))->first()->iso3;
+        $events = Event::search($request->name)->where('country_code', $country)->with('users','city','country')->orderBy('date_start','desc')->paginate(30);
+
+        if($events->count() > 0) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => [
+                    'type' => 'success',
+                    'text' => 'Lista de Eventos Encontrada'
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => $events,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => [
                     'type' => 'error',
                     'text' => 'No se encontraron Eventos'
                 ],
@@ -110,7 +145,7 @@ class EventController extends Controller
         if($data = Event::create($request->all())) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Evento Creado'
                 ],
@@ -121,7 +156,7 @@ class EventController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'No se pudo crear el Evento'
                 ],
@@ -146,7 +181,7 @@ class EventController extends Controller
         if($event) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Evento Encontrado'
                 ],
@@ -157,7 +192,7 @@ class EventController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'No se encontró el Evento'
                 ],
@@ -167,7 +202,7 @@ class EventController extends Controller
             ), 404);
         }
     }
-    
+
     /**
      * Display the specified resource.
      *
@@ -182,7 +217,7 @@ class EventController extends Controller
         if($event) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Evento Encontrado'
                 ],
@@ -193,7 +228,7 @@ class EventController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'No se encontró el Evento'
                 ],
@@ -233,7 +268,7 @@ class EventController extends Controller
         if($data->update($request->all())) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [  
+                'message' => [
                     'type' => 'success',
                     'text' => 'Evento Actualizado'
                 ],
@@ -244,7 +279,7 @@ class EventController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'No se pudo actualizar el Evento'
                 ],
@@ -268,7 +303,7 @@ class EventController extends Controller
 		if ($event->delete()) {
             return response()->json(array(
                 'code' => 200,
-                'message' => [ 
+                'message' => [
                     'type' => 'success',
                     'text' => 'Evento Eliminado'
                 ],
@@ -279,7 +314,7 @@ class EventController extends Controller
         } else {
             return response()->json(array(
                 'code' => 404,
-                'message' => [ 
+                'message' => [
                     'type' => 'error',
                     'text' => 'No se pudo eliminar el Evento'
                 ],

@@ -22,7 +22,7 @@ class PeopleController extends Controller {
 		if ($people->count() > 0) {
 			return response()->json(array(
 				'code' => 200,
-				'message' => [ 
+				'message' => [
 						'type' => 'success',
 						'text' => 'Resultados encontrados'
 				],
@@ -33,7 +33,7 @@ class PeopleController extends Controller {
 		} else {
 			return response()->json(array(
 				'code' => 404,
-				'message' => [ 
+				'message' => [
 						'type' => 'error',
 						'text' => 'Sin resultados'
 				],
@@ -53,7 +53,7 @@ class PeopleController extends Controller {
 		if ($people->count() > 0) {
 			return response()->json(array(
 				'code' => 200,
-				'message' => [ 
+				'message' => [
 						'type' => 'success',
 						'text' => 'Resultados encontrados'
 				],
@@ -64,14 +64,46 @@ class PeopleController extends Controller {
 		} else {
 			return response()->json(array(
 				'code' => 404,
-				'message' => [ 
+				'message' => [
 						'type' => 'error',
 						'text' => 'Sin resultados'
 				],
 				'title' => 'Coanime.net - Lista de Personas',
 				'description' => 'Lista sin resultados',
 			), 404);
-		} 
+		}
+	}
+
+	/**
+	 * Display a listing of the resource by Country in JSON format.
+	 *
+	 * @return \Illuminate\Http\Response
+	 */
+	public function apiIndexByCountry(Request $request, $slug) {
+		$country = Country::where('name', ucfirst($slug))->first()->iso3;
+		$people = People::search($request->name)->where('country_code', $country)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
+		if ($people->count() > 0) {
+			return response()->json(array(
+				'code' => 200,
+				'message' => [
+						'type' => 'success',
+						'text' => 'Resultados encontrados'
+				],
+				'title' => 'Coanime.net - Lista de Personas',
+				'description' => 'Lista de Personas en la enciclopedia de coanime.net',
+				'result' => $people,
+			), 200);
+		} else {
+			return response()->json(array(
+				'code' => 404,
+				'message' => [
+						'type' => 'error',
+						'text' => 'Sin resultados'
+				],
+				'title' => 'Coanime.net - Lista de Personas',
+				'description' => 'Lista sin resultados',
+			), 404);
+		}
 	}
 
 	public function apiSearchPeople(Request $request) {
@@ -79,7 +111,7 @@ class PeopleController extends Controller {
 		if ($people->count() > 0) {
 			return response()->json(array(
 					'code' => 200,
-					'message' => [ 
+					'message' => [
 							'type' => 'success',
 							'text' => 'Resultados encontrados'
 					],
@@ -90,7 +122,7 @@ class PeopleController extends Controller {
 		} else {
 			return response()->json(array(
 					'code' => 404,
-					'message' => [ 
+					'message' => [
 							'type' => 'error',
 							'text' => 'Sin resultados'
 					],
@@ -123,7 +155,7 @@ class PeopleController extends Controller {
 		if (People::where('name', 'like', $request->get('name'))->where('birthday', '=', $request->get('birthday'))->count() > 0) {
 			return response()->json(array(
 				'code' => 400,
-				'message' => [ 
+				'message' => [
 						'type' => 'error',
 						'text' => 'Ya existe una persona con ese nombre y fecha de nacimiento'
 				],
@@ -156,7 +188,7 @@ class PeopleController extends Controller {
 
 			$request['user_id'] = Auth::user()->id;
 			$request['slug'] = Str::slug($request['name']);
-			
+
 			if (People::where('slug', 'like', $request['slug'])->count() > 0){
 				$request['slug'] = Str::slug($request['name']) . '1';
 			}
@@ -196,7 +228,7 @@ class PeopleController extends Controller {
 			if ($data = People::create($request->all())) {
 				return response()->json(array(
 					'code' => 200,
-					'message' => [ 
+					'message' => [
 							'type' => 'success',
 							'text' => 'Persona creada correctamente'
 					],
@@ -206,7 +238,7 @@ class PeopleController extends Controller {
 			} else {
 				return response()->json(array(
 					'code' => 400,
-					'message' => [ 
+					'message' => [
 							'type' => 'error',
 							'text' => 'Error al crear la persona'
 					],
@@ -214,7 +246,7 @@ class PeopleController extends Controller {
 					'description' => 'Crear una nueva persona',
 				), 400);
 
-			}	
+			}
 		}
 	}
 
@@ -230,7 +262,7 @@ class PeopleController extends Controller {
 			//dd($people);
 			return response()->json(array(
 				'code' => 200,
-				'message' => [ 
+				'message' => [
 						'type' => 'success',
 						'text' => 'Persona encontrada'
 				],
@@ -241,7 +273,7 @@ class PeopleController extends Controller {
 		} else {
 			return response()->json(array(
 				'code' => 400,
-				'message' => [ 
+				'message' => [
 						'type' => 'error',
 						'text' => 'Persona no encontrada'
 				],
@@ -264,7 +296,7 @@ class PeopleController extends Controller {
 
 			return response()->json(array(
 				'code' => 200,
-				'message' => [ 
+				'message' => [
 						'type' => 'success',
 						'text' => 'Persona encontrada'
 				],
@@ -275,7 +307,7 @@ class PeopleController extends Controller {
 		} else {
 			return response()->json(array(
 				'code' => 400,
-				'message' => [ 
+				'message' => [
 						'type' => 'error',
 						'text' => 'Persona no encontrada'
 				],
@@ -348,7 +380,7 @@ class PeopleController extends Controller {
 		if ($data->update($request->all())) {
 			return response()->json(array(
 				'code' => 200,
-				'message' => [ 
+				'message' => [
 						'type' => 'success',
 						'text' => 'Persona actualizada correctamente'
 				],
@@ -358,7 +390,7 @@ class PeopleController extends Controller {
 		} else {
 			return response()->json(array(
 				'code' => 400,
-				'message' => [ 
+				'message' => [
 						'type' => 'error',
 						'text' => 'Error al actualizar la persona'
 				],
@@ -380,7 +412,7 @@ class PeopleController extends Controller {
 		if ($people->delete()) {
 			return response()->json(array(
 				'code' => 200,
-				'message' => [ 
+				'message' => [
 						'type' => 'success',
 						'text' => 'Persona eliminada correctamente'
 				],
@@ -390,7 +422,7 @@ class PeopleController extends Controller {
 		} else {
 			return response()->json(array(
 				'code' => 400,
-				'message' => [ 
+				'message' => [
 						'type' => 'error',
 						'text' => 'Error al eliminar la persona'
 				],

@@ -81,9 +81,11 @@ Route::prefix('external/')->group(function () {
   Route::get('genres/{slug}', [TitleController::class, 'apiShowTitlesByGenre']);
 
   Route::get('events', [EventController::class, 'index']);
+  Route::get('events/country/{slug}', [EventController::class, 'indexByCountry']);
   Route::get('events/{slug}', [EventController::class, 'apiShow']);
 
   Route::get('people', [PeopleController::class, 'apiIndex']);
+  Route::get('people/country/{slug}', [PeopleController::class, 'apiIndexByCountry']);
   Route::get('people/{slug}', [PeopleController::class, 'apiShow']);
 
   Route::get('magazine', [MagazineController::class, 'apiIndex']);
@@ -91,6 +93,7 @@ Route::prefix('external/')->group(function () {
   Route::get('magazine/{slug}', [MagazineController::class, 'apiShow']);
 
   Route::get('companies', [CompanyController::class, 'apiIndex']);
+  Route::get('companies/country/{slug}', [CompanyController::class, 'apiIndexByCountry']);
   Route::get('companies/{slug}', [CompanyController::class, 'apiShow']);
 
   Route::get('profile/{slug}', [UserController::class, 'apiProfile']);

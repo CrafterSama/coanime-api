@@ -70,6 +70,35 @@ class CompanyController extends Controller
     }
 
     /**
+     * Display a listing of the resource in JSON format.
+     *
+     * @return \Illuminate\Http\Response|mixed
+     */
+    public function apiIndexByCountry(Request $request, $slug)
+    {
+        $country = Country::where('name', ucfirst($slug))->first()->iso3;
+        $companies = Company::search($request->name)->where('country_code', $country)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
+
+        if ($companies->count() > 0) {
+            return response()->json(array(
+                'code' => 200,
+                'message' => Helper::successMessage(),
+                'title' => 'Coanime.net - Entidades',
+                'description' => 'Lista de Entidades en la enciclopedia relacionadas al mundillo de la produccion de entretenimiento en Asia',
+                'result' => $companies,
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => Helper::errorMessage(),
+                'title' => 'Coanime.net - Entidades',
+                'description' => 'Lista de Entidades en la enciclopedia relacionadas al mundillo de la produccion de entretenimiento en Asia',
+                'result' => [],
+            ), 404);
+        }
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -94,7 +123,7 @@ class CompanyController extends Controller
             $data = new Company;
             $request['user_id'] = Auth::user()->id;
             $request['slug'] = Str::slug($request['name']);
-            
+
             if (Company::where('slug', 'like', $request['slug'])->count() > 0) {
                 $request['slug'] = Str::slug($request['name']) . '1';
             }
@@ -142,7 +171,7 @@ class CompanyController extends Controller
                     'description' => 'La Entidad que busca no esta disponible en Coanime.net',
                     'result' => [],
                 ), 404);
-            }   
+            }
         } catch (Exception $e) {
             return response()->json(array(
                 'code' => 500,
@@ -151,7 +180,7 @@ class CompanyController extends Controller
             ), 500);
         }
     }
-    
+
     public function apiShow($slug)
     {
         $company = Company::with('country')->whereSlug($slug)->firstOrFail();
@@ -173,7 +202,7 @@ class CompanyController extends Controller
                     'description' => 'La Entidad que busca no esta disponible en Coanime.net',
                     'result' => [],
                 ), 404);
-            }   
+            }
         } catch (Exception $e) {
             return response()->json(array(
                 'code' => 500,
@@ -226,7 +255,7 @@ class CompanyController extends Controller
                 'message' => Helper::errorMessage($e->getMessage()),
                 'result' => [],
             ), 500);
-        }	
+        }
     }
 
     /**
