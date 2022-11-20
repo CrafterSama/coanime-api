@@ -9,6 +9,7 @@ use App\Models\Country;
 use App\Models\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Auth;
 
 class CompanyController extends Controller
 {
@@ -231,7 +232,7 @@ class CompanyController extends Controller
         ]);
 
         $data = Company::find($id);
-        $request['user_id'] = Auth::user()->id;
+        $request['user_id'] = $data->user_id;
         $request['slug'] = Str::slug($request['name']);
         $request['edited_by'] = Auth::user()->id;
 

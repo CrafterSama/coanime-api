@@ -116,7 +116,7 @@ class PostController extends Controller
         }
     }
 
-        /**
+    /**
      * Get all items of the resource by tags.
      *
      * @param  str  $type
@@ -1169,9 +1169,10 @@ class PostController extends Controller
 
     public function dashboard(Request $request)
     {
-        $postsCount = Post::count();
-        $titlesCount = Title::count();
-        $mostVisitedPost = Post::orderBy('view_counter', 'desc')->first();
+        $userId = Auth::user()->id;
+        $postsCount = Post::where('user_id', $userId)->count();
+        $titlesCount = Title::where('user_id', $userId)->count();
+        $mostVisitedPost = Post::where('user_id', $userId)->orderBy('view_counter', 'desc')->first();
         $mostPostsCategory = Category::withCount('posts')->orderBy('posts_count', 'desc')->first();
 
         return response()->json(array(
