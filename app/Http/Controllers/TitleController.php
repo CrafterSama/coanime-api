@@ -33,6 +33,7 @@ use Goutte\Client as GoutteClient;
 use GoogleTranslate;
 use Exception;
 use Image;
+use PHPUnit\Util\Json;
 
 class TitleController extends Controller
 {
@@ -842,14 +843,14 @@ class TitleController extends Controller
         }
     }
 
-    public function apiShowTitle($type, $slug)
+    public function apiShowTitle(string $type, string $slug)
     {
         $jikan = Client::create();
         $type_id = TitleType::where('slug', '=', $type)->pluck('id')->first();
-        $title = Title::where('type_id', $type_id)->where('slug', '=', $slug)->first();
-        $title = $title->load('images', 'rating', 'type', 'genres', 'users', 'posts');
         //dd($thisTitle);
         if (Title::where('type_id', $type_id)->where('slug', '=', $slug)->count() > 0) {
+            $title = Title::where('type_id', $type_id)->where('slug', '=', $slug)->first();
+            $title = $title->load('images', 'rating', 'type', 'genres', 'users', 'posts');
             if ($title?->id !== null && isset($this->typeTranslations[$type])) {
                 $thisTitle = Title::find($title->id);
                 $cloudTitlesTemp = collect($jikan->getAnimeSearch(['q' => $title->name, 'type' => $type])->getData());
