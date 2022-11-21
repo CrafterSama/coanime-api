@@ -13,7 +13,11 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, InteractsWithMedia;
+    use HasApiTokens;
+    use HasFactory;
+    use Notifiable;
+    use HasRoles;
+    use InteractsWithMedia;
 
     /**
      * The attributes that are mass assignable.
@@ -65,19 +69,19 @@ class User extends Authenticatable
 
     public function posts()
     {
-        return $this->hasMany(Post::class)->where('approved', 'yes')->whereRaw('TIMESTAMP(postponed_to) <= NOW()')->orWhere('postponed_to', NULL)->orderBy('id', 'desc');
+        return $this->hasMany(Post::class)->where('approved', 'yes')->whereRaw('TIMESTAMP(postponed_to) <= NOW()')->orWhere('postponed_to', null)->orderBy('id', 'desc');
     }
 
     public function titles()
     {
         return $this->hasMany(Title::class)->orderBy('id', 'desc');
     }
-    
+
     public function titleStatistics()
     {
         return $this->hasOne(TitleStatistics::class)->with('titles', 'statistics');
     }
-    
+
     public function rates()
     {
         return $this->hasOne(TitleRate::class);

@@ -96,7 +96,7 @@ class Title extends Model
 
     public function getBroadTimeAttribute($value)
     {
-        if($value === null) {
+        if ($value === null) {
             return null;
         }
         return Carbon::parse($value)->format('Y-m-d');
@@ -104,7 +104,7 @@ class Title extends Model
 
     public function getBroadFinishAttribute($value)
     {
-        if($value === null) {
+        if ($value === null) {
             return null;
         }
         return Carbon::parse($value)->format('Y-m-d');

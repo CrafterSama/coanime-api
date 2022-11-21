@@ -31,8 +31,7 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-
-        $users = User::with('roles')->where('remember_token', '!=', NULL)->paginate();
+        $users = User::with('roles')->where('remember_token', '!=', null)->paginate();
         return view('dashboard.users.home', compact('users'));
     }
 
@@ -50,7 +49,8 @@ class UserController extends Controller
 
             $user->save();
         }
-        return 'Usuarios Actualizados'; */ }
+        return 'Usuarios Actualizados'; */
+    }
 
     /**
      * Show the form for creating a new resource.
@@ -69,7 +69,8 @@ class UserController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
-    { }
+    {
+    }
 
     /**
      * Display the specified resource.
@@ -83,8 +84,9 @@ class UserController extends Controller
 
         return $user->pivot()->role_id;
     }
-   
-    public function user(Request $request) {
+
+    public function user(Request $request)
+    {
         $id = Auth::user()->id;
         return User::find($id)->with('roles')->first();
     }
@@ -92,7 +94,7 @@ class UserController extends Controller
     public function me(Request $request)
     {
         $id = Auth::user()->id;
-        
+
         if ($user = User::with('roles')->find($id)) {
             return response()->json(array(
                 'code' => 200,
@@ -260,7 +262,8 @@ class UserController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function destroy($id, Request $request)
-    { }
+    {
+    }
 
     /**
      * Show the Profile page to Edit the profile user data
@@ -274,13 +277,13 @@ class UserController extends Controller
         if (User::where('slug', '=', $slug)->pluck('id')->count() > 0) {
             $id = User::whereSlug($slug)->pluck('id')->first();
             $user = User::with('roles', 'posts', 'titles', 'people', 'magazine', 'companies', 'events')->find($id);
-            
+
             return response()->json(array(
                 'status' => 'Success',
                 'message' => 'Usuario encontrado',
                 'data' => $user
             ), 200);
-            //return view('users.details', compact('user', 'carbon'));
+        //return view('users.details', compact('user', 'carbon'));
         } else {
             return response()->json(array(
                 'status' => 'error',
@@ -304,7 +307,7 @@ class UserController extends Controller
                     'description' => 'Perfil de ' . $user->name . ' en Coanime.net',
                     'result' => $user
                 ), 200);
-                //return view('users.details', compact('user', 'carbon'));
+            //return view('users.details', compact('user', 'carbon'));
             } else {
                 return response()->json(array(
                     'code' => 404,
@@ -327,7 +330,6 @@ class UserController extends Controller
 
     public function postsProfile(Request $request, $id)
     {
-
         $posts = Post::where('user_id', $id)->where('view_counter', '>', 50)->where('image', '!=', null)->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')->with('categories')->orderBy('postponed_to', 'desc')->paginate();
 
         if (Post::where('user_id', $id)->count() > 0) {
@@ -347,9 +349,8 @@ class UserController extends Controller
 
     public function titlesProfile(Request $request, $id)
     {
-
         $titles = Title::where('user_id', $id)->with('images', 'rating', 'type', 'genres')->orderBy('created_at', 'desc')->paginate();
-        
+
         if (Title::where('user_id', $id)->count() > 0) {
             return response()->json(array(
                 'code' => 200,
@@ -400,7 +401,6 @@ class UserController extends Controller
 
     public function companiesProfile(Request $request, $id)
     {
-
         if (Company::where('user_id', $id)->count() > 0) {
             $companies = Company::where('user_id', $id)->paginate(10);
 
@@ -418,7 +418,6 @@ class UserController extends Controller
 
     public function magazineProfile(Request $request, $id)
     {
-
         if (Magazine::where('user_id', $id)->count() > 0) {
             $magazine = Magazine::where('user_id', $id)->paginate(10);
 

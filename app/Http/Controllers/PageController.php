@@ -16,12 +16,12 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
-class PageController extends Controller {
-
-    public function index(Request $request, $id) {
+class PageController extends Controller
+{
+    public function index(Request $request, $id)
+    {
         $page = '';
 
         return view('pages.detail', compact($page));
     }
-
 }

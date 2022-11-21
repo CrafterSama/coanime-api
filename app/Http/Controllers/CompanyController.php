@@ -38,8 +38,6 @@ class CompanyController extends Controller
                 'result' => [],
             ), 404);
         }
-
-
     }
 
     /**
@@ -121,7 +119,7 @@ class CompanyController extends Controller
                 'message' => Helper::errorMessage('There is already a company with this name'),
             ), 409);
         } else {
-            $data = new Company;
+            $data = new Company();
             $request['user_id'] = Auth::user()->id;
             $request['slug'] = Str::slug($request['name']);
 

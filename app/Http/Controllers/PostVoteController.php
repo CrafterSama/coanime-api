@@ -19,14 +19,15 @@ class PostVoteController extends Controller
         $this->middleware('auth');
     }
 
-    public function vote (Request $request) { 
+    public function vote(Request $request)
+    {
         $data = $request->all();
         //dd($data);
         $postVote = PostVote::where('post_id', $data['post_id'])->where('user_id', $data['user_id'])->get();
-        
-        if(count($postVote->pluck('id')) > 0) {
+
+        if (count($postVote->pluck('id')) > 0) {
             $vote = PostVote::find($postVote->pluck('id'));
-            if($data['status'] != $vote['status']) {
+            if ($data['status'] != $vote['status']) {
                 $vote->status = $data['status'];
                 $vote->save();
                 return response()->json(array('success' => true, 'data' => $vote), 201);

@@ -131,7 +131,7 @@ class MagazineController extends Controller
             'image-client' => 'max:2048|mimes:jpeg,gif,bmp,png',
         ]);
 
-        $data = new Magazine;
+        $data = new Magazine();
 
         $request['slug'] = Str::slug($request['name']);
 
@@ -171,7 +171,7 @@ class MagazineController extends Controller
         $data = $request->all();
 
         if ($data = Magazine::create($data)) {
-            $image = $data->image ?: new MagazineImage;
+            $image = $data->image ?: new MagazineImage();
             $image->name = $request['images'];
             $data->image()->save($image);
             return response()->json(array(
@@ -242,7 +242,7 @@ class MagazineController extends Controller
         $mgz = Magazine::with('image', 'type', 'release', 'country')
             ->whereSlug($slug)
             ->firstOrFail();
-        if($mgz->count() > 0) {
+        if ($mgz->count() > 0) {
             return response()->json(array(
                 'code' => 200,
                 'message' => [

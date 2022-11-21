@@ -9,10 +9,10 @@ class Category extends Model
 {
     use SoftDeletes;
     /**
-	 * The table associated with the model.
-	 *
-	 * @var string
-	 */
+     * The table associated with the model.
+     *
+     * @var string
+     */
     protected $table = 'categories';
     protected $dates = ['deleted_at', 'created_at', 'updated_at'];
 

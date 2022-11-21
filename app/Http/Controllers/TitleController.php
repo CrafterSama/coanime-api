@@ -358,7 +358,7 @@ class TitleController extends Controller
                 $request['episodies'] = 0;
             }
 
-            $data = new Title;
+            $data = new Title();
 
             $request['user_id'] = Auth::user()->id;
             $request['slug'] = Str::slug($request['name']);
@@ -370,7 +370,7 @@ class TitleController extends Controller
             $data = $request->all();
 
             if ($data = Title::create($data)) {
-                $images = $data->images ?: new TitleImage;
+                $images = $data->images ?: new TitleImage();
                 $images->name = $request['images'];
                 $images->thumbnail = $request['images'];
                 $data->images()->save($images);
@@ -445,7 +445,6 @@ class TitleController extends Controller
     public function update(Request $request, $id)
     {
         try {
-
             $this->validate($request, [
                 'name' => 'required',
                 'other_titles' => 'required',
@@ -482,7 +481,7 @@ class TitleController extends Controller
                     if (TitleImage::where('title_id', $id)->count() > 0) {
                         $images = $data->images ?: TitleImage::where('title_id', $id);
                     } else {
-                        $images = $data->images ?: new TitleImage;
+                        $images = $data->images ?: new TitleImage();
                     }
                     $images->name = $request['images'];
                     $images->thumbnail = $request['images'];
@@ -539,7 +538,7 @@ class TitleController extends Controller
                 $stats->statistics_id = $request->statistics_id;
                 $stats->update();
             } else {
-                $stats = new TitleStatistics;
+                $stats = new TitleStatistics();
                 $stats->title_id = $request->title_id;
                 $stats->user_id = $user->id;
                 $stats->statistics_id = $request->statistics_id;
@@ -575,7 +574,7 @@ class TitleController extends Controller
                 $rates->rate_id = $request->rate_id;
                 $rates->update();
             } else {
-                $rates = new TitleRate;
+                $rates = new TitleRate();
                 $rates->title_id = $request->title_id;
                 $rates->user_id = $user->id;
                 $rates->rate_id = $request->rate_id;
@@ -693,14 +692,15 @@ class TitleController extends Controller
         $type_id = TitleType::whereSlug($type)->pluck('id');
         if ($type_id->count() > 0):
             $type_name = TitleType::where('slug', '=', $type)->pluck('name');
-        $id = Title::where('type_id', $type_id)->pluck('id');
-        $titles = Title::where('type_id', $type_id)->with('images', 'rating', 'type', 'genres')->orderBy('name', 'asc')->paginate(30);
-        $types = TitleType::orderBy('name', 'asc')->get();
-        $genres = Genre::orderBy('name', 'asc')->get();
+            $id = Title::where('type_id', $type_id)->pluck('id');
+            $titles = Title::where('type_id', $type_id)->with('images', 'rating', 'type', 'genres')->orderBy('name', 'asc')->paginate(30);
+            $types = TitleType::orderBy('name', 'asc')->get();
+            $genres = Genre::orderBy('name', 'asc')->get();
 
-        return view('titles.home', compact('titles', 'types', 'genres', 'type_name')); else:
-            return view('errors.404');
-        endif;
+            return view('titles.home', compact('titles', 'types', 'genres', 'type_name'));
+            else:
+                return view('errors.404');
+            endif;
     }
 
     /**
@@ -825,7 +825,7 @@ class TitleController extends Controller
 
     public function apiTitlesUpcoming(Request $request)
     {
-        if ($titles = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->where('broad_time','>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->paginate()) {
+        if ($titles = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->where('broad_time', '>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->paginate()) {
             return response()->json(array(
                 'code' => 200,
                 'message' => Helper::successMessage('Titulos encontrados'),
@@ -1094,7 +1094,6 @@ class TitleController extends Controller
     public function saveTitlesBySeason(Request $request)
     {
         try {
-
             $jikan = Client::create();
             $page = intval($request->get('page')) ?? 1;
             $year = intval($request->get('year')) ?? 2019;
@@ -1105,7 +1104,7 @@ class TitleController extends Controller
             $proccess[] = '<p>Pagina ' . $page . '</p>';
             foreach ($results->getData() as $key => $value) {
                 //dd($value);
-                $title = new Title;
+                $title = new Title();
                 $newGenres = [];
                 $title->name = $value->getTitle();
                 $title->slug = Str::slug($value->getTitle());
@@ -1186,13 +1185,11 @@ class TitleController extends Controller
                 'data' => $e->getMessage(),
             ), 500);
         }
-
     }
 
     public function saveTitlesByAlphabetic(Request $request)
     {
         try {
-
             $jikan = Client::create();
             $query = [];
             $query['page'] = intval($request->get('page')) ?? 1;
@@ -1208,7 +1205,7 @@ class TitleController extends Controller
             $proccess[] = '<p>Pagina ' . $query['page'] ?? 1 . '</p>';
             foreach ($results->getData() as $key => $value) {
                 //dd($value);
-                $title = new Title;
+                $title = new Title();
                 $newGenres = [];
                 $title->name = $value->getTitle();
                 $title->slug = Str::slug($value->getTitle());
@@ -1244,7 +1241,6 @@ class TitleController extends Controller
                         if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
                             $title->broad_finish = $value->getAired()->getTo();
                         }
-
                     }
 
                     if ($manga) {
@@ -1308,12 +1304,11 @@ class TitleController extends Controller
                 'data' => $e->getMessage(),
             ), 500);
         }
-
     }
 
     public function consumeAnimes(Request $request)
     {
-        $client = new GoutteClient;
+        $client = new GoutteClient();
         $page = $client->request('GET', 'https://jkanime.net/directorio/');
         $result = [];
         $page->filter('div.card.mb-3.custom_item2')->each(function ($node) use ($client) {

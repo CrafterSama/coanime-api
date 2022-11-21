@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Http\Middleware;
 
 use Closure;
@@ -26,7 +25,7 @@ class Authenticate extends Middleware
         if ($xcsrf = $request->cookie('XSRF-TOKEN')) {
             $request->headers->set('Authorization', 'Bearer ' . $xcsrf);
         }
-        
+
         $this->authenticate($request, $guards);
 
         return $next($request);

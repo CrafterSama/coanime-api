@@ -20,9 +20,9 @@ class EventController extends Controller
      */
     public function index(Request $request)
     {
-        $events = Event::search($request->name)->with('users','city','country')->orderBy('date_start','desc')->paginate(30);
+        $events = Event::search($request->name)->with('users', 'city', 'country')->orderBy('date_start', 'desc')->paginate(30);
 
-        if($events->count() > 0) {
+        if ($events->count() > 0) {
             return response()->json(array(
                 'code' => 200,
                 'message' => [
@@ -55,9 +55,9 @@ class EventController extends Controller
     public function indexByCountry(Request $request, $slug)
     {
         $country = Country::where('name', ucfirst($slug))->first()->iso3;
-        $events = Event::search($request->name)->where('country_code', $country)->with('users','city','country')->orderBy('date_start','desc')->paginate(30);
+        $events = Event::search($request->name)->where('country_code', $country)->with('users', 'city', 'country')->orderBy('date_start', 'desc')->paginate(30);
 
-        if($events->count() > 0) {
+        if ($events->count() > 0) {
             return response()->json(array(
                 'code' => 200,
                 'message' => [
@@ -90,7 +90,7 @@ class EventController extends Controller
      */
     public function store(Request $request)
     {
-        $this->validate($request,[
+        $this->validate($request, [
             'name' => 'required',
             'address' => 'required',
             'description' => 'required',
@@ -101,14 +101,14 @@ class EventController extends Controller
             'image-client' => 'max:2048|mimes:jpeg,gif,bmp,png',
         ]);
 
-        $data = new Event;
+        $data = new Event();
         $request['user_id'] = Auth::user()->id;
         $request['slug'] = Str::slug($request['name']);
-        if(Event::where('slug','like',$request['slug'])->count() > 0) {
+        if (Event::where('slug', 'like', $request['slug'])->count() > 0) {
             $request['slug'] = Str::slug($request['name']).'1';
         }
 
-        if($request->file('image-client')) {
+        if ($request->file('image-client')) {
             $file = $request->file('image-client');
             //Creamos una instancia de la libreria instalada
             $image = Image::make($request->file('image-client')->getRealPath());
@@ -137,12 +137,12 @@ class EventController extends Controller
 
             $request['image'] = $fileName.'.jpg';
         } else {
-            $request['image'] = NULL;
+            $request['image'] = null;
         }
 
         //dd($data);
 
-        if($data = Event::create($request->all())) {
+        if ($data = Event::create($request->all())) {
             return response()->json(array(
                 'code' => 200,
                 'message' => [
@@ -175,10 +175,10 @@ class EventController extends Controller
      */
     public function show($slug)
     {
-		$id = Event::where('slug','like',$slug)->pluck('id');
-		$event = Event::with('users')->find($id);
+        $id = Event::where('slug', 'like', $slug)->pluck('id');
+        $event = Event::with('users')->find($id);
 
-        if($event) {
+        if ($event) {
             return response()->json(array(
                 'code' => 200,
                 'message' => [
@@ -211,10 +211,10 @@ class EventController extends Controller
      */
     public function apiShow($slug)
     {
-		$id = Event::where('slug','like',$slug)->pluck('id');
-		$event = Event::with('users', 'country', 'city')->findOrFail($id)->first();
+        $id = Event::where('slug', 'like', $slug)->pluck('id');
+        $event = Event::with('users', 'country', 'city')->findOrFail($id)->first();
 
-        if($event) {
+        if ($event) {
             return response()->json(array(
                 'code' => 200,
                 'message' => [
@@ -250,7 +250,7 @@ class EventController extends Controller
     {
         $data = Event::find($id);
 
-        $this->validate($request,[
+        $this->validate($request, [
             'name' => 'required',
             'address' => 'required',
             'description' => 'required',
@@ -263,9 +263,9 @@ class EventController extends Controller
 
         $request['user_id'] = Auth::user()->id;
         $request['slug']    = Str::slug($request['name']);
-        $request['image']   = is_string($request->get('image')) ? $request->get('image') : NULL;
+        $request['image']   = is_string($request->get('image')) ? $request->get('image') : null;
 
-        if($data->update($request->all())) {
+        if ($data->update($request->all())) {
             return response()->json(array(
                 'code' => 200,
                 'message' => [
@@ -300,7 +300,7 @@ class EventController extends Controller
     {
         $event = Event::find($id);
 
-		if ($event->delete()) {
+        if ($event->delete()) {
             return response()->json(array(
                 'code' => 200,
                 'message' => [
@@ -327,6 +327,5 @@ class EventController extends Controller
 
     public function name(Request $request, $name)
     {
-
     }
 }

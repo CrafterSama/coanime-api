@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-
 class Magazine extends Model
 {
     use SoftDeletes;
@@ -21,9 +20,10 @@ class Magazine extends Model
     public function scopeSearch($query, $name)
     {
         if (strlen($name) > 1) :
-            return $query->where('name', 'like', '%' . $name . '%'); else:
-            return $query->where('name', 'like', $name . '%');
-        endif;
+            return $query->where('name', 'like', '%' . $name . '%');
+            else:
+                return $query->where('name', 'like', $name . '%');
+            endif;
     }
 
     public function country()

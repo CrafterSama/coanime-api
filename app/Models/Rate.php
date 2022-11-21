@@ -10,14 +10,14 @@ class Rate extends Model
 {
     use HasFactory;
     use SoftDeletes;
-	/**
-	 * The table associated with the model.
-	 *
-	 * @var string
-	 */
-	protected $table = 'rates';
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'rates';
     protected $fillable = ['name', 'slug'];
-	protected $dates = ['deleted_at', 'created_at', 'updated_at'];
+    protected $dates = ['deleted_at', 'created_at', 'updated_at'];
 
     public function titleRate()
     {

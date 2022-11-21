@@ -93,7 +93,7 @@ class PostController extends Controller
             $json = file_get_contents($broadcastUrl);
             $broadcast = json_decode($json, true);
 
-            $upcoming = Title::with('images', 'type')->where('broad_time','>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(10)->get();
+            $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(10)->get();
 
             return response()->json(array(
                 'code' => 200,
@@ -125,7 +125,6 @@ class PostController extends Controller
     public function showAllByTag(Request $request, $tag)
     {
         try {
-
             $tag_id = Tag::where('slug', '=', $tag)->pluck('id');
             $categories = [1,2,3,4,5,6,7,8,9,11];
 
@@ -176,7 +175,7 @@ class PostController extends Controller
             $json = file_get_contents($broadcastUrl);
             $broadcast = json_decode($json, true);
 
-            $upcoming = Title::with('images', 'type')->where('broad_time','>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(10)->get();
+            $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(10)->get();
 
             return response()->json(array(
                 'code' => 200,
@@ -220,10 +219,10 @@ class PostController extends Controller
         ->orderBy('postponed_to', 'desc')
         ->take(4)->get();
 
-            $ids = [];
-            foreach ($news as $p) {
-                $ids[] = $p->id;
-            }
+        $ids = [];
+        foreach ($news as $p) {
+            $ids[] = $p->id;
+        }
 
         $posts = Post::search($request->name)
         ->with('users', 'categories', 'titles', 'tags')
@@ -288,7 +287,7 @@ class PostController extends Controller
 
     public function postsJapan(Request $request)
     {
-        $carbon = new Carbon;
+        $carbon = new Carbon();
         $news = Post::search($request->name)
             ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
             ->with('users', 'categories', 'titles', 'tags')
@@ -322,7 +321,7 @@ class PostController extends Controller
 
     public function postsDashboard(Request $request)
     {
-        $carbon = new Carbon;
+        $carbon = new Carbon();
 
         $posts = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
@@ -345,18 +344,18 @@ class PostController extends Controller
             ->where('postponed_to', '<=', Carbon::now())
             ->orderBy('postponed_to', 'desc')
             ->paginate()) {
-                return response()->json(array(
-                    'code' => 200,
-                    'message' => 'Success',
-                    'result' => $posts
-                ), 200);
-            } else {
-                return response()->json(array(
-                    'code' => 404,
-                    'message' => 'Not Found',
-                    'error' => 'No se encontraron resultados'
-                ), 404);
-            }
+            return response()->json(array(
+                'code' => 200,
+                'message' => 'Success',
+                'result' => $posts
+            ), 200);
+        } else {
+            return response()->json(array(
+                'code' => 404,
+                'message' => 'Not Found',
+                'error' => 'No se encontraron resultados'
+            ), 404);
+        }
     }
 
     /**
@@ -387,7 +386,7 @@ class PostController extends Controller
      */
     public function postsByCategory(Request $request)
     {
-        $carbon = new Carbon;
+        $carbon = new Carbon();
         $category = Category::where('slug', $request->category)->pluck('id')->first();
         //dd($category);
         $posts = Post::search($request->name)
@@ -527,7 +526,7 @@ class PostController extends Controller
     public function create()
     {
         $currentUser = Auth::user()->id;
-        $data = new Post;
+        $data = new Post();
         $data->user_id = $currentUser;
         $data->category_id = 1;
         $data->draft = 1;
@@ -555,7 +554,7 @@ class PostController extends Controller
             'image' => 'required|max:255',
         ]);
 
-        $data = new Post;
+        $data = new Post();
         $data = $request->all();
         $currentUser = Auth::user()->id;
         $data['user_id'] = $currentUser;
@@ -770,7 +769,7 @@ class PostController extends Controller
                 'message' => 'Success!!',
                 'post' => $post,
             ), 200);
-            //return view('pages.details', compact('post'));
+        //return view('pages.details', compact('post'));
         } else {
             return response()->json(array(
                 'code' => 404,
@@ -885,7 +884,7 @@ class PostController extends Controller
                 'keywords' => $keywords,
                 'otherArticles' => $otherArticles,
             ), 200);
-            //return view('web.details', compact('post', 'relateds', 'otherArticles', 'keywords', 'votes'));
+        //return view('web.details', compact('post', 'relateds', 'otherArticles', 'keywords', 'votes'));
         } else {
             return response()->json(array(
                 'code' => 404,
@@ -997,7 +996,7 @@ class PostController extends Controller
     {
         if (empty($id)) {
             $currentUser = Auth::user()->id;
-            $data = new Post;
+            $data = new Post();
             $data->user_id = $currentUser;
             $data->save();
             $id = $data->id;

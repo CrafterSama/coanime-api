@@ -23,35 +23,46 @@ class Helper extends Model
     {
         $type = 'success';
         $text = is_string($string) ? $string : 'Request successful';
-        
+
         return compact('type', 'text');
     }
-    
+
     public static function errorMessage($string = null)
     {
         $type = 'success';
         $text = is_string($string) ? $string : 'Request unsuccessful';
-        
+
         return compact('type', 'text');
     }
 
     private static function ConSoSinS($val, $sentence)
     {
-        if ($val > 1) return $val . str_replace(array('(s)', '(es)'), array('s', 'es'), $sentence);
-        else return $val . str_replace('(s)', '', $sentence);
+        if ($val > 1) {
+            return $val . str_replace(array('(s)', '(es)'), array('s', 'es'), $sentence);
+        } else {
+            return $val . str_replace('(s)', '', $sentence);
+        }
     }
 
     public static function getDate($value)
     {
         $time = time() - $value;
 
-        if ($time <= 0) return 'Ahora';
-        else if ($time < 60) return "Hace " . self::ConSoSinS(floor($time), ' Segundo(s)');
-        else if ($time < 60 * 60) return "Hace " . self::ConSoSinS(floor($time / 60), ' Minuto(s)');
-        else if ($time < 60 * 60 * 24) return "Hace " . self::ConSoSinS(floor($time / (60 * 60)), ' Hora(s)');
-        else if ($time < 60 * 60 * 24 * 30) return "Hace " . self::ConSoSinS(floor($time / (60 * 60 * 24)), ' Día(s)');
-        else if ($time < 60 * 60 * 24 * 30 * 12) return "Hace " . self::ConSoSinS(floor($time / (60 * 60 * 24 * 30)), ' Mes(es)');
-        else return "Hace " . self::ConSoSinS(floor($time / (60 * 60 * 24 * 30 * 12)), ' Año(s)');
+        if ($time <= 0) {
+            return 'Ahora';
+        } elseif ($time < 60) {
+            return "Hace " . self::ConSoSinS(floor($time), ' Segundo(s)');
+        } elseif ($time < 60 * 60) {
+            return "Hace " . self::ConSoSinS(floor($time / 60), ' Minuto(s)');
+        } elseif ($time < 60 * 60 * 24) {
+            return "Hace " . self::ConSoSinS(floor($time / (60 * 60)), ' Hora(s)');
+        } elseif ($time < 60 * 60 * 24 * 30) {
+            return "Hace " . self::ConSoSinS(floor($time / (60 * 60 * 24)), ' Día(s)');
+        } elseif ($time < 60 * 60 * 24 * 30 * 12) {
+            return "Hace " . self::ConSoSinS(floor($time / (60 * 60 * 24 * 30)), ' Mes(es)');
+        } else {
+            return "Hace " . self::ConSoSinS(floor($time / (60 * 60 * 24 * 30 * 12)), ' Año(s)');
+        }
     }
 
     public static function setSpanishDate($formato)
@@ -108,7 +119,6 @@ class Helper extends Model
 
     public static function img_post($string)
     {
-
         $string = htmlentities($string);
 
         $imageTag = '(<img.+?/>)';
@@ -179,7 +189,7 @@ class Helper extends Model
                             // http://www.youtube.com/embed/VIDEOID?modestbranding=1&amp;rel=0
                             // http://www.youtube.com/v/VIDEO-ID?fs=1&amp;hl=en_US
                             $videoIdRegex = '/youtube.com\/(?:embed|v){1}\/([a-zA-Z0-9_\-\.]+)\??/i';
-                        } else if (strpos($link, 'youtu.be') !== false) {
+                        } elseif (strpos($link, 'youtu.be') !== false) {
                             // works on:
                             // http://youtu.be/daro6K6mym8
                             $videoIdRegex = '/youtu.be\/([a-zA-Z0-9_-]+)\??/i';
@@ -194,7 +204,7 @@ class Helper extends Model
                         }
                     }
                     // handle vimeo videos
-                    else if (strpos($video, 'vimeo') !== false) {
+                    elseif (strpos($video, 'vimeo') !== false) {
                         if (strpos($video, 'player.vimeo.com') !== false) {
                             // works on:
                             // http://player.vimeo.com/video/37985580?title=0&amp;byline=0&amp;portrait=0
@@ -242,11 +252,11 @@ class Helper extends Model
     }
 
     public static function getAllImages()
-    { }
+    {
+    }
 
     public static function getTitleImage($string)
     {
-
         $server = 'https://' . $_SERVER['HTTP_HOST'];
 
         $path = "/images/encyclopedia/titles/";
@@ -258,7 +268,6 @@ class Helper extends Model
 
     public static function getTitleImageWithTags($string)
     {
-
         $server = 'https://' . $_SERVER['HTTP_HOST'];
 
         $path = "/images/encyclopedia/titles/";
@@ -332,5 +341,4 @@ class Helper extends Model
         }
         throw new \Exception('Can not create a unique slug');
     }
-
 }

@@ -10,14 +10,14 @@ class Statistics extends Model
 {
     use HasFactory;
     use SoftDeletes;
-	/**
-	 * The table associated with the model.
-	 *
-	 * @var string
-	 */
-	protected $table = 'statistics';
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'statistics';
     protected $fillable = ['name', 'slug'];
-	protected $dates = ['deleted_at', 'created_at', 'updated_at'];
+    protected $dates = ['deleted_at', 'created_at', 'updated_at'];
 
     public function titleStatistics()
     {
@@ -28,5 +28,4 @@ class Statistics extends Model
     {
         return $this->belongsToMany(User::class);
     }
-
 }

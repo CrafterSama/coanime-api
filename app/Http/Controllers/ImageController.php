@@ -64,7 +64,7 @@ class ImageController extends Controller
                     'code' => 500,
                     'message' => $e->getMessage(),
                 ), Response::HTTP_INTERNAL_SERVER_ERROR);
-            } 
+            }
         } else {
             return response()->json(array(
                 'code' => 400,
