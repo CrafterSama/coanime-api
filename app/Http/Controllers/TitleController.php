@@ -1273,7 +1273,7 @@ class TitleController extends Controller
 
                     if ($title->genres->count() === 0) {
                         foreach ($value->getGenres() as $key => $gen) {
-                            if ($gen !== '' || $gen !== null || $this->genres[strtolower($gen->getName())]) {
+                            if ($gen !== '' || $gen !== null || $this->genres[strtolower($gen->getName())] || $gen->getName() !== 'Award Winning' || isset($this->genres[strtolower($gen->getName())])) {
                                 $newGenres[] = $this->genres[strtolower($gen->getName())];
                             }
                         }
