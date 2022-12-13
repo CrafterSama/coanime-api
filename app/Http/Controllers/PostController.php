@@ -171,7 +171,7 @@ class PostController extends Controller
             }
             $keywords = implode(', ', $keywords);
 
-            $broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . date("l");
+            $broadcastUrl = 'https://api.jikan.moe/v4/schedules/' . strtolower(date("l"));
             $json = file_get_contents($broadcastUrl);
             $broadcast = json_decode($json, true);
 

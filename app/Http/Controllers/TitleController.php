@@ -148,6 +148,7 @@ class TitleController extends Controller
         'Finished' => 'Finalizado',
         'Publishing' => 'Publicándose',
         'Discontinued' => 'Descontinuado',
+        'On Hiatus' => 'En espera'
     ];
 
     private $rating = [
