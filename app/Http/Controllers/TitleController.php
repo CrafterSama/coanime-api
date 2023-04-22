@@ -441,7 +441,7 @@ class TitleController extends Controller
      *
      * @param  int  $id
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
@@ -847,6 +847,14 @@ class TitleController extends Controller
         }
     }
 
+
+    /**
+     * Get the Titles in JSON Format from th API.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return Illuminate\Http\JsonResponse
+     */
+
     public function apiShowTitle(string $type, string $slug)
     {
         $jikan = Client::create();
@@ -902,24 +910,24 @@ class TitleController extends Controller
                         }
 
                         if ($thisTitle->broad_time === null || $thisTitle->broad_time === '0000-00-00 00:00:00' || $thisTitle->broad_time !== $cloudTitle?->getAired()?->getFrom()) {
-                            $thisTitle->broad_time = $cloudTitle->getAired()->getFrom();
+                            $thisTitle->broad_time = Carbon::create($cloudTitle->getAired()->getFrom())->format('Y-m-d');
                             $thisTitle->save();
                         }
 
                         if ($thisTitle->broad_finish === null || $thisTitle->broad_finish === '0000-00-00 00:00:00' || $thisTitle->broad_finish !== $cloudTitle?->getAired()?->getTo()) {
-                            $thisTitle->broad_finish = $cloudTitle->getAired()->getTo();
+                            $thisTitle->broad_finish = Carbon::create($cloudTitle->getAired()->getTo())->format('Y-m-d');
                             $thisTitle->save();
                         }
                     }
 
                     if ($manga) {
                         if ($thisTitle->broad_time === null || $thisTitle->broad_time === '0000-00-00 00:00:00' || $thisTitle->broad_time !== $cloudTitle?->getPublished()?->getFrom()) {
-                            $thisTitle->broad_time = $cloudTitle->getPublished()->getFrom();
+                            $thisTitle->broad_time = Carbon::create($cloudTitle->getPublished()->getFrom())->format('Y-m-d');
                             $thisTitle->save();
                         }
 
                         if ($thisTitle->broad_finish === null || $thisTitle->broad_finish === '0000-00-00 00:00:00' || $thisTitle->broad_finish !== $cloudTitle?->getPublished()?->getTo()) {
-                            $thisTitle->broad_finish = $cloudTitle->getPublished()->getTo();
+                            $thisTitle->broad_finish = Carbon::create($cloudTitle->getPublished()->getTo())->format('Y-m-d');
                             $thisTitle->save();
                         }
 

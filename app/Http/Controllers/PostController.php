@@ -27,7 +27,7 @@ use Exception;
 use Image;
 use Storage;
 
-class PostController extends Controller
+ class PostController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -120,7 +120,7 @@ class PostController extends Controller
      * Get all items of the resource by tags.
      *
      * @param  str  $type
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function showAllByTag(Request $request, $tag)
     {
@@ -235,7 +235,6 @@ class PostController extends Controller
         ->where('image', '!=', null)
         ->orderBy('postponed_to', 'desc')
         ->paginate(15);
-        //dd($posts);
         return $posts;
     }
 
@@ -287,7 +286,6 @@ class PostController extends Controller
 
     public function postsJapan(Request $request)
     {
-        $carbon = new Carbon();
         $news = Post::search($request->name)
             ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
             ->with('users', 'categories', 'titles', 'tags')
@@ -305,7 +303,7 @@ class PostController extends Controller
             $ids[] = $p->id;
         }
 
-        $posts = Post::search($request->name)
+        return Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
             ->whereNotIn('id', $ids)
             ->where('approved', 'yes')
@@ -316,20 +314,16 @@ class PostController extends Controller
             ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
             ->paginate(8);
-        return $posts;
     }
 
     public function postsDashboard(Request $request)
     {
-        $carbon = new Carbon();
-
-        $posts = Post::search($request->name)
+        return Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->orderBy('postponed_to', 'desc')
             ->paginate();
-        return $posts;
     }
 
     public function apiSearchPosts(Request $request)
@@ -353,7 +347,7 @@ class PostController extends Controller
             return response()->json(array(
                 'code' => 404,
                 'message' => 'Not Found',
-                'error' => 'No se encontraron resultados'
+                'error' => NO_RESULTS
             ), 404);
         }
     }
@@ -503,7 +497,7 @@ class PostController extends Controller
                     'code' => 404,
                     'message' => array(
                         'type' => 'error',
-                        'text' => 'No se encontraron resultados',
+                        'text' => NO_RESULTS,
                     ),
                 ), 404);
             }
@@ -512,7 +506,7 @@ class PostController extends Controller
                 'code' => 404,
                 'message' => array(
                     'type' => 'error',
-                    'text' => 'No se encontraron resultados',
+                    'text' => NO_RESULTS,
                 ),
             ), 404);
         }
@@ -541,7 +535,7 @@ class PostController extends Controller
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -663,7 +657,7 @@ class PostController extends Controller
      * Get all items of the resource by Category.
      *
      * @param  str  $type
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function showAllByCategory(Request $request, $category)
     {
@@ -733,7 +727,7 @@ class PostController extends Controller
 
     /**
      * Get all the genre.
-     *
+     * return
      */
     public function showAllTags()
     {
@@ -753,7 +747,7 @@ class PostController extends Controller
      * Display the specified resource.
      *
      * @param  string  $slug
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function page($slug)
     {
@@ -783,7 +777,7 @@ class PostController extends Controller
      * Display the specified resource.
      *
      * @param  string  $slug
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show($slug)
     {
@@ -858,7 +852,6 @@ class PostController extends Controller
                             array_push($relateds, $add);
                         endif;
                     }
-                    //dd($relateds);
                     if (count($relateds) > 0) {
                         if (count($relateds) > 3) {
                             $relateds = array_slice($relateds, 3);
@@ -884,13 +877,11 @@ class PostController extends Controller
                 'keywords' => $keywords,
                 'otherArticles' => $otherArticles,
             ), 200);
-        //return view('web.details', compact('post', 'relateds', 'otherArticles', 'keywords', 'votes'));
         } else {
             return response()->json(array(
                 'code' => 404,
                 'message' => ['type' => 'error', 'text' => 'Post not found'],
             ), 404);
-            //return view('errors.404');
         }
     }
 
@@ -990,7 +981,7 @@ class PostController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function edit(Request $request, $id)
     {
@@ -1009,8 +1000,8 @@ class PostController extends Controller
         return response()->json(array(
             'code' => 200,
             'message' => 'Success',
-            'title' => 'Coanime.net - Editar Post',
-            'description' => 'Coanime.net - Editar Post',
+            'title' => POST_EDIT_TITLE,
+            'description' => POST_EDIT_TITLE,
             'path_posts' => 'https://coanime.net/posts/',
             'path_image' => $post->image,
             'result' => $post,
@@ -1018,7 +1009,6 @@ class PostController extends Controller
             'tags' => $tags,
             'selected' => $selected,
         ), 200);
-        //return view('dashboard.posts.create', compact('post', 'categories', 'tags', 'selected'));
     }
 
     /**
@@ -1026,7 +1016,7 @@ class PostController extends Controller
      *
      * @param  int  $id
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
@@ -1051,9 +1041,13 @@ class PostController extends Controller
             $data['slug'] = Str::slug($data['title']);
         }
 
-        if ($request->postponed_to == "") {
+        if ($request->postponed_to === "") {
             $data['postponed_to'] = Carbon::now()->format('Y-m-d H:i:s');
         }
+
+        //$data['postponed_to'] = Carbon::createFromFormat('d-m-Y H:i', $request->postponed_to)->format('Y-m-d H:i:s');
+
+        //dd($data['postponed_to']);
 
         $data['draft'] = 0;
 
@@ -1098,8 +1092,8 @@ class PostController extends Controller
             return response()->json(array(
                 'code' => 500,
                 'message' => 'Error',
-                'title' => 'Coanime.net - Editar Post',
-                'description' => 'Coanime.net - Editar Post',
+                'title' => POST_EDIT_TITLE,
+                'description' => POST_EDIT_TITLE,
                 'path_posts' => 'https://coanime.net/posts/',
                 'path_image' => $data->image,
                 'result' => $data,
@@ -1116,8 +1110,8 @@ class PostController extends Controller
         return response()->json(array(
             'code' => 200,
             'message' => 'Success!! Post aprobado',
-            'title' => 'Coanime.net - Editar Post',
-            'description' => 'Coanime.net - Editar Post',
+            'title' => POST_EDIT_TITLE,
+            'description' => POST_EDIT_TITLE,
             'path_posts' => 'https://coanime.net/posts/',
             'path_image' => $post->image,
             'result' => $post,
@@ -1128,9 +1122,9 @@ class PostController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function destroy($id, Request $request)
+    public function destroy($id)
     {
         $post = Post::find($id);
 
@@ -1153,6 +1147,12 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * Metho to show the deleted posts.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+
     public function destroyPosts(Request $request)
     {
         $posts = Post::search($request->name)->with('users', 'categories', 'titles', 'tags')->orderBy('id', 'desc')->onlyTrashed()->paginate(20);
@@ -1166,7 +1166,13 @@ class PostController extends Controller
         ), 200);
     }
 
-    public function dashboard(Request $request)
+    /**
+     * Show some Data in the initial Dashboard view.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+
+    public function dashboard()
     {
         $userId = Auth::user()->id;
         $postsCount = Post::where('user_id', $userId)->count();
@@ -1187,7 +1193,7 @@ class PostController extends Controller
     }
 
 
-    public function changeImagesPath(Request $request)
+    public function changeImagesPath()
     {
         $posts = Post::all();
         $titles = Title::with('images')->get();
