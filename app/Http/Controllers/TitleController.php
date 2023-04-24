@@ -30,7 +30,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Jikan\JikanPHP\Client;
 use Goutte\Client as GoutteClient;
-use GoogleTranslate;
+use Stichoza\GoogleTranslate\GoogleTranslate;
 use Exception;
 use Image;
 use PHPUnit\Util\Json;
@@ -526,7 +526,7 @@ class TitleController extends Controller
      *
      * @param  int  $id
      * @param  int  $statistics_id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function updateStatistics(Request $request)
     {
@@ -605,7 +605,7 @@ class TitleController extends Controller
      *
      * @param  int  $id
      * @param  \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(Request $request, $id)
     {
@@ -632,11 +632,13 @@ class TitleController extends Controller
 
     public function userTitleList(Request $request)
     {
-        $abandoned = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '1')->paginate();
-        $stopped = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '2')->paginate();
-        $wantWatch = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '3')->paginate();
-        $watching = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '4')->paginate();
-        $watched = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '5')->paginate();
+        $type = $request->type;
+        $statisticsOptions = Statistics::select('id', 'name')->get();
+        $abandoned = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '1')->paginate(30);
+        $stopped = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '2')->paginate(30);
+        $wantWatch = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '3')->paginate(30);
+        $watching = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '4')->paginate(30);
+        $watched = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '5')->paginate(30);
         $titles = TitleStatistics::where('user_id', Auth::user()->id)->with('titles', 'statistics')->orderBy('created_at', 'desc')->paginate(30);
         return response()->json(array(
             'code' => 200,
@@ -653,6 +655,7 @@ class TitleController extends Controller
             'wantWatch' => $wantWatch,
             'watching' => $watching,
             'watched' => $watched,
+            'meta' => ['statistics' => $statisticsOptions],
         ), 200);
     }
 
@@ -1155,11 +1158,11 @@ class TitleController extends Controller
                     }
 
                     if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
-                        $title->broad_time = $value->getAired()->getFrom();
+                        $title->broad_time = Carbon::create($value->getAired()->getFrom())->format('Y-m-d');
                     }
 
                     if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
-                        $title->broad_finish = $value->getAired()->getTo();
+                        $title->broad_finish = Carbon::create($value->getAired()->getTo())->format('Y-m-d');
                     }
                     $title->save();
 
@@ -1212,8 +1215,9 @@ class TitleController extends Controller
             //dd($results);
             $proccess = [];
             $proccess[] = '<p>Pagina ' . $query['page'] ?? 1 . '</p>';
+
             foreach ($results->getData() as $key => $value) {
-                //dd($value);
+                // dd($value);
                 $title = new Title();
                 $newGenres = [];
                 $title->name = $value->getTitle();
@@ -1244,21 +1248,21 @@ class TitleController extends Controller
                         }
 
                         if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
-                            $title->broad_time = $value->getAired()->getFrom();
+                            $title->broad_time = Carbon::create($value->getAired()->getFrom())->format('Y-m-d');
                         }
 
                         if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
-                            $title->broad_finish = $value->getAired()->getTo();
+                            $title->broad_finish = Carbon::create($value->getAired()->getTo())->format('Y-m-d');
                         }
                     }
 
                     if ($manga) {
                         if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
-                            $title->broad_time = $value->getPublished()->getFrom();
+                            $title->broad_time = Carbon::create($value->getPublished()->getFrom())->format('Y-m-d');
                         }
 
                         if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
-                            $title->broad_finish = $value->getPublished()->getTo();
+                            $title->broad_finish = Carbon::create($value->getPublished()->getTo())->format('Y-m-d');
                         }
                     }
 
