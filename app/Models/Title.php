@@ -1,14 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 class Title extends Model
@@ -21,6 +22,7 @@ class Title extends Model
      * @var array
      */
     protected $dates = ['deleted_at', 'broad_finish', 'broad_time', 'created_at', 'updated_at'];
+
     protected $fillable = ['name', 'user_id', 'episodies', 'sinopsis', 'slug', 'type_id', 'other_titles', 'trailer_url', 'status', 'rating_id', 'broad_time', 'broad_finish', 'updated_by', 'just_year'];
 
     /**
@@ -32,15 +34,15 @@ class Title extends Model
 
     public function scopeSearch($query, $name)
     {
-        return $query->where('name', 'like', '%' . $name . '%')
-            ->orWhere('other_titles', 'like', '%' . $name . '%')
-            ->orWhere('sinopsis', 'like', '%' . $name . '%');
+        return $query->where('name', 'like', '%'.$name.'%')
+            ->orWhere('other_titles', 'like', '%'.$name.'%')
+            ->orWhere('sinopsis', 'like', '%'.$name.'%');
     }
 
     public static function scopeTitles($query, $name)
     {
-        return $query->where('name', 'like', $name . '%')
-            ->orWhere('other_titles', 'like', $name . '%');
+        return $query->where('name', 'like', $name.'%')
+            ->orWhere('other_titles', 'like', $name.'%');
     }
 
     /*public function scopeByGenre($genre, $query) {
@@ -99,6 +101,7 @@ class Title extends Model
         if ($value === null) {
             return null;
         }
+
         return Carbon::parse($value)->format('Y-m-d');
     }
 
@@ -107,6 +110,7 @@ class Title extends Model
         if ($value === null) {
             return null;
         }
+
         return Carbon::parse($value)->format('Y-m-d');
     }
 }

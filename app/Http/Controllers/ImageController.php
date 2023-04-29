@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\Helper;
-use Illuminate\Support\Facades\Storage;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Exception;
+use Illuminate\Support\Facades\Storage;
 use Image;
 
 class ImageController extends Controller
@@ -24,7 +26,6 @@ class ImageController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -36,7 +37,7 @@ class ImageController extends Controller
 
         $model = $request->model;
 
-        $path = '/' . $model . '/';
+        $path = '/'.$model.'/';
 
         if ($request->file('file')) {
             try {
@@ -50,26 +51,26 @@ class ImageController extends Controller
                     });
                 }
 
-                $filePath = $path . $fileName . '.webp';
+                $filePath = $path.$fileName.'.webp';
                 $imageUrl = Storage::disk('s3')->put($filePath, $image);
                 $imageUrl = Storage::disk('s3')->url($filePath);
 
-                return response()->json(array(
+                return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage('Image uploaded successfully'),
                     'url' => $imageUrl,
-                ), Response::HTTP_OK);
+                ], Response::HTTP_OK);
             } catch (Exception $e) {
-                return response()->json(array(
+                return response()->json([
                     'code' => 500,
                     'message' => $e->getMessage(),
-                ), Response::HTTP_INTERNAL_SERVER_ERROR);
+                ], Response::HTTP_INTERNAL_SERVER_ERROR);
             }
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 400,
                 'message' => 'Error!! Image not Uploaded',
-            ), Response::HTTP_BAD_REQUEST);
+            ], Response::HTTP_BAD_REQUEST);
         }
     }
 
@@ -87,7 +88,6 @@ class ImageController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */

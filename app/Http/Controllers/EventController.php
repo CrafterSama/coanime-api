@@ -1,14 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Http\Requests;
-use App\Models\Event;
 use App\Models\Country;
-use App\Models\City;
-use App\Models\CountryLanguage;
+use App\Models\Event;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class EventController extends Controller
@@ -23,27 +21,27 @@ class EventController extends Controller
         $events = Event::search($request->name)->with('users', 'city', 'country')->orderBy('date_start', 'desc')->paginate(30);
 
         if ($events->count() > 0) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => [
                     'type' => 'success',
-                    'text' => 'Lista de Eventos Encontrada'
+                    'text' => 'Lista de Eventos Encontrada',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => $events,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => [
                     'type' => 'error',
-                    'text' => 'No se encontraron Eventos'
+                    'text' => 'No se encontraron Eventos',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 
@@ -58,34 +56,33 @@ class EventController extends Controller
         $events = Event::search($request->name)->where('country_code', $country)->with('users', 'city', 'country')->orderBy('date_start', 'desc')->paginate(30);
 
         if ($events->count() > 0) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => [
                     'type' => 'success',
-                    'text' => 'Lista de Eventos Encontrada'
+                    'text' => 'Lista de Eventos Encontrada',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => $events,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => [
                     'type' => 'error',
-                    'text' => 'No se encontraron Eventos'
+                    'text' => 'No se encontraron Eventos',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -117,9 +114,9 @@ class EventController extends Controller
             //Ruta donde se guardaran los Thumbnails
             $thumbnailPath = public_path().'/images/events/thumbnails/';
             // Guardar Original
-            $fileName = hash('sha256', $data['slug'] . strval(time()));
+            $fileName = hash('sha256', $data['slug'].strval(time()));
 
-            $watermark = Image::make(public_path() . '/images/logo_homepage.png');
+            $watermark = Image::make(public_path().'/images/logo_homepage.png');
 
             $watermark->opacity(30);
 
@@ -143,27 +140,27 @@ class EventController extends Controller
         //dd($data);
 
         if ($data = Event::create($request->all())) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => [
                     'type' => 'success',
-                    'text' => 'Evento Creado'
+                    'text' => 'Evento Creado',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => $data,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => [
                     'type' => 'error',
-                    'text' => 'No se pudo crear el Evento'
+                    'text' => 'No se pudo crear el Evento',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 
@@ -179,27 +176,27 @@ class EventController extends Controller
         $event = Event::with('users')->find($id);
 
         if ($event) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => [
                     'type' => 'success',
-                    'text' => 'Evento Encontrado'
+                    'text' => 'Evento Encontrado',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => $event,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => [
                     'type' => 'error',
-                    'text' => 'No se encontró el Evento'
+                    'text' => 'No se encontró el Evento',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 
@@ -215,34 +212,33 @@ class EventController extends Controller
         $event = Event::with('users', 'country', 'city')->findOrFail($id)->first();
 
         if ($event) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => [
                     'type' => 'success',
-                    'text' => 'Evento Encontrado'
+                    'text' => 'Evento Encontrado',
                 ],
-                'title' => 'Coanime.net - Eventos - '. $event->name .'',
-                'description' => $event->name . ' tendrá lugar en ' . $event->address . ' ubicado en la ciudad de ' . $event->city->name . ' en ' . $event->country->name,
+                'title' => 'Coanime.net - Eventos - '.$event->name.'',
+                'description' => $event->name.' tendrá lugar en '.$event->address.' ubicado en la ciudad de '.$event->city->name.' en '.$event->country->name,
                 'result' => $event,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => [
                     'type' => 'error',
-                    'text' => 'No se encontró el Evento'
+                    'text' => 'No se encontró el Evento',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
@@ -262,31 +258,31 @@ class EventController extends Controller
         ]);
 
         $request['user_id'] = Auth::user()->id;
-        $request['slug']    = Str::slug($request['name']);
-        $request['image']   = is_string($request->get('image')) ? $request->get('image') : null;
+        $request['slug'] = Str::slug($request['name']);
+        $request['image'] = is_string($request->get('image')) ? $request->get('image') : null;
 
         if ($data->update($request->all())) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => [
                     'type' => 'success',
-                    'text' => 'Evento Actualizado'
+                    'text' => 'Evento Actualizado',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => $data,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => [
                     'type' => 'error',
-                    'text' => 'No se pudo actualizar el Evento'
+                    'text' => 'No se pudo actualizar el Evento',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 
@@ -301,27 +297,27 @@ class EventController extends Controller
         $event = Event::find($id);
 
         if ($event->delete()) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => [
                     'type' => 'success',
-                    'text' => 'Evento Eliminado'
+                    'text' => 'Evento Eliminado',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => $event,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => [
                     'type' => 'error',
-                    'text' => 'No se pudo eliminar el Evento'
+                    'text' => 'No se pudo eliminar el Evento',
                 ],
                 'title' => 'Coanime.net - Eventos',
                 'description' => 'Lista de Eventos en Coanime.net',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 

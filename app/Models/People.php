@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -8,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class People extends Model
 {
     use SoftDeletes;
+
     /**
      * The table associated with the model.
      *
@@ -16,16 +19,15 @@ class People extends Model
     protected $table = 'people';
 
     protected $dates = ['deleted_at', 'birthday', 'falldown_date', 'created_at', 'updated_at'];
-
     protected $fillable = ['name', 'japanese_name', 'areas_skills_hobbies', 'bio', 'city_id', 'country_code', 'slug', 'birthday', 'falldown', 'falldown_date', 'approved', 'image', 'user_id'];
 
     public function scopeSearch($query, $name)
     {
-        if (strlen($name) > 1):
-            return $query->where('name', 'like', '%' . $name . '%');
-            else:
-                return $query->where('name', 'like', $name . '%');
-            endif;
+        if (strlen($name) > 1) {
+            return $query->where('name', 'like', '%'.$name.'%');
+        } else {
+            return $query->where('name', 'like', $name.'%');
+        }
     }
 
     public static function name($id)
@@ -33,7 +35,8 @@ class People extends Model
         $people = People::find($id);
         $fnmame = $people->first_name;
         $lname = $people->last_name;
-        $name = $fnmame . ' ' . $lname;
+        $name = $fnmame.' '.$lname;
+
         return $name;
     }
 

@@ -1,25 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-
-use App\Http\Requests;
-use App\Models\User;
-use App\Models\Post;
-use App\Models\Helper;
-
-use App\Models\Title;
-use App\Models\People;
-use App\Models\Magazine;
 use App\Models\Company;
 use App\Models\Event;
-use App\Models\Role;
+use App\Models\Helper;
+use App\Models\Magazine;
+use App\Models\People;
+use App\Models\Post;
+use App\Models\Title;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 use Image;
 
 class UserController extends Controller
@@ -32,6 +30,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $users = User::with('roles')->where('remember_token', '!=', null)->paginate();
+
         return view('dashboard.users.home', compact('users'));
     }
 
@@ -65,7 +64,6 @@ class UserController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -88,6 +86,7 @@ class UserController extends Controller
     public function user(Request $request)
     {
         $id = Auth::user()->id;
+
         return User::find($id)->with('roles')->first();
     }
 
@@ -96,28 +95,28 @@ class UserController extends Controller
         $id = Auth::user()->id;
 
         if ($user = User::with('roles')->find($id)) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage('User found'),
                 'title' => 'Coanime.net - Profile edition',
                 'description' => 'This is to Edit the User Profile',
                 'result' => $user,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => Helper::errorMessage('User not found'),
                 'title' => 'Coanime.net - Profile',
                 'description' => 'This is the User Profile',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 
     public function updateMe(Request $request)
     {
         $user = User::find(Auth::user()->id);
-        if (!empty($request->password)) {
+        if (! empty($request->password)) {
             $request->validate([
                 'password' => [
                     'required',
@@ -127,7 +126,7 @@ class UserController extends Controller
                         ->numbers()
                         ->symbols()
                         ->uncompromised(),
-                    'confirmed'
+                    'confirmed',
                 ],
             ]);
             $user->password = Hash::make($request->password);
@@ -150,24 +149,24 @@ class UserController extends Controller
         }
         try {
             if ($user->save()) {
-                return response()->json(array(
+                return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage('Your profile was updated successfully'),
                     'result' => $user,
-                ), 200);
+                ], 200);
             } else {
-                return response()->json(array(
+                return response()->json([
                     'code' => 400,
                     'message' => Helper::errorMessage('Your profile was not updated'),
                     'result' => [],
-                ), 400);
+                ], 400);
             }
         } catch (\Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 403,
-                'message' => Helper::errorMessage('Something went wrong '. $e->getMessage()),
+                'message' => Helper::errorMessage('Something went wrong '.$e->getMessage()),
                 'result' => [],
-            ), 403);
+            ], 403);
         }
     }
 
@@ -187,28 +186,27 @@ class UserController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
         $this->validate($request, [
-            'nick'          => 'required|max:255',
-            'name'          => 'required|max:255',
-            'bio'           => 'required|max:255',
-            'facebook'      => 'max:255',
-            'instagram'     => 'max:255',
-            'twitter'       => 'max:255',
-            'googleplus'    => 'max:255',
-            'pinterest'     => 'max:255',
-            'tumblr'        => 'max:255',
-            'behance'       => 'max:255',
-            'deviantart'    => 'max:255',
-            'website'       => 'max:255',
-            'genre'         => 'required',
-            'birthday'      => 'date_format: "Y-m-d H:i:s"',
-            'image-client'  => 'max:2048|mimes:jpeg,gif,bmp,png',
+            'nick' => 'required|max:255',
+            'name' => 'required|max:255',
+            'bio' => 'required|max:255',
+            'facebook' => 'max:255',
+            'instagram' => 'max:255',
+            'twitter' => 'max:255',
+            'googleplus' => 'max:255',
+            'pinterest' => 'max:255',
+            'tumblr' => 'max:255',
+            'behance' => 'max:255',
+            'deviantart' => 'max:255',
+            'website' => 'max:255',
+            'genre' => 'required',
+            'birthday' => 'date_format: "Y-m-d H:i:s"',
+            'image-client' => 'max:2048|mimes:jpeg,gif,bmp,png',
         ]);
 
         $data = User::find($id);
@@ -223,35 +221,35 @@ class UserController extends Controller
             //Creamos una instancia de la libreria instalada
             $image = Image::make($request->file('image-client')->getRealPath());
             //Ruta donde queremos guardar las imagenes
-            $originalPath = public_path() . '/images/profiles/';
+            $originalPath = public_path().'/images/profiles/';
             //Ruta donde se guardaran los Thumbnails
-            $thumbnailPath = public_path() . '/images/profiles/';
+            $thumbnailPath = public_path().'/images/profiles/';
 
-            $fileName = hash('sha256', $data['slug'] . strval(time()));
+            $fileName = hash('sha256', $data['slug'].strval(time()));
 
-            $image->save($originalPath . $fileName . '.jpg');
+            $image->save($originalPath.$fileName.'.jpg');
             // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
             $image->resize(300, null, function ($constraint) {
                 $constraint->aspectRatio();
             });
             // Guardar
-            $image->save($thumbnailPath . 'thumb-' . $fileName . '.jpg');
+            $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
 
-            $data['image'] = 'https://coanime.net/images/profiles/' . $fileName . '.jpg';
+            $data['image'] = 'https://coanime.net/images/profiles/'.$fileName.'.jpg';
         }
 
         if ($data->update($user)) {
-            return response()->json(array(
+            return response()->json([
                 'status' => 'Success',
                 'message' => 'Usuario actualizado correctamente',
-                'data' => $data
-            ), 200);
+                'data' => $data,
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'status' => 'error',
                 'message' => 'No se pudo Actualizar el Usuario',
-                'data' => $data
-            ), 500);
+                'data' => $data,
+            ], 500);
         }
     }
 
@@ -268,7 +266,6 @@ class UserController extends Controller
     /**
      * Show the Profile page to Edit the profile user data
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
@@ -278,18 +275,18 @@ class UserController extends Controller
             $id = User::whereSlug($slug)->pluck('id')->first();
             $user = User::with('roles', 'posts', 'titles', 'people', 'magazine', 'companies', 'events')->find($id);
 
-            return response()->json(array(
+            return response()->json([
                 'status' => 'Success',
                 'message' => 'Usuario encontrado',
-                'data' => $user
-            ), 200);
+                'data' => $user,
+            ], 200);
         //return view('users.details', compact('user', 'carbon'));
         } else {
-            return response()->json(array(
+            return response()->json([
                 'status' => 'error',
                 'message' => 'Usuario no encontrado',
-                'data' => $id
-            ), 404);
+                'data' => $id,
+            ], 404);
         }
     }
 
@@ -300,31 +297,31 @@ class UserController extends Controller
                 $id = User::whereSlug($request->slug)->pluck('id')->first();
                 $user = User::with('roles')->find($id);
 
-                return response()->json(array(
+                return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage('User found'),
-                    'title' => 'Coanime.net - Perfil - ' . $user->name,
-                    'description' => 'Perfil de ' . $user->name . ' en Coanime.net',
-                    'result' => $user
-                ), 200);
+                    'title' => 'Coanime.net - Perfil - '.$user->name,
+                    'description' => 'Perfil de '.$user->name.' en Coanime.net',
+                    'result' => $user,
+                ], 200);
             //return view('users.details', compact('user', 'carbon'));
             } else {
-                return response()->json(array(
+                return response()->json([
                     'code' => 404,
                     'message' => Helper::errorMessage('User not found'),
-                    'title' => 'Coanime.net - Perfil no enontrado - ' . $request->slug,
-                    'description' => 'No se consiguio el perfil de ' . $request->slug . ' en Coanime.net',
-                    'result' => $request->slug
-                ), 404);
+                    'title' => 'Coanime.net - Perfil no enontrado - '.$request->slug,
+                    'description' => 'No se consiguio el perfil de '.$request->slug.' en Coanime.net',
+                    'result' => $request->slug,
+                ], 404);
             }
         } catch (\Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 500,
-                'message' => Helper::errorMessage('Internal Server Error, Error: ' . $e->getMessage()),
+                'message' => Helper::errorMessage('Internal Server Error, Error: '.$e->getMessage()),
                 'title' => 'Coanime.net - Error Interno',
                 'description' => 'Error Interno en Coanime.net',
-                'data' => $e
-            ), 500);
+                'data' => $e,
+            ], 500);
         }
     }
 
@@ -333,17 +330,17 @@ class UserController extends Controller
         $posts = Post::where('user_id', $id)->where('view_counter', '>', 50)->where('image', '!=', null)->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')->with('categories')->orderBy('postponed_to', 'desc')->paginate();
 
         if (Post::where('user_id', $id)->count() > 0) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage('Posts founds'),
                 'result' => $posts,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::errorMessage('Posts not founds'),
                 'result' => $posts,
-            ), 200);
+            ], 200);
         }
     }
 
@@ -352,17 +349,17 @@ class UserController extends Controller
         $titles = Title::where('user_id', $id)->with('images', 'rating', 'type', 'genres')->orderBy('created_at', 'desc')->paginate();
 
         if (Title::where('user_id', $id)->count() > 0) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage('Titles founds'),
                 'result' => $titles,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::errorMessage('Titles not founds'),
                 'result' => $titles,
-            ), 200);
+            ], 200);
         }
     }
 
@@ -370,15 +367,16 @@ class UserController extends Controller
     {
         if (Event::where('user_id', $id)->count() > 0) {
             $events = Event::where('user_id', $id)->paginate(10);
-            return response()->json(array(
+
+            return response()->json([
                 'message' => 'Success',
                 'quantity' => $events->count(),
-                'data' => $events
-            ), 200);
+                'data' => $events,
+            ], 200);
         } else {
-            return response()->json(array(
-                'message' => 'Not Found!'
-            ), 404);
+            return response()->json([
+                'message' => 'Not Found!',
+            ], 404);
         }
     }
 
@@ -387,15 +385,15 @@ class UserController extends Controller
         if (People::where('user_id', $id)->count() > 0) {
             $people = People::where('user_id', $id)->paginate(10);
 
-            return response()->json(array(
+            return response()->json([
                 'message' => 'Success',
                 'quantity' => $people->count(),
                 'data' => $people,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
-                'message' => 'Not Found!'
-            ), 404);
+            return response()->json([
+                'message' => 'Not Found!',
+            ], 404);
         }
     }
 
@@ -404,15 +402,15 @@ class UserController extends Controller
         if (Company::where('user_id', $id)->count() > 0) {
             $companies = Company::where('user_id', $id)->paginate(10);
 
-            return response()->json(array(
+            return response()->json([
                 'message' => 'Success',
                 'quantity' => $companies->count(),
                 'data' => $companies,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
-                'message' => 'Not Found!'
-            ), 404);
+            return response()->json([
+                'message' => 'Not Found!',
+            ], 404);
         }
     }
 
@@ -421,15 +419,15 @@ class UserController extends Controller
         if (Magazine::where('user_id', $id)->count() > 0) {
             $magazine = Magazine::where('user_id', $id)->paginate(10);
 
-            return response()->json(array(
+            return response()->json([
                 'message' => 'Success',
                 'quantity' => $magazine->count(),
                 'data' => $magazine,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
-                'message' => 'Not Found!'
-            ), 404);
+            return response()->json([
+                'message' => 'Not Found!',
+            ], 404);
         }
     }
 }

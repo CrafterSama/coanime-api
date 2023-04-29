@@ -1,11 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Post;
-use App\Models\User;
 use App\Models\PostVote;
+use Illuminate\Http\Request;
 
 class PostVoteController extends Controller
 {
@@ -30,13 +30,14 @@ class PostVoteController extends Controller
             if ($data['status'] != $vote['status']) {
                 $vote->status = $data['status'];
                 $vote->save();
-                return response()->json(array('success' => true, 'data' => $vote), 201);
+
+                return response()->json(['success' => true, 'data' => $vote], 201);
             } else {
-                return response()->json(array('success' => false, 'message' => 'No se puede votar dos veces'), 200);
+                return response()->json(['success' => false, 'message' => 'No se puede votar dos veces'], 200);
             }
         } else {
             if ($data = PostVote::create($data)) {
-                return response()->json(array('success' => true, 'data' => $data), 201);
+                return response()->json(['success' => true, 'data' => $data], 201);
             }
         }
     }

@@ -1,15 +1,16 @@
 <?php
 
-namespace App\Http\Controllers;
+declare(strict_types=1);
 
-use Exception;
+namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\Country;
 use App\Models\Helper;
+use Auth;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Auth;
 
 class CompanyController extends Controller
 {
@@ -22,21 +23,21 @@ class CompanyController extends Controller
     {
         $companies = Company::search($request->name)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
         if ($companies->count() > 0) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage(),
                 'title' => 'Coanime.net - Entidades',
                 'description' => 'Lista de Entidades relacionadas con el medio en Coanime.net',
                 'result' => $companies,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => Helper::errorMessage(),
                 'title' => 'Coanime.net - Entidades',
                 'description' => 'Lista de Entidades relacionadas con el medio en Coanime.net',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 
@@ -50,21 +51,21 @@ class CompanyController extends Controller
         $companies = Company::search($request->name)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
 
         if ($companies->count() > 0) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage(),
                 'title' => 'Coanime.net - Entidades',
                 'description' => 'Lista de Entidades en la enciclopedia relacionadas al mundillo de la produccion de entretenimiento en Asia',
                 'result' => $companies,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => Helper::errorMessage(),
                 'title' => 'Coanime.net - Entidades',
                 'description' => 'Lista de Entidades en la enciclopedia relacionadas al mundillo de la produccion de entretenimiento en Asia',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 
@@ -79,28 +80,27 @@ class CompanyController extends Controller
         $companies = Company::search($request->name)->where('country_code', $country)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
 
         if ($companies->count() > 0) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage(),
                 'title' => 'Coanime.net - Entidades',
                 'description' => 'Lista de Entidades en la enciclopedia relacionadas al mundillo de la produccion de entretenimiento en Asia',
                 'result' => $companies,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => Helper::errorMessage(),
                 'title' => 'Coanime.net - Entidades',
                 'description' => 'Lista de Entidades en la enciclopedia relacionadas al mundillo de la produccion de entretenimiento en Asia',
                 'result' => [],
-            ), 404);
+            ], 404);
         }
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -114,32 +114,33 @@ class CompanyController extends Controller
         ]);
 
         if (Company::where('slug', '=', Str::slug($request->get('name')))->count() > 0) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 409,
                 'message' => Helper::errorMessage('There is already a company with this name'),
-            ), 409);
+            ], 409);
         } else {
             $data = new Company();
             $request['user_id'] = Auth::user()->id;
             $request['slug'] = Str::slug($request['name']);
 
             if (Company::where('slug', 'like', $request['slug'])->count() > 0) {
-                $request['slug'] = Str::slug($request['name']) . '1';
+                $request['slug'] = Str::slug($request['name']).'1';
             }
 
             try {
                 $data = Company::create($request->all());
-                return response()->json(array(
+
+                return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage('Entity created successfully'),
                     'result' => $data,
-                ), 200);
+                ], 200);
             } catch (Exception $e) {
-                return response()->json(array(
+                return response()->json([
                     'code' => 500,
                     'message' => Helper::errorMessage($e->getMessage()),
                     'result' => [],
-                ), 500);
+                ], 500);
             }
         }
     }
@@ -155,28 +156,28 @@ class CompanyController extends Controller
 
         try {
             if ($company->count() > 0) {
-                return response()->json(array(
+                return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage(),
-                    'title' => 'Coanime.net - Entidades - ' . $company->name . '',
-                    'description' => 'Información acerca de la Entidad ' . $company->name . ' en Coanime.net',
+                    'title' => 'Coanime.net - Entidades - '.$company->name.'',
+                    'description' => 'Información acerca de la Entidad '.$company->name.' en Coanime.net',
                     'result' => $company,
-                ), 200);
+                ], 200);
             } else {
-                return response()->json(array(
+                return response()->json([
                     'code' => 404,
                     'message' => Helper::errorMessage(),
                     'title' => 'Coanime.net - Entidades',
                     'description' => 'La Entidad que busca no esta disponible en Coanime.net',
                     'result' => [],
-                ), 404);
+                ], 404);
             }
         } catch (Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 500,
                 'message' => Helper::errorMessage($e->getMessage()),
                 'result' => [],
-            ), 500);
+            ], 500);
         }
     }
 
@@ -186,35 +187,34 @@ class CompanyController extends Controller
 
         try {
             if ($company->count() > 0) {
-                return response()->json(array(
+                return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage(),
-                    'title' => 'Coanime.net - Entidades - ' . $company->name . '',
-                    'description' => 'Información acerca de la Entidad ' . $company->name . ' en Coanime.net',
+                    'title' => 'Coanime.net - Entidades - '.$company->name.'',
+                    'description' => 'Información acerca de la Entidad '.$company->name.' en Coanime.net',
                     'result' => $company,
-                ), 200);
+                ], 200);
             } else {
-                return response()->json(array(
+                return response()->json([
                     'code' => 404,
                     'message' => Helper::errorMessage(),
                     'title' => 'Coanime.net - Entidades',
                     'description' => 'La Entidad que busca no esta disponible en Coanime.net',
                     'result' => [],
-                ), 404);
+                ], 404);
             }
         } catch (Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 500,
                 'message' => Helper::errorMessage($e->getMessage()),
                 'result' => [],
-            ), 500);
+            ], 500);
         }
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
@@ -236,24 +236,24 @@ class CompanyController extends Controller
 
         try {
             if ($data->update($request->all())) {
-                return response()->json(array(
+                return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage('Entity updated successfully'),
                     'result' => $data,
-                ), 200);
+                ], 200);
             } else {
-                return response()->json(array(
+                return response()->json([
                     'code' => 500,
                     'message' => Helper::errorMessage(),
                     'result' => [],
-                ), 500);
+                ], 500);
             }
         } catch (Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 500,
                 'message' => Helper::errorMessage($e->getMessage()),
                 'result' => [],
-            ), 500);
+            ], 500);
         }
     }
 

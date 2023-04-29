@@ -1,35 +1,36 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
-use App\Http\Controllers\PostController;
-use App\Http\Controllers\EncyclopediaController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\TitleController;
-use App\Http\Controllers\MagazineController;
 use App\Http\Controllers\CompanyController;
-use App\Http\Controllers\PeopleController;
+use App\Http\Controllers\EncyclopediaController;
 use App\Http\Controllers\EventController;
-use App\Http\Controllers\PostVoteController;
-use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ImageController;
+use App\Http\Controllers\MagazineController;
+use App\Http\Controllers\PeopleController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\PostVoteController;
+use App\Http\Controllers\TitleController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/verify-email/{id}/{hash}', [VerifyEmailController::class, '__invoke'])
-                ->middleware(['auth', 'signed', 'throttle:6,1'])
-                ->name('verification.verify');
+    ->middleware(['auth', 'signed', 'throttle:6,1'])
+    ->name('verification.verify');
 
 Route::post('/email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
-                ->middleware(['auth', 'throttle:6,1'])
-                ->name('verification.send');
+    ->middleware(['auth', 'throttle:6,1'])
+    ->name('verification.send');
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-                ->middleware('auth')
-                ->name('logout');
+    ->middleware('auth')
+    ->name('logout');
 
 Route::post('/register', [RegisteredUserController::class, 'store'])->name('register');
 Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login');
@@ -71,7 +72,6 @@ Route::prefix('external/')->group(function () {
 
     Route::get('statistics/{title}/{user}', [TitleController::class, 'statisticsByUser']);
     Route::get('rates/{title}/{user}', [TitleController::class, 'ratesByUser']);
-
 
     Route::get('search/titles/{name}', [TitleController::class, 'apiSearchTitles']);
     Route::get('search/people/{name}', [PeopleController::class, 'apiIndex']);
