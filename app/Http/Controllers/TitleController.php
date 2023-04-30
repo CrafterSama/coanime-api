@@ -203,7 +203,7 @@ class TitleController extends Controller
     /**
      * Display a listing of titles serie.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
@@ -239,7 +239,7 @@ class TitleController extends Controller
     /**
      * Display a listing of Titles Series with JSON Response.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function apiSearchTitles(Request $request)
     {
@@ -280,7 +280,7 @@ class TitleController extends Controller
     /**
      * Get all the Data in JSON format to create a Title.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function create(Request $request)
     {
@@ -313,7 +313,7 @@ class TitleController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -391,7 +391,7 @@ class TitleController extends Controller
      *
      * @param  string  $type
      * @param  string  $slug
-     * @return \Illuminate\Http\Response|mixed
+     * @return \Illuminate\Http\JsonResponse|mixed
      */
     public function show(Request $request, $id)
     {
@@ -680,7 +680,7 @@ class TitleController extends Controller
      * Get all items of the titles by type.
      *
      * @param  string  $type
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View
      */
     public function showAllByType($type)
     {
@@ -723,7 +723,7 @@ class TitleController extends Controller
      * Get all items of the titles by genre.
      *
      * @param  string  $genre
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function showAllByGenre($genre)
     {
@@ -752,7 +752,7 @@ class TitleController extends Controller
             'data' => $data,
         ], 200);
 
-        return view('titles.home', compact('titles', 'genres', 'types'));
+        // return view('titles.home', compact('titles', 'genres', 'types'));
     }
 
     public function getAllBySearch(Request $request)
@@ -774,7 +774,7 @@ class TitleController extends Controller
     /**
      * Get the Titles in JSON Format from th API.
      *
-     * @return Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function apiTitles(Request $request)
     {
@@ -797,7 +797,7 @@ class TitleController extends Controller
     /**
      * Get the Titles in JSON Format from th API.
      *
-     * @return Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function getAllTitles(Request $request)
     {
@@ -815,6 +815,11 @@ class TitleController extends Controller
         }
     }
 
+    /**
+     * Get the Titles Upcoming in JSON Format from th API.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function apiTitlesUpcoming(Request $request)
     {
         if ($titles = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->where('broad_time', '>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->paginate()) {
@@ -947,7 +952,7 @@ class TitleController extends Controller
                             $path = '/titles/';
 
                             $filePath = $path.$fileName.'.webp';
-                            $imageUrl = Storage::disk('s3')->put($filePath, $image);
+                            Storage::disk('s3')->put($filePath, $image);
                             $imageUrl = Storage::disk('s3')->url($filePath);
                             $images = new TitleImage();
                             $images->create([
@@ -1065,7 +1070,48 @@ class TitleController extends Controller
                     ],
                     'title' => 'Coanime.net - Posts - '.$slug,
                     'descripcion' => 'Posts de la Enciclopedia en el aparatado de '.$slug,
-                    'quantity' => $posts->count(),
+                    'quantity' => count($posts),
+                    'data' => $posts,
+                ], 200);
+            } else {
+                return response()->json([
+                    'code' => 404,
+                    'message' => [
+                        'type' => 'Error',
+                        'text' => 'Posts no encontrados',
+                    ],
+                ], 404);
+            }
+        } else {
+            return response()->json([
+                'code' => 404,
+                'message' => [
+                    'type' => 'Error',
+                    'text' => 'Posts no encontrados',
+                ],
+            ], 404);
+        }
+        /* return view('web.home', compact('posts')); */
+    }
+
+    public function titlesWithPosts($type, $slug)
+    {
+        $tag_id = Tag::where('slug', '=', $slug)->pluck('id');
+
+        if ($tag_id->count() > 0) {
+            $posts = Post::getByTitle($tag_id);
+            if (! empty($tag_id) && $posts->count() > 0) {
+                $posts = $posts->orderBy('posts.postponed_to', 'desc')->simplePaginate();
+
+                return response()->json([
+                    'code' => 200,
+                    'message' => [
+                        'type' => 'Success',
+                        'text' => 'Posts encontrados',
+                    ],
+                    'title' => 'Coanime.net - Posts - '.$slug,
+                    'descripcion' => 'Posts de la Enciclopedia en el aparatado de '.$slug,
+                    'quantity' => count($posts),
                     'data' => $posts,
                 ], 200);
             } else {

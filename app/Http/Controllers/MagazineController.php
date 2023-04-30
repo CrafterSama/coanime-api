@@ -15,7 +15,7 @@ class MagazineController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response|mixed
+     * @return \Illuminate\Http\JsonResponse|mixed
      */
     public function index(Request $request)
     {
@@ -47,7 +47,7 @@ class MagazineController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response|mixed
+     * @return \Illuminate\Http\JsonResponse|mixed
      */
     public function apiIndex(Request $request)
     {
@@ -79,7 +79,7 @@ class MagazineController extends Controller
     /**
      * Display a listing of the resource by slug.
      *
-     * @return \Illuminate\Http\Response|mixed
+     * @return \Illuminate\Http\JsonResponse|mixed
      */
     public function apiIndexByDemography(Request $request, $slug)
     {
@@ -112,7 +112,7 @@ class MagazineController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -197,7 +197,7 @@ class MagazineController extends Controller
     /**
      * Display the specified resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show($slug)
     {
@@ -232,7 +232,7 @@ class MagazineController extends Controller
     /**
      * Display the specified resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function apiShow($slug)
     {
@@ -267,7 +267,7 @@ class MagazineController extends Controller
      * Update the specified resource in storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
@@ -353,7 +353,7 @@ class MagazineController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($id, Request $request)
     {
