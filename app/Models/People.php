@@ -23,7 +23,7 @@ class People extends Model
 
     public function scopeSearch($query, $name)
     {
-        if (strlen($name) > 1) {
+        if ($name && strlen($name) > 1) {
             return $query->where('name', 'like', '%'.$name.'%');
         } else {
             return $query->where('name', 'like', $name.'%');
