@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -28,8 +30,8 @@ class Post extends Model
 
     public function scopeSearch($query, $name)
     {
-        return $query->where('title', 'like', '%' . $name . '%')->with('tags', function ($q) use ($name) {
-            $q->where('name', 'like', '%' . $name . '%');
+        return $query->where('title', 'like', '%'.$name.'%')->with('tags', function ($q) use ($name) {
+            $q->where('name', 'like', '%'.$name.'%');
         });
     }
 
@@ -43,7 +45,7 @@ class Post extends Model
         $post = Post::find($id);
         $intro = $post->intro;
         $content = $post->content;
-        $post = $intro . $content;
+        $post = $intro.$content;
 
         //dd($post);
         return $post;
@@ -56,7 +58,7 @@ class Post extends Model
 
     public function categories()
     {
-        return $this->belongsTo(Category::class, 'category_id', 'id')->select(array('id', 'name', 'slug'));
+        return $this->belongsTo(Category::class, 'category_id', 'id')->select(['id', 'name', 'slug']);
     }
 
     public function tags()

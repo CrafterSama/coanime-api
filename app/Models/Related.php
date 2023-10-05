@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +17,7 @@ class Related extends Model
      * @var string
      */
     protected $table = 'relateds';
+
     protected $fillable = ['title_id', 'related_id', 'type'];
 
     /**

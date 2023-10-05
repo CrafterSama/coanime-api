@@ -1,39 +1,33 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-use Alert;
 use App\Models\Genre;
+use App\Models\Helper;
+use App\Models\Post;
+use App\Models\Rate;
 use App\Models\Ratings;
+use App\Models\Statistics;
 use App\Models\Tag;
 use App\Models\Title;
 use App\Models\TitleImage;
+use App\Models\TitleRate;
+use App\Models\TitleStatistics;
 use App\Models\TitleType;
 use App\Models\User;
-use App\Models\Category;
-use App\Models\Company;
-use App\Models\Magazine;
-use App\Models\People;
-use App\Models\Post;
-use App\Models\Rate;
-use App\Models\TitleRate;
-use App\Models\Statistics;
-use App\Models\TitleStatistics;
-use App\Models\Helper;
 use Carbon\Carbon;
+use Goutte\Client as GoutteClient;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
-use Illuminate\Support\Arr;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
-use Jikan\JikanPHP\Client;
-use Goutte\Client as GoutteClient;
-use GoogleTranslate;
-use Exception;
+use Illuminate\Support\Str;
 use Image;
+use Jikan\JikanPHP\Client;
 use PHPUnit\Util\Json;
+use Stichoza\GoogleTranslate\GoogleTranslate;
 
 class TitleController extends Controller
 {
@@ -94,7 +88,7 @@ class TitleController extends Controller
         'superhero' => 62,
         'military' => 63,
         'samurai' => 64,
-        "childs" => 65,
+        'childs' => 65,
         'video games' => 66,
         'video game' => 66,
         'police' => 67,
@@ -140,7 +134,6 @@ class TitleController extends Controller
         'gourmet' => 108,
         'hentai' => 109,
     ];
-
     private $status = [
         'Currently Airing' => 'En emisión',
         'Finished Airing' => 'Finalizado',
@@ -148,9 +141,8 @@ class TitleController extends Controller
         'Finished' => 'Finalizado',
         'Publishing' => 'Publicándose',
         'Discontinued' => 'Descontinuado',
-        'On Hiatus' => 'En espera'
+        'On Hiatus' => 'En espera',
     ];
-
     private $rating = [
         'g - all ages' => 1,
         'g' => 1,
@@ -165,7 +157,6 @@ class TitleController extends Controller
         'rx - hentai' => 6,
         'rx' => 6,
     ];
-
     private $typeById = [
         'tv' => 1,
         'manga' => 2,
@@ -180,7 +171,6 @@ class TitleController extends Controller
         'doujinshi' => 15,
         'novel' => 16,
     ];
-
     private $typeInCloud = [
         'tv',
         'manga',
@@ -195,7 +185,6 @@ class TitleController extends Controller
         'doujinshi',
         'novel',
     ];
-
     private $typeTranslations = [
         'tv' => 'tv',
         'manga' => 'manga',
@@ -214,45 +203,43 @@ class TitleController extends Controller
     /**
      * Display a listing of titles serie.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
         if ($titles = Title::search($request->name)->with('images', 'rating', 'type', 'genres', 'users')->orderBy('created_at', 'desc')->paginate()) {
             $types = TitleType::orderBy('name', 'asc')->get();
             $genres = Genre::orderBy('name', 'asc')->get();
-            return response()->json(array(
+
+            return response()->json([
                 'code' => 200,
                 'message' => [
                     'type' => 'success',
-                    'text' => 'Resultados encontrados'
+                    'text' => 'Resultados encontrados',
                 ],
                 'title' => 'Coanime.net - Lista de Títulos',
                 'description' => 'Lista de títulos en la enciclopedia de Coanime.net',
                 'result' => $titles,
                 'types' => $types,
                 'genres' => $genres,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => [
                     'type' => 'error',
-                    'text' => 'No se encontraron resultados'
+                    'text' => 'No se encontraron resultados',
                 ],
                 'title' => 'Coanime.net - Lista de Títulos - Títulos No encontrados',
                 'description' => 'Lista de títulos en la enciclopedia de Coanime.net',
-            ), 404);
+            ], 404);
         }
     }
-
 
     /**
      * Display a listing of Titles Series with JSON Response.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function apiSearchTitles(Request $request)
     {
@@ -260,41 +247,40 @@ class TitleController extends Controller
         $genres = Genre::orderBy('name', 'asc')->get();
         try {
             if ($titles = Title::titles($request->name)->with('images', 'type', 'genres')->orderBy('name', 'asc')->paginate(10)) {
-                return response()->json(array(
+                return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage('Resultados encontrados'),
                     'title' => 'Coanime.net - Títulos',
                     'descripcion' => 'Títulos de la Enciclopedia, estos están compuestos por títulos de TV, Mangas, Películas, Lives Actions, Doramas, Video Juegos, entre otros',
                     'result' => $titles,
                     'types' => $types,
-                    'genres' => $genres
-                ), 200);
+                    'genres' => $genres,
+                ], 200);
             } else {
-                return response()->json(array(
+                return response()->json([
                     'code' => 404,
                     'message' => Helper::errorMessage('No se encontraron resultados'),
                     'title' => 'Coanime.net - Titulos - No encontrados',
                     'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
                     'result' => $titles,
                     'types' => $types,
-                    'genres' => $genres
-                ), 404);
+                    'genres' => $genres,
+                ], 404);
             }
         } catch (\Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 500,
-                'message' => Helper::errorMessage('Error al buscar los titulos ' . $e->getMessage()),
+                'message' => Helper::errorMessage('Error al buscar los titulos '.$e->getMessage()),
                 'title' => 'Coanime.net - Titulos - Titulos No encontrados',
                 'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
-            ), 500);
+            ], 500);
         }
     }
 
     /**
      * Get all the Data in JSON format to create a Title.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function create(Request $request)
     {
@@ -302,40 +288,40 @@ class TitleController extends Controller
             $ratings = Ratings::all();
             $genres = Genre::all();
             $types = TitleType::all();
-            return response()->json(array(
+
+            return response()->json([
                 'code' => 200,
-                'message' => array(
+                'message' => [
                     'type' => 'Success',
                     'text' => 'Titulo encontrado',
-                ),
+                ],
                 'genres' => $genres,
                 'types' => $types,
                 'ratings' => $ratings,
-            ), 200);
+            ], 200);
         } catch (\Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
-                'message' => array(
+                'message' => [
                     'type' => 'Error',
-                    'text' => 'No se encontraron resultados, Error: ' . $e->getMessage(),
-                ),
-            ), 404);
+                    'text' => 'No se encontraron resultados, Error: '.$e->getMessage(),
+                ],
+            ], 404);
         }
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
         if (Title::where('name', '=', $request->get('name'))->where('type_id', '=', $request->get('type_id'))->count() > 0) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 403,
                 'message' => Helper::errorMessage('El titulo ya existe'),
-            ), 403);
+            ], 403);
         } else {
             $this->validate($request, [
                 'name' => 'required',
@@ -365,7 +351,7 @@ class TitleController extends Controller
             $request['slug'] = Str::slug($request['name']);
 
             if (Title::where('slug', '=', $request['slug'])->where('type_id', '=', $request['type_id'])->count() > 0) {
-                $request['slug'] = Str::slug($request['name']) . '-01';
+                $request['slug'] = Str::slug($request['name']).'-01';
             }
 
             $data = $request->all();
@@ -376,25 +362,26 @@ class TitleController extends Controller
                 $images->thumbnail = $request['images'];
                 $data->images()->save($images);
                 $data->genres()->sync($request['genre_id']);
-                return response()->json(array(
+
+                return response()->json([
                     'code' => 200,
-                    'message' => array(
+                    'message' => [
                         'type' => 'Success',
                         'text' => 'El titulo se ha guardado correctamente',
-                    ),
+                    ],
                     'title' => 'Coanime.net - Titulos - Titulo Agregado',
                     'description' => 'El titulo se ha agregado correctamente',
-                ), 200);
+                ], 200);
             } else {
-                return response()->json(array(
+                return response()->json([
                     'code' => 400,
-                    'message' => array(
+                    'message' => [
                         'type' => 'Error',
                         'text' => 'No se pudo agregar el titulo',
-                    ),
+                    ],
                     'title' => 'Coanime.net - Titulos - Titulo no Agregado',
                     'description' => 'El titulo no se ha podido agregar',
-                ), 400);
+                ], 400);
             }
         }
     }
@@ -404,7 +391,7 @@ class TitleController extends Controller
      *
      * @param  string  $type
      * @param  string  $slug
-     * @return \Illuminate\Http\Response|mixed
+     * @return \Illuminate\Http\JsonResponse|mixed
      */
     public function show(Request $request, $id)
     {
@@ -412,27 +399,28 @@ class TitleController extends Controller
             $ratings = Ratings::all();
             $genres = Genre::all();
             $types = TitleType::all();
-            return response()->json(array(
+
+            return response()->json([
                 'code' => 200,
-                'message' => array(
+                'message' => [
                     'type' => 'Success',
                     'text' => 'Titulo encontrado',
-                ),
+                ],
                 'data' => $title,
                 'genres' => $genres,
                 'types' => $types,
                 'ratings' => $ratings,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
-                'message' => array(
+                'message' => [
                     'type' => 'Error',
                     'text' => 'No se pudo encontrar el titulo',
-                ),
+                ],
                 'title' => 'Coanime.net - Titulos - Titulo no encontrado',
                 'description' => 'El titulo no se ha podido encontrar',
-            ), 404);
+            ], 404);
         }
     }
 
@@ -440,7 +428,6 @@ class TitleController extends Controller
      * Update the specified resource in storage.
      *
      * @param  int  $id
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
@@ -467,9 +454,9 @@ class TitleController extends Controller
                 $request['broad_finish'] = null;
             }
 
-            if (empty($request['episodies'])) :
+            if (empty($request['episodies'])) {
                 $request['episodies'] = '0';
-            endif;
+            }
 
             $data = Title::find($id);
             $request['user_id'] = $data['user_id'];
@@ -491,33 +478,33 @@ class TitleController extends Controller
 
                 $data->genres()->sync($request['genre_id']);
 
-                return response()->json(array(
+                return response()->json([
                     'code' => 200,
-                    'message' => array(
+                    'message' => [
                         'type' => 'Success',
                         'text' => 'Titulo actualizado',
-                    ),
-                    'title' => 'Coanime.net - Titulos - ' . $request['name'],
-                    'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $request['name'],
+                    ],
+                    'title' => 'Coanime.net - Titulos - '.$request['name'],
+                    'descripcion' => 'Títulos de la Enciclopedia en el aparatado de '.$request['name'],
                     'result' => $data,
-                ), 200);
+                ], 200);
             } else {
-                return response()->json(array(
+                return response()->json([
                     'code' => 404,
-                    'message' => array(
+                    'message' => [
                         'type' => 'Error',
                         'text' => 'Titulo no pudo ser actualizado',
-                    ),
-                ), 404);
+                    ],
+                ], 404);
             }
         } catch (\Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 500,
-                'message' => array(
+                'message' => [
                     'type' => 'Error',
-                    'text' => 'Error al tratar de guardar. Error: ' . $e->getMessage(),
-                ),
-            ), 500);
+                    'text' => 'Error al tratar de guardar. Error: '.$e->getMessage(),
+                ],
+            ], 500);
         }
     }
 
@@ -526,7 +513,7 @@ class TitleController extends Controller
      *
      * @param  int  $id
      * @param  int  $statistics_id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function updateStatistics(Request $request)
     {
@@ -545,22 +532,23 @@ class TitleController extends Controller
                 $stats->statistics_id = $request->statistics_id;
                 $stats->save();
             }
-            return response()->json(array(
+
+            return response()->json([
                 'code' => 200,
-                'message' => array(
+                'message' => [
                     'type' => 'Success',
                     'text' => 'Estadística actualizada',
-                ),
+                ],
                 'result' => $stats,
-            ), 200);
+            ], 200);
         } catch (\Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 500,
-                'message' => array(
+                'message' => [
                     'type' => 'Error',
-                    'text' => 'Error al tratar de guardar. Error: ' . $e->getMessage(),
-                ),
-            ), 500);
+                    'text' => 'Error al tratar de guardar. Error: '.$e->getMessage(),
+                ],
+            ], 500);
         }
     }
 
@@ -581,22 +569,23 @@ class TitleController extends Controller
                 $rates->rate_id = $request->rate_id;
                 $rates->save();
             }
-            return response()->json(array(
+
+            return response()->json([
                 'code' => 200,
-                'message' => array(
+                'message' => [
                     'type' => 'Success',
                     'text' => 'Rate actualizado',
-                ),
+                ],
                 'result' => $rates,
-            ), 200);
+            ], 200);
         } catch (\Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 500,
-                'message' => array(
+                'message' => [
                     'type' => 'Error',
-                    'text' => 'Error al tratar de guardar. Error: ' . $e->getMessage(),
-                ),
-            ), 500);
+                    'text' => 'Error al tratar de guardar. Error: '.$e->getMessage(),
+                ],
+            ], 500);
         }
     }
 
@@ -604,46 +593,48 @@ class TitleController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @param  \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy(Request $request, $id)
     {
         $title = Title::find($id);
 
         if ($title->delete()) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
-                'message' => array(
+                'message' => [
                     'type' => 'Success',
                     'text' => 'Título eliminado',
-                ),
-            ), 200);
+                ],
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
-                'message' => array(
+                'message' => [
                     'type' => 'Error',
                     'text' => 'Título no eliminado',
-                ),
-            ), 404);
+                ],
+            ], 404);
         }
     }
 
     public function userTitleList(Request $request)
     {
-        $abandoned = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '1')->paginate();
-        $stopped = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '2')->paginate();
-        $wantWatch = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '3')->paginate();
-        $watching = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '4')->paginate();
-        $watched = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '5')->paginate();
+        $type = $request->type;
+        $statisticsOptions = Statistics::select('id', 'name')->get();
+        $abandoned = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '1')->paginate(30);
+        $stopped = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '2')->paginate(30);
+        $wantWatch = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '3')->paginate(30);
+        $watching = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '4')->paginate(30);
+        $watched = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '5')->paginate(30);
         $titles = TitleStatistics::where('user_id', Auth::user()->id)->with('titles', 'statistics')->orderBy('created_at', 'desc')->paginate(30);
-        return response()->json(array(
+
+        return response()->json([
             'code' => 200,
-            'message' => array(
+            'message' => [
                 'type' => 'Success',
                 'text' => 'Titulos en tu Lista encontrados',
-            ),
+            ],
             'title' => 'Coanime.net - Titulos - Lista de Titulos',
             'descripcion' => 'Tu Lista de Titulos, los puedes agregar a la lista a traves de las Watch Options',
             'keywords' => 'Lista de Titulos, Titulos, Lista, Titulos en tu Lista, lista anime, lista manga, lista ova, lista película, lista especial, lista ona, lista ovas, lista películas, lista especiales, lista onas',
@@ -653,45 +644,48 @@ class TitleController extends Controller
             'wantWatch' => $wantWatch,
             'watching' => $watching,
             'watched' => $watched,
-        ), 200);
+            'meta' => ['statistics' => $statisticsOptions],
+        ], 200);
     }
 
     public function statisticsByUser(Request $request)
     {
         $statistics = TitleStatistics::where('user_id', $request->user)->where('title_id', $request->title)->with('statistics')->get();
-        return response()->json(array(
+
+        return response()->json([
             'code' => 200,
-            'message' => array(
+            'message' => [
                 'type' => 'Success',
                 'text' => 'Estadistica Encontrada',
-            ),
+            ],
             'data' => $statistics->first(),
-        ), 200);
+        ], 200);
     }
 
     public function ratesByUser(Request $request)
     {
         $rates = TitleRate::where('user_id', $request->user)->where('title_id', $request->title)->with('rates')->get();
-        return response()->json(array(
+
+        return response()->json([
             'code' => 200,
-            'message' => array(
+            'message' => [
                 'type' => 'Success',
                 'text' => 'Rate Encontrado',
-            ),
+            ],
             'data' => $rates->first(),
-        ), 200);
+        ], 200);
     }
 
     /**
      * Get all items of the titles by type.
      *
-     * @param  str  $type
-     * @return \Illuminate\Http\Response
+     * @param  string  $type
+     * @return \Illuminate\Contracts\View\View
      */
     public function showAllByType($type)
     {
         $type_id = TitleType::whereSlug($type)->pluck('id');
-        if ($type_id->count() > 0):
+        if ($type_id->count() > 0) {
             $type_name = TitleType::where('slug', '=', $type)->pluck('name');
             $id = Title::where('type_id', $type_id)->pluck('id');
             $titles = Title::where('type_id', $type_id)->with('images', 'rating', 'type', 'genres')->orderBy('name', 'asc')->paginate(30);
@@ -699,14 +693,13 @@ class TitleController extends Controller
             $genres = Genre::orderBy('name', 'asc')->get();
 
             return view('titles.home', compact('titles', 'types', 'genres', 'type_name'));
-            else:
-                return view('errors.404');
-            endif;
+        } else {
+            return view('errors.404');
+        }
     }
 
     /**
      * Get all items of the genre.
-     *
      */
     public function showAllGenre()
     {
@@ -714,23 +707,23 @@ class TitleController extends Controller
         // TODO: Move to its own Controller
         $genre = Genre::withCount('titles')->orderBy('name', 'asc')->get();
 
-        return response()->json(array(
+        return response()->json([
             'code' => 200,
-            'message' => array(
+            'message' => [
                 'type' => 'Success',
                 'text' => 'Generos encontrados',
-            ),
+            ],
             'title' => 'Coanime.net - Titulos - Generos',
             'description' => 'Se han encontrado los generos',
             'data' => $genre,
-        ), 200);
+        ], 200);
     }
 
     /**
      * Get all items of the titles by genre.
      *
-     * @param  str  $genre
-     * @return \Illuminate\Http\Response
+     * @param  string  $genre
+     * @return \Illuminate\Http\JsonResponse
      */
     public function showAllByGenre($genre)
     {
@@ -742,47 +735,46 @@ class TitleController extends Controller
         $genres = Genre::orderBy('name', 'asc')->get();
         $types = TitleType::orderBy('name', 'asc')->get();
 
-        $data = array(
+        $data = [
             'titles' => $titles,
             'genres' => $genres,
             'types' => $types,
-        );
+        ];
 
-        return response()->json(array(
+        return response()->json([
             'code' => 200,
-            'message' => array(
+            'message' => [
                 'type' => 'Success',
                 'text' => 'Titulos encontrados',
-            ),
-            'title' => 'Coanime.net - Titulos - ' . $genre,
+            ],
+            'title' => 'Coanime.net - Titulos - '.$genre,
             'description' => 'Se han encontrado los titulos',
             'data' => $data,
-        ), 200);
+        ], 200);
 
-        return view('titles.home', compact('titles', 'genres', 'types'));
+        // return view('titles.home', compact('titles', 'genres', 'types'));
     }
 
     public function getAllBySearch(Request $request)
     {
         $titles = Title::search($request->name)->with('images', 'rating', 'type', 'genres')->orderBy('name', 'asc')->get();
 
-        return response()->json(array(
+        return response()->json([
             'code' => 200,
-            'message' => array(
+            'message' => [
                 'type' => 'Success',
                 'text' => 'Titulos encontrados',
-            ),
-            'title' => 'Coanime.net - Titulos - Busqueda de ' . $request->name,
+            ],
+            'title' => 'Coanime.net - Titulos - Busqueda de '.$request->name,
             'description' => 'Se han encontrado los siguientes titulos',
             'data' => $titles,
-        ), 200);
+        ], 200);
     }
 
     /**
      * Get the Titles in JSON Format from th API.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function apiTitles(Request $request)
     {
@@ -790,7 +782,7 @@ class TitleController extends Controller
         $types = TitleType::orderBy('name', 'asc')->get();
         $genres = Genre::orderBy('name', 'asc')->get();
 
-        return response()->json(array(
+        return response()->json([
             'code' => 200,
             'message' => Helper::successMessage('Titulos encontrados'),
             'title' => 'Coanime.net - Titulos',
@@ -798,55 +790,58 @@ class TitleController extends Controller
             'keywords' => 'TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
             'result' => $titles,
             'types' => $types,
-            'genres' => $genres
-        ), 200);
+            'genres' => $genres,
+        ], 200);
     }
 
     /**
      * Get the Titles in JSON Format from th API.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function getAllTitles(Request $request)
     {
         if ($titles = Title::with('type')->orderBy('name', 'asc')->get()) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage('Titulos encontrados'),
                 'result' => $titles,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => Helper::errorMessage('No se encontraron titulos'),
-            ), 404);
+            ], 404);
         }
     }
 
+    /**
+     * Get the Titles Upcoming in JSON Format from th API.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function apiTitlesUpcoming(Request $request)
     {
         if ($titles = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->where('broad_time', '>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->paginate()) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage('Titulos encontrados'),
                 'title' => 'Coanime.net - Titulos - Próximos Estrenos',
                 'descripcion' => 'Titulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, entre otros que estan por estrenarse',
                 'keywords' => 'TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, ona, ova, doujinshi, one shot, entre otros',
                 'result' => $titles,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => Helper::errorMessage('No se encontraron titulos'),
                 'title' => 'Coanime.net - Titulos - Próximos Estrenos',
                 'descripcion' => 'Titulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, entre otros que estan por estrenarse',
                 'keywords' => 'TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, ona, ova, doujinshi, one shot, entre otros',
-                'result' => array(),
-            ), 404);
+                'result' => [],
+            ], 404);
         }
     }
-
 
     /**
      * Get the Titles in JSON Format from th API.
@@ -854,7 +849,6 @@ class TitleController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return Illuminate\Http\JsonResponse
      */
-
     public function apiShowTitle(string $type, string $slug)
     {
         $jikan = Client::create();
@@ -882,8 +876,8 @@ class TitleController extends Controller
                 //dd($cloudTitle);
                 if ($cloudTitle?->getTitle() !== null) {
                     if (empty($thisTitle->other_titles)) {
-                        $thisTitle->other_titles .= $cloudTitle->getTitleJapanese() ? $cloudTitle->getTitleJapanese() . ' (Japonés)' : '';
-                        $thisTitle->other_titles .= $cloudTitle->getTitleEnglish() ? ', ' . $cloudTitle->getTitleEnglish() . ' (Inglés)' : '';
+                        $thisTitle->other_titles .= $cloudTitle->getTitleJapanese() ? $cloudTitle->getTitleJapanese().' (Japonés)' : '';
+                        $thisTitle->other_titles .= $cloudTitle->getTitleEnglish() ? ', '.$cloudTitle->getTitleEnglish().' (Inglés)' : '';
                         $thisTitle->save();
                     }
 
@@ -892,14 +886,13 @@ class TitleController extends Controller
                         $thisTitle->save();
                     }
                     //dd($cloudTitle);
-                    if (!$manga) {
+                    if (! $manga) {
                         if ((empty($thisTitle->trailer_url) || $thisTitle->trailer_url === null || $thisTitle->trailer_url === '') && $cloudTitle->getTrailer()->getUrl() !== null) {
                             $thisTitle->trailer_url = $cloudTitle->getTrailer()->getUrl();
                             $thisTitle->save();
                         }
 
-
-                        if (!$thisTitle->rating_id || $thisTitle->rating_id === 7) {
+                        if (! $thisTitle->rating_id || $thisTitle->rating_id === 7) {
                             $thisTitle->rating_id = $this->rating[strtolower($cloudTitle->getRating())] ?? 7;
                             $thisTitle->save();
                         }
@@ -937,12 +930,12 @@ class TitleController extends Controller
                         }
                     }
 
-                    if (!$thisTitle->status || $this->status[$cloudTitle->getStatus()] !== $thisTitle->status) {
+                    if (! $thisTitle->status || $this->status[$cloudTitle->getStatus()] !== $thisTitle->status) {
                         $thisTitle->status = $this->status[$cloudTitle->getStatus()];
                         $thisTitle->save();
                     }
 
-                    if (!$title?->images || $title?->images?->name === null || $title?->images?->name === '') {
+                    if (! $title?->images || $title?->images?->name === null || $title?->images?->name === '') {
                         $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl() === 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-256.png' ? null : $cloudTitle->getImages()->getWebp()->getLargeImageUrl();
                         if ($imageUrl) {
                             $processingImage = file_get_contents($imageUrl);
@@ -958,8 +951,8 @@ class TitleController extends Controller
 
                             $path = '/titles/';
 
-                            $filePath = $path . $fileName . '.webp';
-                            $imageUrl = Storage::disk('s3')->put($filePath, $image);
+                            $filePath = $path.$fileName.'.webp';
+                            Storage::disk('s3')->put($filePath, $image);
                             $imageUrl = Storage::disk('s3')->url($filePath);
                             $images = new TitleImage();
                             $images->create([
@@ -993,21 +986,21 @@ class TitleController extends Controller
                 ],
             ];
             ///dd($title);
-            return response()->json(array(
+            return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage('Titulo encontrado'),
-                'title' => 'Coanime.net - Titulos - ' . $name,
+                'title' => 'Coanime.net - Titulos - '.$name,
                 'description' => Str::words(htmlentities(strip_tags($description)), 20),
                 'result' => $title,
                 'rates' => $rates,
                 'statistics' => $statistics,
                 'meta' => $meta,
-            ), 200);
+            ], 200);
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
                 'message' => Helper::errorMessage('Titulo no encontrado'),
-            ), 200);
+            ], 200);
         }
     }
 
@@ -1020,18 +1013,18 @@ class TitleController extends Controller
         $types = TitleType::orderBy('name', 'asc')->get();
         $genres = Genre::orderBy('name', 'asc')->get();
 
-        return response()->json(array(
+        return response()->json([
             'code' => 200,
-            'message' => array(
+            'message' => [
                 'type' => 'Success',
                 'text' => 'Titulos encontrados',
-            ),
-            'title' => 'Coanime.net - Titulos - ' . $name->first(),
-            'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $name->first(),
+            ],
+            'title' => 'Coanime.net - Titulos - '.$name->first(),
+            'descripcion' => 'Títulos de la Enciclopedia en el aparatado de '.$name->first(),
             'result' => $titles,
             'types' => $types,
-            'genres' => $genres
-        ), 200);
+            'genres' => $genres,
+        ], 200);
     }
 
     public function apiShowTitlesByGenre($genre)
@@ -1046,18 +1039,18 @@ class TitleController extends Controller
         $genres = Genre::orderBy('name', 'asc')->get();
         $types = TitleType::orderBy('name', 'asc')->get();
 
-        return response()->json(array(
+        return response()->json([
             'code' => 200,
-            'message' => array(
+            'message' => [
                 'type' => 'Success',
                 'text' => 'Titulos encontrados',
-            ),
-            'title' => 'Coanime.net - Titulos - ' . $name->first(),
-            'descripcion' => 'Títulos de la Enciclopedia en el aparatado de ' . $name->first(),
+            ],
+            'title' => 'Coanime.net - Titulos - '.$name->first(),
+            'descripcion' => 'Títulos de la Enciclopedia en el aparatado de '.$name->first(),
             'result' => $titles,
             'genres' => $genres,
             'types' => $types,
-        ), 200);
+        ], 200);
     }
 
     public function postsTitle($type, $slug)
@@ -1066,36 +1059,78 @@ class TitleController extends Controller
 
         if ($tag_id->count() > 0) {
             $posts = Post::getByTitle($tag_id);
-            if (!empty($tag_id) && $posts->count() > 0) {
+            if (! empty($tag_id) && $posts->count() > 0) {
                 $posts = $posts->orderBy('posts.postponed_to', 'desc')->simplePaginate();
-                return response()->json(array(
+
+                return response()->json([
                     'code' => 200,
-                    'message' => array(
+                    'message' => [
                         'type' => 'Success',
                         'text' => 'Posts encontrados',
-                    ),
-                    'title' => 'Coanime.net - Posts - ' . $slug,
-                    'descripcion' => 'Posts de la Enciclopedia en el aparatado de ' . $slug,
-                    'quantity' => $posts->count(),
+                    ],
+                    'title' => 'Coanime.net - Posts - '.$slug,
+                    'descripcion' => 'Posts de la Enciclopedia en el aparatado de '.$slug,
+                    'quantity' => count($posts),
                     'data' => $posts,
-                ), 200);
+                ], 200);
             } else {
-                return response()->json(array(
+                return response()->json([
                     'code' => 404,
-                    'message' => array(
+                    'message' => [
                         'type' => 'Error',
                         'text' => 'Posts no encontrados',
-                    ),
-                ), 404);
+                    ],
+                ], 404);
             }
         } else {
-            return response()->json(array(
+            return response()->json([
                 'code' => 404,
-                'message' => array(
+                'message' => [
                     'type' => 'Error',
                     'text' => 'Posts no encontrados',
-                ),
-            ), 404);
+                ],
+            ], 404);
+        }
+        /* return view('web.home', compact('posts')); */
+    }
+
+    public function titlesWithPosts($type, $slug)
+    {
+        $tag_id = Tag::where('slug', '=', $slug)->pluck('id');
+
+        if ($tag_id->count() > 0) {
+            $posts = Post::getByTitle($tag_id);
+            if (! empty($tag_id) && $posts->count() > 0) {
+                $posts = $posts->orderBy('posts.postponed_to', 'desc')->simplePaginate();
+
+                return response()->json([
+                    'code' => 200,
+                    'message' => [
+                        'type' => 'Success',
+                        'text' => 'Posts encontrados',
+                    ],
+                    'title' => 'Coanime.net - Posts - '.$slug,
+                    'descripcion' => 'Posts de la Enciclopedia en el aparatado de '.$slug,
+                    'quantity' => count($posts),
+                    'data' => $posts,
+                ], 200);
+            } else {
+                return response()->json([
+                    'code' => 404,
+                    'message' => [
+                        'type' => 'Error',
+                        'text' => 'Posts no encontrados',
+                    ],
+                ], 404);
+            }
+        } else {
+            return response()->json([
+                'code' => 404,
+                'message' => [
+                    'type' => 'Error',
+                    'text' => 'Posts no encontrados',
+                ],
+            ], 404);
         }
         /* return view('web.home', compact('posts')); */
     }
@@ -1110,7 +1145,7 @@ class TitleController extends Controller
             //dd($page);
             $results = $jikan->getSeason($year, $season, ['page' => $page]);
             $proccess = [];
-            $proccess[] = '<p>Pagina ' . $page . '</p>';
+            $proccess[] = '<p>Pagina '.$page.'</p>';
             foreach ($results->getData() as $key => $value) {
                 //dd($value);
                 $title = new Title();
@@ -1120,14 +1155,14 @@ class TitleController extends Controller
                 $title->user_id = 1;
                 $title->just_year = 'false';
                 if (Title::where('slug', $title->slug)->first()) {
-                    $proccess[] = '<p>' . $title->name . ' Ya existe</p>';
-                } elseif  ($value->getType() === null || $value->getType() === 'Unknown' || $value->getType() === 'Music') {
-                    $proccess[] = '<p>' . $title->name . ' No tiene determinado el Tipo</p>';
+                    $proccess[] = '<p>'.$title->name.' Ya existe</p>';
+                } elseif ($value->getType() === null || $value->getType() === 'Unknown' || $value->getType() === 'Music') {
+                    $proccess[] = '<p>'.$title->name.' No tiene determinado el Tipo</p>';
                 } else {
-                    $proccess[] = '<p>' . $title->name . ' Procesando</p>';
-                    if(empty($title->other_titles)) {
-                        $title->other_titles .= $value->getTitleJapanese() ? $value->getTitleJapanese() . ' (Japonés)' : '';
-                        $title->other_titles .= $value->getTitleEnglish() ? ', ' . $value->getTitleEnglish() . ' (Inglés)' : '';
+                    $proccess[] = '<p>'.$title->name.' Procesando</p>';
+                    if (empty($title->other_titles)) {
+                        $title->other_titles .= $value->getTitleJapanese() ? $value->getTitleJapanese().' (Japonés)' : '';
+                        $title->other_titles .= $value->getTitleEnglish() ? ', '.$value->getTitleEnglish().' (Inglés)' : '';
                     }
 
                     if (empty($title->sinopsis) || $title->sinopsis == 'Sinopsis no disponible' || $title->sinopsis == 'Pendiente de agregar sinopsis...') {
@@ -1138,15 +1173,15 @@ class TitleController extends Controller
                         $title->trailer_url = $value->getTrailer()->getUrl();
                     }
 
-                    if (!$title->status || $this->status[$value->getStatus()] !== $title->status) {
+                    if (! $title->status || $this->status[$value->getStatus()] !== $title->status) {
                         $title->status = $this->status[$value->getStatus()];
                     }
 
-                    if (!$title->type) {
+                    if (! $title->type) {
                         $title->type_id = $this->typeById[strtolower($value->getType())];
                     }
 
-                    if (!$title->rating_id || $title->rating_id === 7) {
+                    if (! $title->rating_id || $title->rating_id === 7) {
                         $title->rating_id = $this->rating[strtolower($value->getRating())] ?? 7;
                     }
 
@@ -1155,11 +1190,11 @@ class TitleController extends Controller
                     }
 
                     if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
-                        $title->broad_time = $value->getAired()->getFrom();
+                        $title->broad_time = Carbon::create($value->getAired()->getFrom())->format('Y-m-d');
                     }
 
                     if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
-                        $title->broad_finish = $value->getAired()->getTo();
+                        $title->broad_finish = Carbon::create($value->getAired()->getTo())->format('Y-m-d');
                     }
                     $title->save();
 
@@ -1173,26 +1208,27 @@ class TitleController extends Controller
                     }
 
                     $title->save();
-                    $proccess[] = '<p>' . $title->name . ' Guardado</p>';
+                    $proccess[] = '<p>'.$title->name.' Guardado</p>';
                 }
             }
-            return response()->json(array(
+
+            return response()->json([
                 'code' => 200,
-                'message' => array(
+                'message' => [
                     'type' => 'Success',
-                    'text' => 'Titulos de la pagina ' . $page . ' Guardados',
-                ),
+                    'text' => 'Titulos de la pagina '.$page.' Guardados',
+                ],
                 'data' => $proccess,
-            ), 200);
+            ], 200);
         } catch (\Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 500,
-                'message' => array(
+                'message' => [
                     'type' => 'Error',
-                    'text' => 'Error al procesar la pagina ' . $page,
-                ),
+                    'text' => 'Error al procesar la pagina '.$page,
+                ],
                 'data' => $e->getMessage(),
-            ), 500);
+            ], 500);
         }
     }
 
@@ -1211,9 +1247,10 @@ class TitleController extends Controller
             $results = $manga ? $jikan->getMangaSearch($query) : $jikan->getAnimeSearch($query);
             //dd($results);
             $proccess = [];
-            $proccess[] = '<p>Pagina ' . $query['page'] ?? 1 . '</p>';
+            $proccess[] = '<p>Pagina '.$query['page'] ?? 1 .'</p>';
+
             foreach ($results->getData() as $key => $value) {
-                //dd($value);
+                // dd($value);
                 $title = new Title();
                 $newGenres = [];
                 $title->name = $value->getTitle();
@@ -1221,14 +1258,14 @@ class TitleController extends Controller
                 $title->user_id = 1;
                 $title->just_year = 'false';
                 if (Title::where('slug', $title->slug)->first()) {
-                    $proccess[] = '<p>' . $title->name . ' Ya existe</p>';
-                } elseif  ($value->getType() === null || $value->getType() === 'Unknown' || $value->getType() === 'Music' || $value->getType() === 'Award Winning') {
-                    $proccess[] = '<p>' . $title->name . ' No tiene determinado el Tipo</p>';
+                    $proccess[] = '<p>'.$title->name.' Ya existe</p>';
+                } elseif ($value->getType() === null || $value->getType() === 'Unknown' || $value->getType() === 'Music' || $value->getType() === 'Award Winning') {
+                    $proccess[] = '<p>'.$title->name.' No tiene determinado el Tipo</p>';
                 } else {
-                    $proccess[] = '<p>' . $title->name . ' Procesando</p>';
-                    if(empty($title->other_titles)) {
-                        $title->other_titles .= $value->getTitleJapanese() ? $value->getTitleJapanese() . ' (Japonés)' : '';
-                        $title->other_titles .= $value->getTitleEnglish() ? ', ' . $value->getTitleEnglish() . ' (Inglés)' : '';
+                    $proccess[] = '<p>'.$title->name.' Procesando</p>';
+                    if (empty($title->other_titles)) {
+                        $title->other_titles .= $value->getTitleJapanese() ? $value->getTitleJapanese().' (Japonés)' : '';
+                        $title->other_titles .= $value->getTitleEnglish() ? ', '.$value->getTitleEnglish().' (Inglés)' : '';
                     }
 
                     if (empty($title->sinopsis) || $title->sinopsis == 'Sinopsis no disponible' || $title->sinopsis == 'Pendiente de agregar sinopsis...') {
@@ -1239,26 +1276,26 @@ class TitleController extends Controller
                         if ((empty($title->trailer_url) || $title->trailer_url === null || $title->trailer_url === '') && $value->getTrailer()->getUrl() !== null) {
                             $title->trailer_url = $value->getTrailer()->getUrl();
                         }
-                        if (!$title->rating_id || $title->rating_id === 7) {
+                        if (! $title->rating_id || $title->rating_id === 7) {
                             $title->rating_id = $this->rating[strtolower($value->getRating())] ?? 7;
                         }
 
                         if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
-                            $title->broad_time = $value->getAired()->getFrom();
+                            $title->broad_time = Carbon::create($value->getAired()->getFrom())->format('Y-m-d');
                         }
 
                         if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
-                            $title->broad_finish = $value->getAired()->getTo();
+                            $title->broad_finish = Carbon::create($value->getAired()->getTo())->format('Y-m-d');
                         }
                     }
 
                     if ($manga) {
                         if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
-                            $title->broad_time = $value->getPublished()->getFrom();
+                            $title->broad_time = Carbon::create($value->getPublished()->getFrom())->format('Y-m-d');
                         }
 
                         if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
-                            $title->broad_finish = $value->getPublished()->getTo();
+                            $title->broad_finish = Carbon::create($value->getPublished()->getTo())->format('Y-m-d');
                         }
                     }
 
@@ -1266,11 +1303,11 @@ class TitleController extends Controller
                         $title->episodies = $manga ? $value->getChapters() : $value->getEpisodes();
                     }
 
-                    if (!$title->status || $this->status[$value->getStatus()] !== $title->status) {
+                    if (! $title->status || $this->status[$value->getStatus()] !== $title->status) {
                         $title->status = $this->status[$value->getStatus()];
                     }
 
-                    if (!$title->type) {
+                    if (! $title->type) {
                         $title->type_id = $this->typeById[strtolower($value->getType())];
                     }
 
@@ -1291,27 +1328,28 @@ class TitleController extends Controller
                     }
 
                     $title->save();
-                    $proccess[] = '<p>' . $title->name . ' Guardado</p>';
+                    $proccess[] = '<p>'.$title->name.' Guardado</p>';
                 }
             }
-            return response()->json(array(
+
+            return response()->json([
                 'code' => 200,
-                'message' => array(
+                'message' => [
                     'type' => 'Success',
-                    'text' => 'Titulos de la pagina ' . $query['page'] ?? 1 . ' Guardados',
-                ),
+                    'text' => 'Titulos de la pagina '.$query['page'] ?? 1 .' Guardados',
+                ],
                 'total_pages' => $results->getPagination()->getLastVisiblePage(),
                 'data' => $proccess,
-            ), 200);
+            ], 200);
         } catch (\Exception $e) {
-            return response()->json(array(
+            return response()->json([
                 'code' => 500,
-                'message' => array(
+                'message' => [
                     'type' => 'Error',
-                    'text' => 'Error al procesar la pagina ' . $query['page'] ?? 1,
-                ),
+                    'text' => 'Error al procesar la pagina '.$query['page'] ?? 1,
+                ],
                 'data' => $e->getMessage(),
-            ), 500);
+            ], 500);
         }
     }
 
@@ -1328,13 +1366,13 @@ class TitleController extends Controller
             });
         });
 
-        return response()->json(array(
+        return response()->json([
             'code' => 200,
-            'message' => array(
+            'message' => [
                 'type' => 'Success',
                 'text' => 'Pagina Cargada',
-            ),
+            ],
             'data' => $result,
-        ), 200);
+        ], 200);
     }
 }
