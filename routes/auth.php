@@ -126,6 +126,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('posts-dashboard', [PostController::class, 'postsDashboard'])->name('posts-dashboard');
         Route::get('posts/{id}', [PostController::class, 'show']);
         Route::put('posts/{id}', [PostController::class, 'update']);
+        Route::put('posts/{id}/delete', [PostController::class, 'destroy']);
         Route::post('posts', [PostController::class, 'store']);
 
         // ** Auth Upload Image Endpoints **
