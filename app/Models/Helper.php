@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**********************************************************************
  * Helper Object
  * --------------------------------------------------------------------
@@ -13,9 +15,8 @@
 
 namespace App\Models;
 
-use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Product;
+use Illuminate\Support\Str;
 
 class Helper extends Model
 {
@@ -38,9 +39,9 @@ class Helper extends Model
     private static function ConSoSinS($val, $sentence)
     {
         if ($val > 1) {
-            return $val . str_replace(array('(s)', '(es)'), array('s', 'es'), $sentence);
+            return $val.str_replace(['(s)', '(es)'], ['s', 'es'], $sentence);
         } else {
-            return $val . str_replace('(s)', '', $sentence);
+            return $val.str_replace('(s)', '', $sentence);
         }
     }
 
@@ -51,23 +52,23 @@ class Helper extends Model
         if ($time <= 0) {
             return 'Ahora';
         } elseif ($time < 60) {
-            return "Hace " . self::ConSoSinS(floor($time), ' Segundo(s)');
+            return 'Hace '.self::ConSoSinS(floor($time), ' Segundo(s)');
         } elseif ($time < 60 * 60) {
-            return "Hace " . self::ConSoSinS(floor($time / 60), ' Minuto(s)');
+            return 'Hace '.self::ConSoSinS(floor($time / 60), ' Minuto(s)');
         } elseif ($time < 60 * 60 * 24) {
-            return "Hace " . self::ConSoSinS(floor($time / (60 * 60)), ' Hora(s)');
+            return 'Hace '.self::ConSoSinS(floor($time / (60 * 60)), ' Hora(s)');
         } elseif ($time < 60 * 60 * 24 * 30) {
-            return "Hace " . self::ConSoSinS(floor($time / (60 * 60 * 24)), ' Día(s)');
+            return 'Hace '.self::ConSoSinS(floor($time / (60 * 60 * 24)), ' Día(s)');
         } elseif ($time < 60 * 60 * 24 * 30 * 12) {
-            return "Hace " . self::ConSoSinS(floor($time / (60 * 60 * 24 * 30)), ' Mes(es)');
+            return 'Hace '.self::ConSoSinS(floor($time / (60 * 60 * 24 * 30)), ' Mes(es)');
         } else {
-            return "Hace " . self::ConSoSinS(floor($time / (60 * 60 * 24 * 30 * 12)), ' Año(s)');
+            return 'Hace '.self::ConSoSinS(floor($time / (60 * 60 * 24 * 30 * 12)), ' Año(s)');
         }
     }
 
     public static function setSpanishDate($formato)
     {
-        $trad = array(
+        $trad = [
             'Sunday' => 'Domingo',  'Monday' => 'Lunes',
             'Tuesday' => 'Martes',  'Wednesday' => 'Mi&eacute;rcoles',
             'Thursday' => 'Jueves', 'Friday' => 'Viernes',
@@ -76,16 +77,16 @@ class Helper extends Model
             'Tue' => 'Mar', 'Wed' => 'Mie',
             'Thu' => 'Jue', 'Fri' => 'Vie', 'Sat' => 'Sab',
             'January' => 'Enero',   'February' => 'Febrero',
-            'March'   => 'Marzo',   'April'    => 'Abril',
-            'May'     => 'Mayo',    'June'     => 'Junio',
-            'July'    => 'Julio',   'August'   => 'Agosto',
-            'September' => 'Septiembre',  'October'  => 'Octubre',
-            'November'  => 'Noviembre',   'December' => 'Diciembre',
+            'March' => 'Marzo',   'April' => 'Abril',
+            'May' => 'Mayo',    'June' => 'Junio',
+            'July' => 'Julio',   'August' => 'Agosto',
+            'September' => 'Septiembre',  'October' => 'Octubre',
+            'November' => 'Noviembre',   'December' => 'Diciembre',
             'Jan' => 'Ene', 'Feb' => 'Feb', 'Mar' => 'Mar',
             'Apr' => 'Abr', 'May' => 'May', 'Jun' => 'Jun',
             'Jul' => 'Jul', 'Aug' => 'Ago', 'Sep' => 'Sep',
             'Oct' => 'Oct', 'Nov' => 'Nov', 'Dec' => 'Dic',
-        );
+        ];
 
         return strtr($formato, $trad);
     }
@@ -95,12 +96,13 @@ class Helper extends Model
         $string = preg_replace('~\[b\](.*?)\[\/b\]~is', '<b>\\1</b>', $string);
         $string = preg_replace('~\[i\](.*?)\[\/i\]~is', '<i>\\1</i>', $string);
         $string = preg_replace('~\[u\](.*?)\[\/u\]~is', '<u>\\1</u>', $string);
+
         return $string;
     }
 
     public static function split_str($value)
     {
-        $change = array(',' => '<br />');
+        $change = [',' => '<br />'];
 
         return strtr($value, $change);
     }
@@ -112,8 +114,9 @@ class Helper extends Model
 
     public static function chageDateToMySQL($date)
     {
-        ereg("([0-9]{1,2})/([0-9]{1,2})/([0-9]{2,4})", $date, $myDate);
-        $theDate = $myDate[3] . "-" . $myDate[2] . "-" . $myDate[1];
+        ereg('([0-9]{1,2})/([0-9]{1,2})/([0-9]{2,4})', $date, $myDate);
+        $theDate = $myDate[3].'-'.$myDate[2].'-'.$myDate[1];
+
         return $theDate;
     }
 
@@ -128,11 +131,11 @@ class Helper extends Model
 
         $images = array_pop($images);
         //dd($images);
-        if (!empty($images[0])) :
+        if (! empty($images[0])) {
             return $images[0];
-        else :
+        } else {
             return 'https://coanime.net/images/no_post_image.jpg';
-        endif;
+        }
     }
 
     public static function excerpt($value, $words = 20, $end = '...')
@@ -142,10 +145,9 @@ class Helper extends Model
 
     public static function textWithoutImage($string)
     {
-        $imageTag = "(<img.+?/>)";
+        $imageTag = '(<img.+?/>)';
 
-        $cleanText = preg_replace($imageTag, " ", $string);
-
+        $cleanText = preg_replace($imageTag, ' ', $string);
 
         return $cleanText;
     }
@@ -153,8 +155,8 @@ class Helper extends Model
     public static function getVideoLink($videoString)
     {
         // return data
-        $videos = array();
-        if (!empty($videoString)) {
+        $videos = [];
+        if (! empty($videoString)) {
             // split on line breaks
             $videoString = stripslashes(trim($videoString));
             $videoString = explode("\n", $videoString);
@@ -166,7 +168,7 @@ class Helper extends Model
                     // retrieve the video url
                     //$anchorRegex = '/src="(.*)?"/isU';
                     $anchorRegex = '/<iframe.*src=\"(.*)\".*><\/iframe>/isU';
-                    $results = array();
+                    $results = [];
                     if (preg_match($anchorRegex, $video, $results)) {
                         //dd($results);
                         $link = trim($results[1]);
@@ -176,11 +178,11 @@ class Helper extends Model
                     $link = $video;
                 }
                 // if we have a URL, parse it down
-                if (!empty($link)) {
+                if (! empty($link)) {
                     // initial values
                     $video_id = null;
                     $videoIdRegex = null;
-                    $results = array();
+                    $results = [];
                     // check for type of youtube link
                     if (strpos($link, 'youtu') !== false) {
                         if (strpos($link, 'youtube.com') !== false) {
@@ -220,7 +222,7 @@ class Helper extends Model
                                 // get the thumbnail
                                 try {
                                     $hash = unserialize(file_get_contents("https://vimeo.com/api/v2/video/$video_id.php"));
-                                    if (!empty($hash) && is_array($hash)) {
+                                    if (! empty($hash) && is_array($hash)) {
                                         $video_str = 'https://vimeo.com/moogaloop.swf?clip_id=%s';
                                         $thumbnail_str = $hash[0]['thumbnail_small'];
                                         $fullsize_str = $hash[0]['thumbnail_large'];
@@ -235,13 +237,13 @@ class Helper extends Model
                         }
                     }
                     // check if we have a video id, if so, add the video metadata
-                    if (!empty($video_id)) {
+                    if (! empty($video_id)) {
                         // add to return
-                        $videos = array(
+                        $videos = [
                             'url' => sprintf($video_str, $video_id),
                             'thumbnail' => sprintf($thumbnail_str, $video_id),
-                            'fullsize' => sprintf($fullsize_str, $video_id)
-                        );
+                            'fullsize' => sprintf($fullsize_str, $video_id),
+                        ];
                     }
                 }
             }
@@ -257,24 +259,24 @@ class Helper extends Model
 
     public static function getTitleImage($string)
     {
-        $server = 'https://' . $_SERVER['HTTP_HOST'];
+        $server = 'https://'.$_SERVER['HTTP_HOST'];
 
-        $path = "/images/encyclopedia/titles/";
+        $path = '/images/encyclopedia/titles/';
 
-        $file = $server . $path . $string;
+        $file = $server.$path.$string;
 
         return $file;
     }
 
     public static function getTitleImageWithTags($string)
     {
-        $server = 'https://' . $_SERVER['HTTP_HOST'];
+        $server = 'https://'.$_SERVER['HTTP_HOST'];
 
-        $path = "/images/encyclopedia/titles/";
+        $path = '/images/encyclopedia/titles/';
 
-        $file = $server . $path . $string;
+        $file = $server.$path.$string;
 
-        return '<img src="' . $file . '" />';
+        return '<img src="'.$file.'" />';
     }
 
     public static function getLastsTvShows()
@@ -305,18 +307,18 @@ class Helper extends Model
                 $data['type_id'] = 10;
             }
 
-            if (Title::where('name', 'like', $data['name'])->where('type_id', 'like', $data['type_id'])->count() > 0) :
-                echo $data['name'] . ': Data Existente </br>';
-            else :
+            if (Title::where('name', 'like', $data['name'])->where('type_id', 'like', $data['type_id'])->count() > 0) {
+                echo $data['name'].': Data Existente </br>';
+            } else {
                 Title::create($data);
-                echo $data['name'] . ': Data Creada </br>';
-            endif;
+                echo $data['name'].': Data Creada </br>';
+            }
         }
     }
 
     protected function getRelatedSlugs($slug, $id = 0)
     {
-        return Product::select('slug')->where('slug', 'like', $slug . '%')
+        return Product::select('slug')->where('slug', 'like', $slug.'%')
             ->whereNotIn($id)
             ->get();
     }
@@ -329,13 +331,13 @@ class Helper extends Model
         // This cuts the queries down by doing it once.
         $allSlugs = getRelatedSlugs($slug, $id);
         // If we haven't used it before then we are all good.
-        if (!$allSlugs->contains('slug', $slug)) {
+        if (! $allSlugs->contains('slug', $slug)) {
             return $slug;
         }
         // Just append numbers like a savage until we find not used.
         for ($i = 1; $i <= 10; $i++) {
-            $newSlug = $slug . '-' . $i;
-            if (!$allSlugs->contains('slug', $newSlug)) {
+            $newSlug = $slug.'-'.$i;
+            if (! $allSlugs->contains('slug', $newSlug)) {
                 return $newSlug;
             }
         }

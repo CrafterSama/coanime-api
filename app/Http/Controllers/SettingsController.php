@@ -1,16 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+declare(strict_types=1);
 
-use App\Models\Settings;
-use App\Models\Genre;
-use App\Models\Ratings;
-use App\Models\Title;
-use App\Models\TitleImage;
-use App\Models\TitleType;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+namespace App\Http\Controllers;
 
 class SettingsController extends Controller
 {
