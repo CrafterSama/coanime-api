@@ -9,6 +9,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.1.0",
+        "chriskonnertz/bbcode": "^1.1",
         "guzzlehttp/guzzle": "^7.5",
         "intervention/image": "^2.7",
         "jikan-me/jikan": "^3.3",
