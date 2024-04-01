@@ -36,6 +36,12 @@ class Helper extends Model
         return compact('type', 'text');
     }
 
+    public static function bbcodeToHtml($string)
+    {
+        $bbcode = new \ChrisKonnertz\BBCode\BBCode();
+        return $bbcode->render($string);
+    }
+
     private static function ConSoSinS($val, $sentence)
     {
         if ($val > 1) {
@@ -93,11 +99,25 @@ class Helper extends Model
 
     public static function parseBBCode($string)
     {
-        $string = $string ? preg_replace('~\[b\](.*?)\[\/b\]~is', '<b>\\1</b>', $string) : '';
-        $string = $string ? preg_replace('~\[i\](.*?)\[\/i\]~is', '<i>\\1</i>', $string) : '';
-        $string = $string ? preg_replace('~\[u\](.*?)\[\/u\]~is', '<u>\\1</u>', $string) : '';
+        if (empty($string)) {
+            return '';
+        }
+        // proceed to the replacement of all self-closing tags first
+        $result = preg_replace('~\[ (br|hr|img)\b ([^]]*) ]~xi', '<$1$2/>', $string);
 
-        return $string;
+
+        // then replace the innermost tags until there's nothing to replace
+        $count = 0;
+        do {
+            $result = preg_replace('~
+                \[ ( (\w+) [^]]* ) ]     # opening tag
+                ( [^[]*+ )               # content without other bracketed tags
+                \[/ \2 ]                 # closing tag
+            ~xi', '<$1>$3</$2>', $result, -1, $count);
+        } while ($count);
+
+        return $result;
+
     }
 
     public static function split_str($value)
