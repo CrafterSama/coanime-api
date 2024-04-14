@@ -12,7 +12,7 @@
         "chriskonnertz/bbcode": "^1.1",
         "guzzlehttp/guzzle": "^7.5",
         "intervention/image": "^2.7",
-        "jikan-me/jikan": "^3.3",
+        "jikan-me/jikan": "4",
         "jikan/jikan-php": "^4.0",
         "laravel-json-api/laravel": "^3.0",
         "laravel/framework": "^10.6.2",
