@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 
 class TitleStatistics extends Model
 {
@@ -36,5 +37,10 @@ class TitleStatistics extends Model
     public function statistics()
     {
         return $this->belongsTo(Statistics::class, 'statistics_id', 'id');
+    }
+
+    public static function getStatisticsByAuthUser($statistics_id)
+    {
+        return self::where('user_id', Auth::user()->id)->where('statistics_id', $statistics_id)->paginate(30);
     }
 }
