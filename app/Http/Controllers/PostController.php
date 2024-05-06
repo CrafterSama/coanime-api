@@ -87,8 +87,13 @@ class PostController extends Controller
             $broadcastUrl = 'https://api.jikan.moe/v4/schedules/'.date('l');
             $json = file_get_contents($broadcastUrl);
             $broadcast = json_decode($json, true);
+            $broadcast = $broadcast['data'];
+            foreach ($broadcast as $key => $value) {
+                $broadcast[$key]['url'] = 'https://coanime.net/ecma/titulos/'. Str::slug($value['type']) .'/' . Str::slug($value['title']);
+            }
+            //dd($broadcast);
 
-            $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(10)->get();
+            $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(15)->get();
 
             return response()->json([
                 'code' => 200,
@@ -98,7 +103,7 @@ class PostController extends Controller
                 'image' => $news[0]->image,
                 'keywords' => $keywords,
                 'relevants' => $relevants,
-                'broadcast' => $broadcast['data'],
+                'broadcast' => $broadcast,
                 'upcoming' => $upcoming,
                 'result' => $news,
             ], 200);
