@@ -233,9 +233,13 @@ class HiddenSeeker extends Model
                 return strtolower($value->getTitle()) === strtolower($title->name);
             });
 
+            //dd($cloudTitlesTemp);
+
             $cloudTitle = $cloudTitlesTemp?->first() ?: null;
 
-            //dd($cloudTitle);
+            if ($cloudTitle === null) {
+                return;
+            }
 
             if ($cloudTitle?->getTitles() !== null) {
                 $otherTitles = [];
@@ -264,7 +268,7 @@ class HiddenSeeker extends Model
 
 
             if (!$isManga) {
-                //dd($cloudTitle->getAired());
+                // dd($cloudTitle);
                 if ((empty($localTitle->trailer_url) || $localTitle->trailer_url === null || $localTitle->trailer_url === '') && $cloudTitle?->getTrailer()?->getUrl() !== null) {
                     $localTitle->trailer_url = $cloudTitle->getTrailer()->getUrl();
                     $localTitle->save();
@@ -281,7 +285,7 @@ class HiddenSeeker extends Model
                 }
 
                 if ($localTitle->broad_time === null || $localTitle->broad_time === '0000-00-00 00:00:00' || $localTitle->broad_time !== $cloudTitle?->getAired()?->getFrom()) {
-                    $localTitle->broad_time = Carbon::create($cloudTitle->getAired()->getFrom())->format('Y-m-d');
+                    $localTitle->broad_time = Carbon::create($cloudTitle?->getAired()?->getFrom())->format('Y-m-d');
                     $localTitle->save();
                 }
 
