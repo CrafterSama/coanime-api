@@ -149,7 +149,10 @@ class TitleController extends Controller
      */
     public function store(Request $request)
     {
-        if (Title::where('name', '=', $request->get('name'))->where('type_id', '=', $request->get('type_id'))->count() > 0) {
+        $requestedName = strtolower($request->get('name'));
+        $requestedType = strtolower($request->get('type_id'));
+
+        if (Title::where('name', '=', $requestedName)->where('type_id', '=', $requestedType)->exists()) {
             return response()->json([
                 'code' => 403,
                 'message' => Helper::errorMessage('El titulo ya existe'),
@@ -182,8 +185,11 @@ class TitleController extends Controller
             $request['user_id'] = Auth::user()->id;
             $request['slug'] = Str::slug($request['name']);
 
-            if (Title::where('slug', '=', $request['slug'])->where('type_id', '=', $request['type_id'])->count() > 0) {
-                $request['slug'] = Str::slug($request['name']).'-01';
+            if (Title::where('slug', '=', $request['slug'])->where('type_id', '=', $requestedType)->exists()) {
+                return response()->json([
+                    'code' => 403,
+                    'message' => Helper::errorMessage('El titulo ya existe'),
+                ], 403);
             }
 
             $data = $request->all();
@@ -199,9 +205,9 @@ class TitleController extends Controller
                     'code' => 200,
                     'message' => [
                         'type' => 'Success',
-                        'text' => 'El titulo se ha guardado correctamente',
+                        'text' => 'El título se ha guardado correctamente',
                     ],
-                    'title' => 'Coanime.net - Titulos - Titulo Agregado',
+                    'title' => 'Coanime.net - Títulos - Título Agregado',
                     'description' => 'El titulo se ha agregado correctamente',
                 ], 200);
             } else {
@@ -209,9 +215,9 @@ class TitleController extends Controller
                     'code' => 400,
                     'message' => [
                         'type' => 'Error',
-                        'text' => 'No se pudo agregar el titulo',
+                        'text' => 'No se pudo agregar el título',
                     ],
-                    'title' => 'Coanime.net - Titulos - Titulo no Agregado',
+                    'title' => 'Coanime.net - Títulos - Título no Agregado',
                     'description' => 'El titulo no se ha podido agregar',
                 ], 400);
             }

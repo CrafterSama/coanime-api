@@ -15,7 +15,7 @@ use App\Models\Title;
 
 class HiddenSeeker extends Model
 {
-  private $genres = [
+  private static $genres = [
         'adventure' => 1,
         'comedy' => 2,
         'romance' => 3,
@@ -118,7 +118,7 @@ class HiddenSeeker extends Model
         'gourmet' => 108,
         'hentai' => 109,
     ];
-      private $typeInCloud = [
+      private static $typeInCloud = [
         'tv',
         'manga',
         'movie',
@@ -132,7 +132,7 @@ class HiddenSeeker extends Model
         'doujinshi',
         'novel',
     ];
-    private $rating = [
+    private static $rating = [
         'g - all ages'                    => 1,
         'g'                               => 1,
         'pg - children'                   => 2,
@@ -146,7 +146,7 @@ class HiddenSeeker extends Model
         'rx - hentai'                     => 6,
         'rx'                              => 6,
     ];
-    private $typeTranslations = [
+    private static $typeTranslations = [
         'tv'            => 'tv',
         'manga'         => 'manga',
         'pelicula'      => 'movie',
@@ -161,7 +161,7 @@ class HiddenSeeker extends Model
         'novela'        => 'novel',
     ];
 
-    private $status = [
+    private static $status = [
         'Currently Airing'  => 'En emisión',
         'Finished Airing'   => 'Finalizado',
         'Not yet aired'     => 'Estreno',
@@ -171,7 +171,7 @@ class HiddenSeeker extends Model
         'On Hiatus'         => 'En espera',
     ];
 
-    private $typeById = [
+    private static $typeById = [
         'tv' => 1,
         'manga' => 2,
         'movie' => 3,
@@ -186,7 +186,7 @@ class HiddenSeeker extends Model
         'novel' => 16,
     ];
 
-    public static function getTranslatedType($type)
+    public static function getType($type)
     {
         return self::$typeTranslations[$type] ?? null;
     }
@@ -219,14 +219,14 @@ class HiddenSeeker extends Model
     public static function updateSeriesByTitle($title, $type)
     {
         $jikan = Client::create();
-        $isManga = self::getTranslatedType($type) === 'manga' || self::getTranslatedType($type) === 'manhwa' || self::getTranslatedType($type) === 'manhua' || self::getTranslatedType($type) === 'novel' || self::getTranslatedType($type) === 'one-shot' || self::getTranslatedType($type) === 'doujinshi' || self::getTranslatedType($type) === 'light novel' ?: false;
+        $isManga = self::getType($type) === 'manga' || self::getType($type) === 'manhwa' || self::getType($type) === 'manhua' || self::getType($type) === 'novel' || self::getType($type) === 'one-shot' || self::getType($type) === 'doujinshi' || self::getType($type) === 'light novel' ?: false;
 
-        if ($title?->id !== null && is_null(self::getTranslatedType($type))) {
-            $thisTitle = Title::find($title->id);
-            $cloudTitlesTemp = collect($isManga ? $jikan->getMangaSearch(['q' => $title->name, 'type' => $type])->getData() : $jikan->getAnimeSearch(['q' => $title->name, 'type' => $type])->getData());
+        if ($title?->id && self::getType($type)) {
+            $localTitle = Title::find($title->id);
+            $cloudTitlesTemp = $isManga ? collect($jikan->getMangaSearch(['q' => $title->name, 'type' => $type])->getData()) : collect($jikan->getAnimeSearch(['q' => $title->name, 'type' => $type])->getData());
 
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($type) {
-                return strtolower($value->getType()) === self::getTranslatedType($type);
+                return strtolower($value->getType()) === self::getType($type);
             });
 
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($title) {
@@ -235,103 +235,119 @@ class HiddenSeeker extends Model
 
             $cloudTitle = $cloudTitlesTemp?->first() ?: null;
 
-            if ($cloudTitle?->getTitle() !== null) {
-                if (empty($thisTitle->other_titles)) {
-                    $thisTitle->other_titles .= $cloudTitle->getTitleJapanese() ? $cloudTitle->getTitleJapanese().' (Japonés)' : '';
-                    $thisTitle->other_titles .= $cloudTitle->getTitleEnglish() ? ', '.$cloudTitle->getTitleEnglish().' (Inglés)' : '';
-                    $thisTitle->save();
-                }
+            //dd($cloudTitle);
 
-                if ((empty($title->sinopsis) || $thisTitle->sinopsis == 'Sinopsis no disponible' || $thisTitle->sinopsis == 'Pendiente de agregar sinopsis...' || $thisTitle->sinopsis == 'Sinopsis no disponible.' || $thisTitle->sinopsis == 'Sinopsis en Proceso') && $cloudTitle->getSynopsis() !== null) {
-                    $thisTitle->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
-                    $thisTitle->save();
-                }
-
-                if (!$isManga) {
-                    if ((empty($thisTitle->trailer_url) || $thisTitle->trailer_url === null || $thisTitle->trailer_url === '') && $cloudTitle->getTrailer()->getUrl() !== null) {
-                        $thisTitle->trailer_url = $cloudTitle->getTrailer()->getUrl();
-                        $thisTitle->save();
-                    }
-
-                    if (! $thisTitle->rating_id || $thisTitle->rating_id === 7) {
-                        $thisTitle->rating_id = self::getRatingId(strtolower($cloudTitle->getRating())) ?? 7;
-                        $thisTitle->save();
-                    }
-
-                    if ($thisTitle->episodies === 0 || $thisTitle->episodies === null || empty($thisTitle->episodies)) {
-                        $thisTitle->episodies = $cloudTitle->getEpisodes();
-                        $thisTitle->save();
-                    }
-
-                    if ($thisTitle->broad_time === null || $thisTitle->broad_time === '0000-00-00 00:00:00' || $thisTitle->broad_time !== $cloudTitle?->getAired()?->getFrom()) {
-                        $thisTitle->broad_time = Carbon::create($cloudTitle->getAired()->getFrom())->format('Y-m-d');
-                        $thisTitle->save();
-                    }
-
-                    if ($thisTitle->broad_finish === null || $thisTitle->broad_finish === '0000-00-00 00:00:00' || $thisTitle->broad_finish !== $cloudTitle?->getAired()?->getTo()) {
-                        $thisTitle->broad_finish = Carbon::create($cloudTitle->getAired()->getTo())->format('Y-m-d');
-                        $thisTitle->save();
-                    }
-                }
-
-                if ($isManga) {
-                    if ($thisTitle->broad_time === null || $thisTitle->broad_time === '0000-00-00 00:00:00' || $thisTitle->broad_time !== $cloudTitle?->getPublished()?->getFrom()) {
-                        $thisTitle->broad_time = Carbon::create($cloudTitle->getPublished()->getFrom())->format('Y-m-d');
-                        $thisTitle->save();
-                    }
-
-                    if ($thisTitle->broad_finish === null || $thisTitle->broad_finish === '0000-00-00 00:00:00' || $thisTitle->broad_finish !== $cloudTitle?->getPublished()?->getTo()) {
-                        $thisTitle->broad_finish = Carbon::create($cloudTitle->getPublished()->getTo())->format('Y-m-d');
-                        $thisTitle->save();
-                    }
-
-                    if ($thisTitle->episodies === 0 || $thisTitle->episodies === null || empty($thisTitle->episodies)) {
-                        $thisTitle->episodies = $cloudTitle->getChapters();
-                        $thisTitle->save();
-                    }
-                }
-
-                if (!$thisTitle->status || self::getStatus($cloudTitle->getStatus()) !== $thisTitle->status) {
-                    $thisTitle->status = self::getStatus($cloudTitle->getStatus());
-                    $thisTitle->save();
-                }
-
-                if (!$title?->images || $title?->images?->name === null || $title?->images?->name === '') {
-                    $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl() === 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-256.png' ? null : $cloudTitle->getImages()->getWebp()->getLargeImageUrl();
-                    if ($imageUrl) {
-                        $processingImage = file_get_contents($imageUrl);
-                        $image = Image::make($processingImage);
-                        $fileName = hash('sha256', strval(time()));
-                        $image->encode('webp', 100);
-
-                        if ($image->width() > 2560) {
-                            $image->resize(2560, null, function ($constraint) {
-                                $constraint->aspectRatio();
-                            });
+            if ($cloudTitle?->getTitles() !== null) {
+                $otherTitles = [];
+                foreach ($cloudTitle->getTitles() as $value) {
+                    if (strtolower($value->getType()) === 'english') {
+                        $titleEnglish = $value->getTitle().' (Inglés)';
+                        if (!in_array($titleEnglish, $otherTitles)) {
+                            $otherTitles[] = $titleEnglish;
                         }
-
-                        $path = '/titles/';
-
-                        $filePath = $path.$fileName.'.webp';
-                        Storage::disk('s3')->put($filePath, $image);
-                        $imageUrl = Storage::disk('s3')->url($filePath);
-                        $images = new TitleImage();
-                        $images->create([
-                            'title_id' => $thisTitle->id,
-                            'name' => $imageUrl,
-                            'thumbnail' => $imageUrl,
-                        ]);
                     }
+                    if (strtolower($value->getType()) === 'japanese') {
+                        $titleJapanese = $value->getTitle().' (Japonés)';
+                        if (!in_array($titleJapanese, $otherTitles)) {
+                            $otherTitles[] = $titleJapanese;
+                        }
+                    }
+                    $localTitle->other_titles = implode(', ', $otherTitles);
+                    $localTitle->save();
+                }
+            }
+
+            if ((empty($title->sinopsis) || $localTitle->sinopsis == 'Sinopsis no disponible' || $localTitle->sinopsis == 'Pendiente de agregar sinopsis...' || $localTitle->sinopsis == 'Sinopsis no disponible.' || $localTitle->sinopsis == 'Sinopsis en Proceso') && $cloudTitle->getSynopsis() !== null) {
+                $localTitle->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
+                $localTitle->save();
+            }
+
+
+            if (!$isManga) {
+                //dd($cloudTitle->getAired());
+                if ((empty($localTitle->trailer_url) || $localTitle->trailer_url === null || $localTitle->trailer_url === '') && $cloudTitle?->getTrailer()?->getUrl() !== null) {
+                    $localTitle->trailer_url = $cloudTitle->getTrailer()->getUrl();
+                    $localTitle->save();
                 }
 
-                if ($title->genres->count() === 0) {
-                    $newGenres = [];
-                    foreach ($cloudTitle->getGenres() as $key => $gen) {
-                        $newGenres[] = self::$genres[strtolower($gen->getName())];
-                    }
-                    $title->genres()->sync($newGenres);
+                if (! $localTitle->rating_id || $localTitle->rating_id === 7) {
+                    $localTitle->rating_id = self::getRatingId(strtolower($cloudTitle->getRating())) ?? 7;
+                    $localTitle->save();
                 }
+
+                if ($localTitle->episodies === 0 || $localTitle->episodies === null || empty($localTitle->episodies)) {
+                    $localTitle->episodies = $cloudTitle->getEpisodes();
+                    $localTitle->save();
+                }
+
+                if ($localTitle->broad_time === null || $localTitle->broad_time === '0000-00-00 00:00:00' || $localTitle->broad_time !== $cloudTitle?->getAired()?->getFrom()) {
+                    $localTitle->broad_time = Carbon::create($cloudTitle->getAired()->getFrom())->format('Y-m-d');
+                    $localTitle->save();
+                }
+
+                if ($localTitle->broad_finish === null || $localTitle->broad_finish === '0000-00-00 00:00:00' || $localTitle->broad_finish !== $cloudTitle?->getAired()?->getTo()) {
+                    $localTitle->broad_finish = Carbon::create($cloudTitle->getAired()->getTo())->format('Y-m-d');
+                    $localTitle->save();
+                }
+            }
+
+            if ($isManga) {
+                if ($localTitle->broad_time === null || $localTitle->broad_time === '0000-00-00 00:00:00' || $localTitle->broad_time !== $cloudTitle?->getPublished()?->getFrom()) {
+                    $localTitle->broad_time = Carbon::create($cloudTitle->getPublished()->getFrom())->format('Y-m-d');
+                    $localTitle->save();
+                }
+
+                if ($localTitle->broad_finish === null || $localTitle->broad_finish === '0000-00-00 00:00:00' || $localTitle->broad_finish !== $cloudTitle?->getPublished()?->getTo()) {
+                    $localTitle->broad_finish = Carbon::create($cloudTitle->getPublished()->getTo())->format('Y-m-d');
+                    $localTitle->save();
+                }
+
+                if ($localTitle->episodies === 0 || $localTitle->episodies === null || empty($localTitle->episodies)) {
+                    $localTitle->episodies = $cloudTitle->getChapters();
+                    $localTitle->save();
+                }
+            }
+
+            if (!$localTitle->status || self::getStatus($cloudTitle->getStatus()) !== $localTitle->status) {
+                $localTitle->status = self::getStatus($cloudTitle->getStatus());
+                $localTitle->save();
+            }
+
+            if (!$title?->images || $title?->images?->name === null || $title?->images?->name === '') {
+                $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl() === 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-256.png' ? null : $cloudTitle->getImages()->getWebp()->getLargeImageUrl();
+                if ($imageUrl) {
+                    $processingImage = file_get_contents($imageUrl);
+                    $image = Image::make($processingImage);
+                    $fileName = hash('sha256', strval(time()));
+                    $image->encode('webp', 100);
+
+                    if ($image->width() > 2560) {
+                        $image->resize(2560, null, function ($constraint) {
+                            $constraint->aspectRatio();
+                        });
+                    }
+
+                    $path = '/titles/';
+
+                    $filePath = $path.$fileName.'.webp';
+                    Storage::disk('s3')->put($filePath, $image);
+                    $imageUrl = Storage::disk('s3')->url($filePath);
+                    $images = new TitleImage();
+                    $images->create([
+                        'title_id' => $localTitle->id,
+                        'name' => $imageUrl,
+                        'thumbnail' => $imageUrl,
+                    ]);
+                }
+            }
+
+            if ($title->genres->count() === 0) {
+                $newGenres = [];
+                foreach ($cloudTitle->getGenres() as $gen) {
+                    $newGenres[] = self::$genres[strtolower($gen->getName())];
+                }
+                $title->genres()->sync($newGenres);
+            }
             }
         }
     }
-}

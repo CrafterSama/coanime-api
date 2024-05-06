@@ -34,7 +34,7 @@ class TitlesImageSchema extends Schema
             DateTime::make('created_at')->sortable()->readOnly(),
             DateTime::make('updated_at')->sortable()->readOnly(),
             DateTime::make('deleted_at')->sortable()->readOnly(),
-            BelongsTo::make('titles')->type('titles')->readOnly(),
+            BelongsTo::make('titles')->type('Titles')->readOnly(),
         ];
     }
 

@@ -8,8 +8,11 @@ use App\Models\Title;
 use LaravelJsonApi\Eloquent\Contracts\Paginator;
 use LaravelJsonApi\Eloquent\Fields\DateTime;
 use LaravelJsonApi\Eloquent\Fields\ID;
+use LaravelJsonApi\Eloquent\Fields\Relations\BelongsTo;
+use LaravelJsonApi\Eloquent\Fields\Relations\BelongsToMany;
 use LaravelJsonApi\Eloquent\Fields\Relations\HasOne;
 use LaravelJsonApi\Eloquent\Fields\Str;
+use LaravelJsonApi\Eloquent\Filters\Where;
 use LaravelJsonApi\Eloquent\Filters\WhereIdIn;
 use LaravelJsonApi\Eloquent\Pagination\PagePagination;
 use LaravelJsonApi\Eloquent\Schema;
@@ -29,11 +32,16 @@ class TitleSchema extends Schema
         return [
             ID::make(),
             Str::make('name')->sortable(),
+            Str::make('episodies'),
             Str::make('slug'),
             Str::make('sinopsis'),
-            HasOne::make('images')->type('TitleImage')->readOnly(),
+            Str::make('other_titles'),
+            Str::make('trailer_url'),
+            Str::make('type_id')->hidden(),
+            HasOne::make('titles-image'),
             DateTime::make('created_at')->sortable()->readOnly(),
             DateTime::make('updated_at')->sortable()->readOnly(),
+            DateTime::make('deleted_at')->sortable()->readOnly(),
         ];
     }
 
