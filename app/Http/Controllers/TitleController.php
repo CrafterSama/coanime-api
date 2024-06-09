@@ -700,7 +700,7 @@ class TitleController extends Controller
             $rates = Rate::all();
             $statistics = Statistics::all();
             $name = $title->name;
-            $description = $title->sinopsis;
+            $description = is_null($title->sinopsis) ? 'Sin descripción' : $title->sinopsis;
 
             $meta = [
                 'statuses' => [
