@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Goutte\Client as GoutteClient;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Jikan\JikanPHP\Client;
@@ -179,8 +178,10 @@ class HiddenSeeker extends Model
         'manhwa' => 5,
         'manhua' => 6,
         'ona' => 10,
+        'pv' => 10,
         'light novel' => 11,
         'special' => 13,
+        'tv special' => 13,
         'one-shot' => 14,
         'doujinshi' => 15,
         'novel' => 16,
@@ -191,9 +192,14 @@ class HiddenSeeker extends Model
         return self::$typeTranslations[$type] ?? null;
     }
 
-    public static function getRatingId($rating)
+    /**
+     * A method to get the genre by name
+     * $rating string
+     * return int
+     */
+    public static function getRatingId(string $rating)
     {
-        return self::$rating[$rating] ?? null;
+        return is_null($rating) ? 7 : self::$rating[$rating];
     }
 
     public static function getStatus($status)
@@ -203,7 +209,7 @@ class HiddenSeeker extends Model
 
     public static function getTypeById($id)
     {
-        return self::$typeById[$id] ?? null;
+        return self::$typeById[$id] ?? 1;
     }
 
     public static function getGenres($genre)
@@ -224,7 +230,6 @@ class HiddenSeeker extends Model
         if ($title?->id && self::getType($type)) {
             $localTitle = Title::find($title->id);
             $cloudTitlesTemp = $isManga ? collect($jikan->getMangaSearch(['q' => $title->name, 'type' => $type])->getData()) : collect($jikan->getAnimeSearch(['q' => $title->name, 'type' => $type])->getData());
-
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($type) {
                 return strtolower($value->getType()) === self::getType($type);
             });
@@ -232,8 +237,6 @@ class HiddenSeeker extends Model
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($title) {
                 return strtolower($value->getTitle()) === strtolower($title->name);
             });
-
-            //dd($cloudTitlesTemp);
 
             $cloudTitle = $cloudTitlesTemp?->first() ?: null;
 
