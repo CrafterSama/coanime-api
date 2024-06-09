@@ -278,7 +278,7 @@ class HiddenSeeker extends Model
                 }
 
                 if (! $localTitle->rating_id || $localTitle->rating_id === 7) {
-                    $localTitle->rating_id = self::getRatingId(strtolower($cloudTitle->getRating())) ?? 7;
+                    $localTitle->rating_id = is_null($cloudTitle->getRating()) ? 7 : self::getRatingId(strtolower($cloudTitle->getRating()));
                     $localTitle->save();
                 }
 
