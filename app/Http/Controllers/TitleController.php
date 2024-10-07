@@ -150,7 +150,7 @@ class TitleController extends Controller
     public function store(Request $request)
     {
         $requestedName = strtolower($request->get('name'));
-        $requestedType = strtolower($request->get('type_id'));
+        $requestedType = $request->get('type_id');
 
         if (Title::where('name', '=', $requestedName)->where('type_id', '=', $requestedType)->exists()) {
             return response()->json([

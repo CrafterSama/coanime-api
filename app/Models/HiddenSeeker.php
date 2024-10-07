@@ -154,7 +154,7 @@ class HiddenSeeker extends Model
         'manhua'        => 'manhua',
         'ona'           => 'ona',
         'novela-ligera' => 'light novel',
-        'especial'      => 'special',
+        'especial'      => 'tv special',
         'one-shot'      => 'one-shot',
         'doujinshi'     => 'doujinshi',
         'novela'        => 'novel',
@@ -180,7 +180,7 @@ class HiddenSeeker extends Model
         'ona' => 10,
         'pv' => 10,
         'light novel' => 11,
-        'special' => 13,
+        //'special' => 13,
         'tv special' => 13,
         'one-shot' => 14,
         'doujinshi' => 15,
@@ -229,7 +229,12 @@ class HiddenSeeker extends Model
 
         if ($title?->id && self::getType($type)) {
             $localTitle = Title::find($title->id);
-            $cloudTitlesTemp = $isManga ? collect($jikan->getMangaSearch(['q' => $title->name, 'type' => $type])->getData()) : collect($jikan->getAnimeSearch(['q' => $title->name, 'type' => $type])->getData());
+            //dd(self::getType($type));
+            $cloudTitlesTemp = $isManga ? collect($jikan->getMangaSearch(['q' => $title->name, 'type' => self::getType($type)])->getData()) : collect($jikan->getAnimeSearch(['q' => $title->name, 'type' => self::getType($type)])->getData());
+            dd($cloudTitlesTemp);
+            if (is_null($cloudTitlesTemp)) {
+                return;
+            }
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($type) {
                 return strtolower($value->getType()) === self::getType($type);
             });
@@ -240,7 +245,7 @@ class HiddenSeeker extends Model
 
             $cloudTitle = $cloudTitlesTemp?->first() ?: null;
 
-            if ($cloudTitle === null) {
+            if (is_null($cloudTitle)) {
                 return;
             }
 
