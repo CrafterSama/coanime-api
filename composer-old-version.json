@@ -1,10 +1,11 @@
 {
-    "name": "laravel/laravel",
+    "name": "craftersama/coanime-api",
     "type": "project",
-    "description": "The Laravel Framework.",
+    "description": "Anime and Manga API",
     "keywords": [
-        "framework",
-        "laravel"
+        "anime",
+        "manga",
+        "api"
     ],
     "license": "MIT",
     "require": {
