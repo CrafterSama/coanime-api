@@ -300,7 +300,9 @@ class PeopleController extends Controller
     {
         if (People::where('slug', '=', $slug)->count() > 0) {
             $people = People::with('city', 'country')->whereSlug($slug)->firstOrFail();
-            $people->bio = Helper::parseBBCode($people->bio);
+            $people->about = Helper::bbcodeToHtml($people->about);
+
+            //dd($people);
 
             return response()->json([
                 'code' => 200,
