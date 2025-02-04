@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Genre;
 use App\Models\Helper;
+use App\Models\HiddenSeeker;
 use App\Models\Post;
 use App\Models\Rate;
 use App\Models\Ratings;
@@ -31,175 +32,6 @@ use Stichoza\GoogleTranslate\GoogleTranslate;
 
 class TitleController extends Controller
 {
-    private $genres = [
-        'adventure' => 1,
-        'comedy' => 2,
-        'romance' => 3,
-        'drama' => 4,
-        'sci-fi' => 5,
-        'action' => 7,
-        'magic' => 8,
-        'psychological' => 9,
-        'horror' => 10,
-        'mystery' => 11,
-        'supernatural' => 12,
-        'erotica' => 13,
-        'fantasy' => 14,
-        'slice of life' => 15,
-        'thriller' => 16,
-        'suspense' => 16,
-        'mecha' => 17,
-        'historical' => 18,
-        'ecchi' => 19,
-        'cooking' => 20,
-        'shoujo' => 21,
-        'detectives' => 22,
-        'seinen' => 23,
-        'maids' => 24,
-        'moe' => 25,
-        'shounen' => 26,
-        'school life' => 27,
-        'school' => 27,
-        'gore' => 28,
-        'harem' => 29,
-        'yuri' => 30,
-        'girls love' => 30,
-        'yaoi' => 31,
-        'boys love' => 31,
-        'sports' => 32,
-        'team sports' => 32,
-        'strategy game' => 40,
-        'martial arts' => 43,
-        'survival' => 45,
-        'shounen ai' => 50,
-        'shoujo ai' => 51,
-        'josei' => 52,
-        'doujinshi' => 53,
-        'music' => 54,
-        'spacial' => 55,
-        'gothic' => 56,
-        'dark fantasy' => 57,
-        'demons' => 58,
-        'smut' => 59,
-        'sentai' => 60,
-        'parody' => 61,
-        'super powers' => 62,
-        'super power' => 62,
-        'superhero' => 62,
-        'military' => 63,
-        'samurai' => 64,
-        'childs' => 65,
-        'video games' => 66,
-        'video game' => 66,
-        'police' => 67,
-        'vampires' => 68,
-        'racing' => 69,
-        'monsters' => 70,
-        'isekai' => 71,
-        'monster girls' => 72,
-        'delinquents' => 74,
-        'reverse harem' => 75,
-        'office workers' => 76,
-        'tragedy' => 77,
-        'crime' => 78,
-        'magical girls' => 79,
-        'medical' => 80,
-        'philosophical' => 81,
-        'wuxia' => 82,
-        'aliens' => 83,
-        'animals' => 84,
-        'crossdressing' => 85,
-        'genderswap' => 86,
-        'ghosts' => 87,
-        'gyaru' => 88,
-        'incest' => 89,
-        'loli' => 90,
-        'mafia' => 91,
-        'ninja' => 92,
-        'post-apocalyptic' => 93,
-        'music' => 94,
-        'reincarnation' => 95,
-        'shota' => 96,
-        'time travel' => 97,
-        'traditional games' => 98,
-        'villainess' => 99,
-        'virtual reality' => 100,
-        'zombies' => 101,
-        'romantic subtext' => 102,
-        'mythology' => 103,
-        'high stakes game' => 104,
-        'love polygon' => 105,
-        'avant garde' => 106,
-        'otaku culture' => 107,
-        'gourmet' => 108,
-        'hentai' => 109,
-    ];
-    private $status = [
-        'Currently Airing' => 'En emisión',
-        'Finished Airing' => 'Finalizado',
-        'Not yet aired' => 'Estreno',
-        'Finished' => 'Finalizado',
-        'Publishing' => 'Publicándose',
-        'Discontinued' => 'Descontinuado',
-        'On Hiatus' => 'En espera',
-    ];
-    private $rating = [
-        'g - all ages' => 1,
-        'g' => 1,
-        'pg - children' => 2,
-        'pg' => 2,
-        'pg-13 - teens 13 or older' => 3,
-        'pg-13' => 3,
-        'r - 17+ (violence & profanity)' => 4,
-        'r' => 4,
-        'r+ - mild nudity' => 5,
-        'r+' => 5,
-        'rx - hentai' => 6,
-        'rx' => 6,
-    ];
-    private $typeById = [
-        'tv' => 1,
-        'manga' => 2,
-        'movie' => 3,
-        'ova' => 4,
-        'manhwa' => 5,
-        'manhua' => 6,
-        'ona' => 10,
-        'light novel' => 11,
-        'special' => 13,
-        'one-shot' => 14,
-        'doujinshi' => 15,
-        'novel' => 16,
-    ];
-    private $typeInCloud = [
-        'tv',
-        'manga',
-        'movie',
-        'ova',
-        'manhwa',
-        'manhua',
-        'ona',
-        'light novel',
-        'special',
-        'one-shot',
-        'doujinshi',
-        'novel',
-    ];
-    private $typeTranslations = [
-        'tv' => 'tv',
-        'manga' => 'manga',
-        'pelicula' => 'movie',
-        'ova' => 'ova',
-        'manhwa' => 'manhwa',
-        'manhua' => 'manhua',
-        'ona' => 'ona',
-        'novela-ligera' => 'light novel',
-        'especial' => 'special',
-        'one-shot' => 'one-shot',
-        'doujinshi' => 'doujinshi',
-        'novela' => 'novel',
-    ];
-
     /**
      * Display a listing of titles serie.
      *
@@ -317,7 +149,10 @@ class TitleController extends Controller
      */
     public function store(Request $request)
     {
-        if (Title::where('name', '=', $request->get('name'))->where('type_id', '=', $request->get('type_id'))->count() > 0) {
+        $requestedName = strtolower($request->get('name'));
+        $requestedType = $request->get('type_id');
+
+        if (Title::where('name', '=', $requestedName)->where('type_id', '=', $requestedType)->exists()) {
             return response()->json([
                 'code' => 403,
                 'message' => Helper::errorMessage('El titulo ya existe'),
@@ -350,8 +185,11 @@ class TitleController extends Controller
             $request['user_id'] = Auth::user()->id;
             $request['slug'] = Str::slug($request['name']);
 
-            if (Title::where('slug', '=', $request['slug'])->where('type_id', '=', $request['type_id'])->count() > 0) {
-                $request['slug'] = Str::slug($request['name']).'-01';
+            if (Title::where('slug', '=', $request['slug'])->where('type_id', '=', $requestedType)->exists()) {
+                return response()->json([
+                    'code' => 403,
+                    'message' => Helper::errorMessage('El titulo ya existe'),
+                ], 403);
             }
 
             $data = $request->all();
@@ -367,9 +205,9 @@ class TitleController extends Controller
                     'code' => 200,
                     'message' => [
                         'type' => 'Success',
-                        'text' => 'El titulo se ha guardado correctamente',
+                        'text' => 'El título se ha guardado correctamente',
                     ],
-                    'title' => 'Coanime.net - Titulos - Titulo Agregado',
+                    'title' => 'Coanime.net - Títulos - Título Agregado',
                     'description' => 'El titulo se ha agregado correctamente',
                 ], 200);
             } else {
@@ -377,9 +215,9 @@ class TitleController extends Controller
                     'code' => 400,
                     'message' => [
                         'type' => 'Error',
-                        'text' => 'No se pudo agregar el titulo',
+                        'text' => 'No se pudo agregar el título',
                     ],
-                    'title' => 'Coanime.net - Titulos - Titulo no Agregado',
+                    'title' => 'Coanime.net - Títulos - Título no Agregado',
                     'description' => 'El titulo no se ha podido agregar',
                 ], 400);
             }
@@ -620,13 +458,12 @@ class TitleController extends Controller
 
     public function userTitleList(Request $request)
     {
-        $type = $request->type;
         $statisticsOptions = Statistics::select('id', 'name')->get();
-        $abandoned = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '1')->paginate(30);
-        $stopped = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '2')->paginate(30);
-        $wantWatch = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '3')->paginate(30);
-        $watching = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '4')->paginate(30);
-        $watched = TitleStatistics::where('user_id', Auth::user()->id)->with(['statistics', 'titles'])->where('statistics_id', '5')->paginate(30);
+        $abandoned = TitleStatistics::getStatisticsByAuthUser('1');
+        $stopped = TitleStatistics::getStatisticsByAuthUser('2');
+        $wantWatch = TitleStatistics::getStatisticsByAuthUser('3');
+        $watching = TitleStatistics::getStatisticsByAuthUser('4');
+        $watched = TitleStatistics::getStatisticsByAuthUser('5');
         $titles = TitleStatistics::where('user_id', Auth::user()->id)->with('titles', 'statistics')->orderBy('created_at', 'desc')->paginate(30);
 
         return response()->json([
@@ -851,132 +688,19 @@ class TitleController extends Controller
      */
     public function apiShowTitle(string $type, string $slug)
     {
-        $jikan = Client::create();
+        //dd($type);
         $type_id = TitleType::where('slug', '=', $type)->pluck('id')->first();
-        //dd($thisTitle);
-        if (Title::where('type_id', $type_id)->where('slug', '=', $slug)->count() > 0) {
+        //dd(Title::where('type_id', $type_id)->where('slug', '=', $slug)->exists());
+        if (Title::where('type_id', $type_id)->where('slug', '=', $slug)->exists()) {
             $title = Title::where('type_id', $type_id)->where('slug', '=', $slug)->first();
             $title = $title->load('images', 'rating', 'type', 'genres', 'users', 'posts');
-            $id = $title->id;
-            if ($title?->id !== null && isset($this->typeTranslations[$type])) {
-                $thisTitle = Title::find($title->id);
-                $manga = $this->typeTranslations[$type] === 'manga' || $this->typeTranslations[$type] === 'manhwa' || $this->typeTranslations[$type] === 'manhua' || $this->typeTranslations[$type] === 'novel' || $this->typeTranslations[$type] === 'one-shot' || $this->typeTranslations[$type] === 'doujinshi' || $this->typeTranslations[$type] === 'light novel' ?: false;
-                $cloudTitlesTemp = collect($manga ? $jikan->getMangaSearch(['q' => $title->name, 'type' => $type])->getData() : $jikan->getAnimeSearch(['q' => $title->name, 'type' => $type])->getData());
-                //dd($manga);
-                $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($type) {
-                    return strtolower($value->getType()) === $this->typeTranslations[$type];
-                });
 
-                $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($title) {
-                    return strtolower($value->getTitle()) === strtolower($title->name);
-                });
-                //dd($cloudTitlesTemp);
-
-                $cloudTitle = $cloudTitlesTemp?->first() ?: null;
-                //dd($cloudTitle);
-                if ($cloudTitle?->getTitle() !== null) {
-                    if (empty($thisTitle->other_titles)) {
-                        $thisTitle->other_titles .= $cloudTitle->getTitleJapanese() ? $cloudTitle->getTitleJapanese().' (Japonés)' : '';
-                        $thisTitle->other_titles .= $cloudTitle->getTitleEnglish() ? ', '.$cloudTitle->getTitleEnglish().' (Inglés)' : '';
-                        $thisTitle->save();
-                    }
-
-                    if ((empty($title->sinopsis) || $thisTitle->sinopsis == 'Sinopsis no disponible' || $thisTitle->sinopsis == 'Pendiente de agregar sinopsis...' || $thisTitle->sinopsis == 'Sinopsis no disponible.' || $thisTitle->sinopsis == 'Sinopsis en Proceso') && $cloudTitle->getSynopsis() !== null) {
-                        $thisTitle->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
-                        $thisTitle->save();
-                    }
-                    //dd($cloudTitle);
-                    if (! $manga) {
-                        if ((empty($thisTitle->trailer_url) || $thisTitle->trailer_url === null || $thisTitle->trailer_url === '') && $cloudTitle->getTrailer()->getUrl() !== null) {
-                            $thisTitle->trailer_url = $cloudTitle->getTrailer()->getUrl();
-                            $thisTitle->save();
-                        }
-
-                        if (! $thisTitle->rating_id || $thisTitle->rating_id === 7) {
-                            $thisTitle->rating_id = $this->rating[strtolower($cloudTitle->getRating())] ?? 7;
-                            $thisTitle->save();
-                        }
-
-                        if ($thisTitle->episodies === 0 || $thisTitle->episodies === null || empty($thisTitle->episodies)) {
-                            $thisTitle->episodies = $cloudTitle->getEpisodes();
-                            $thisTitle->save();
-                        }
-
-                        if ($thisTitle->broad_time === null || $thisTitle->broad_time === '0000-00-00 00:00:00' || $thisTitle->broad_time !== $cloudTitle?->getAired()?->getFrom()) {
-                            $thisTitle->broad_time = Carbon::create($cloudTitle->getAired()->getFrom())->format('Y-m-d');
-                            $thisTitle->save();
-                        }
-
-                        if ($thisTitle->broad_finish === null || $thisTitle->broad_finish === '0000-00-00 00:00:00' || $thisTitle->broad_finish !== $cloudTitle?->getAired()?->getTo()) {
-                            $thisTitle->broad_finish = Carbon::create($cloudTitle->getAired()->getTo())->format('Y-m-d');
-                            $thisTitle->save();
-                        }
-                    }
-
-                    if ($manga) {
-                        if ($thisTitle->broad_time === null || $thisTitle->broad_time === '0000-00-00 00:00:00' || $thisTitle->broad_time !== $cloudTitle?->getPublished()?->getFrom()) {
-                            $thisTitle->broad_time = Carbon::create($cloudTitle->getPublished()->getFrom())->format('Y-m-d');
-                            $thisTitle->save();
-                        }
-
-                        if ($thisTitle->broad_finish === null || $thisTitle->broad_finish === '0000-00-00 00:00:00' || $thisTitle->broad_finish !== $cloudTitle?->getPublished()?->getTo()) {
-                            $thisTitle->broad_finish = Carbon::create($cloudTitle->getPublished()->getTo())->format('Y-m-d');
-                            $thisTitle->save();
-                        }
-
-                        if ($thisTitle->episodies === 0 || $thisTitle->episodies === null || empty($thisTitle->episodies)) {
-                            $thisTitle->episodies = $cloudTitle->getChapters();
-                            $thisTitle->save();
-                        }
-                    }
-
-                    if (! $thisTitle->status || $this->status[$cloudTitle->getStatus()] !== $thisTitle->status) {
-                        $thisTitle->status = $this->status[$cloudTitle->getStatus()];
-                        $thisTitle->save();
-                    }
-
-                    if (! $title?->images || $title?->images?->name === null || $title?->images?->name === '') {
-                        $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl() === 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-256.png' ? null : $cloudTitle->getImages()->getWebp()->getLargeImageUrl();
-                        if ($imageUrl) {
-                            $processingImage = file_get_contents($imageUrl);
-                            $image = Image::make($processingImage);
-                            $fileName = hash('sha256', strval(time()));
-                            $image->encode('webp', 100);
-
-                            if ($image->width() > 2560) {
-                                $image->resize(2560, null, function ($constraint) {
-                                    $constraint->aspectRatio();
-                                });
-                            }
-
-                            $path = '/titles/';
-
-                            $filePath = $path.$fileName.'.webp';
-                            Storage::disk('s3')->put($filePath, $image);
-                            $imageUrl = Storage::disk('s3')->url($filePath);
-                            $images = new TitleImage();
-                            $images->create([
-                                'title_id' => $thisTitle->id,
-                                'name' => $imageUrl,
-                                'thumbnail' => $imageUrl,
-                            ]);
-                        }
-                    }
-
-                    if ($title->genres->count() === 0) {
-                        $newGenres = [];
-                        foreach ($cloudTitle->getGenres() as $key => $gen) {
-                            $newGenres[] = $this->genres[strtolower($gen->getName())];
-                        }
-                        $title->genres()->sync($newGenres);
-                    }
-                }
-            }
+            HiddenSeeker::updateSeriesByTitle($title, $type);
 
             $rates = Rate::all();
             $statistics = Statistics::all();
             $name = $title->name;
-            $description = $title->sinopsis;
+            $description = is_null($title->sinopsis) ? 'Sin descripción' : $title->sinopsis;
 
             $meta = [
                 'statuses' => [
@@ -1007,6 +731,7 @@ class TitleController extends Controller
     public function apiShowTitlesByType($type)
     {
         $type_id = TitleType::where('slug', '=', $type)->pluck('id');
+        //dd($type_id);
         $name = TitleType::where('slug', '=', $type)->pluck('name');
         $id = Title::where('type_id', $type_id)->pluck('id');
         $titles = Title::where('type_id', $type_id)->with('images', 'rating', 'type', 'genres')->orderBy('name', 'asc')->paginate(30);
@@ -1060,6 +785,7 @@ class TitleController extends Controller
         if ($tag_id->count() > 0) {
             $posts = Post::getByTitle($tag_id);
             if (! empty($tag_id) && $posts->count() > 0) {
+                $postsCount = $posts->count();
                 $posts = $posts->orderBy('posts.postponed_to', 'desc')->simplePaginate();
 
                 return response()->json([
@@ -1070,7 +796,7 @@ class TitleController extends Controller
                     ],
                     'title' => 'Coanime.net - Posts - '.$slug,
                     'descripcion' => 'Posts de la Enciclopedia en el aparatado de '.$slug,
-                    'quantity' => count($posts),
+                    'quantity' => $postsCount,
                     'data' => $posts,
                 ], 200);
             } else {
@@ -1101,6 +827,7 @@ class TitleController extends Controller
         if ($tag_id->count() > 0) {
             $posts = Post::getByTitle($tag_id);
             if (! empty($tag_id) && $posts->count() > 0) {
+                $postsCount = $posts->count();
                 $posts = $posts->orderBy('posts.postponed_to', 'desc')->simplePaginate();
 
                 return response()->json([
@@ -1111,7 +838,7 @@ class TitleController extends Controller
                     ],
                     'title' => 'Coanime.net - Posts - '.$slug,
                     'descripcion' => 'Posts de la Enciclopedia en el aparatado de '.$slug,
-                    'quantity' => count($posts),
+                    'quantity' => $postsCount,
                     'data' => $posts,
                 ], 200);
             } else {
@@ -1137,78 +864,95 @@ class TitleController extends Controller
 
     public function saveTitlesBySeason(Request $request)
     {
+        $jikan = Client::create();
+        $page = intval($request->get('page')) ?? 1;
+        $year = intval($request->get('year')) ?? 2024;
+        $season = $request->get('season') ?? 'winter';
         try {
-            $jikan = Client::create();
-            $page = intval($request->get('page')) ?? 1;
-            $year = intval($request->get('year')) ?? 2019;
-            $season = $request->get('season') ?? 'winter';
-            //dd($page);
-            $results = $jikan->getSeason($year, $season, ['page' => $page]);
-            $proccess = [];
-            $proccess[] = '<p>Pagina '.$page.'</p>';
-            foreach ($results->getData() as $key => $value) {
-                //dd($value);
+            $results = $jikan->getSeason($year, $season, compact('page'));
+            $process = [];
+            //dd($results->getData());
+            $process[] = '<p>Pagina '.$page.'</p>';
+            foreach ($results->getData() as $key => $cloudTitle) {
                 $title = new Title();
                 $newGenres = [];
-                $title->name = $value->getTitle();
-                $title->slug = Str::slug($value->getTitle());
+                $title->name = $cloudTitle->getTitle();
+
+                $title->slug = Str::slug($cloudTitle->getTitle());
                 $title->user_id = 1;
                 $title->just_year = 'false';
                 if (Title::where('slug', $title->slug)->first()) {
-                    $proccess[] = '<p>'.$title->name.' Ya existe</p>';
-                } elseif ($value->getType() === null || $value->getType() === 'Unknown' || $value->getType() === 'Music') {
-                    $proccess[] = '<p>'.$title->name.' No tiene determinado el Tipo</p>';
+                    $process[] = '<p>'.$title->name.' Ya existe</p>';
+                } elseif ($cloudTitle->getType() === null || $cloudTitle->getType() === 'Unknown' || $cloudTitle->getType() === 'Music') {
+                    $process[] = '<p>'.$title->name.' No tiene determinado el Tipo</p>';
                 } else {
-                    $proccess[] = '<p>'.$title->name.' Procesando</p>';
-                    if (empty($title->other_titles)) {
-                        $title->other_titles .= $value->getTitleJapanese() ? $value->getTitleJapanese().' (Japonés)' : '';
-                        $title->other_titles .= $value->getTitleEnglish() ? ', '.$value->getTitleEnglish().' (Inglés)' : '';
+                    $process[] = '<p>'.$title->name.' Procesando</p>';
+
+                    if ($cloudTitle?->getTitles() !== null) {
+                        $otherTitles = [];
+                        foreach ($cloudTitle->getTitles() as $value) {
+                            if (strtolower($value->getType()) === 'english') {
+                                $titleEnglish = $value->getTitle().' (Inglés)';
+                                if (!in_array($titleEnglish, $otherTitles)) {
+                                    $otherTitles[] = $titleEnglish;
+                                }
+                            }
+                            if (strtolower($value->getType()) === 'japanese') {
+                                $titleJapanese = $value->getTitle().' (Japonés)';
+                                if (!in_array($titleJapanese, $otherTitles)) {
+                                    $otherTitles[] = $titleJapanese;
+                                }
+                            }
+                            $title->other_titles = implode(', ', $otherTitles);
+                            //$title->save();
+                        }
                     }
 
-                    if (empty($title->sinopsis) || $title->sinopsis == 'Sinopsis no disponible' || $title->sinopsis == 'Pendiente de agregar sinopsis...') {
-                        $title->sinopsis = $value->getSynopsis() ? GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $value->getSynopsis()), 'es') : 'Sinopsis en Proceso';
+
+                    if ((empty($title->sinopsis) || $title->sinopsis == 'Sinopsis no disponible' || $title->sinopsis == 'Pendiente de agregar sinopsis...' || $title->sinopsis == 'Sinopsis no disponible.' || $title->sinopsis == 'Sinopsis en Proceso') && $cloudTitle->getSynopsis() !== null) {
+                        $title->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
                     }
 
-                    if ((empty($title->trailer_url) || $title->trailer_url === null || $title->trailer_url === '') && $value->getTrailer()->getUrl() !== null) {
-                        $title->trailer_url = $value->getTrailer()->getUrl();
+                    if ((empty($title->trailer_url) || $title->trailer_url === null || $title->trailer_url === '') && $cloudTitle->getTrailer()->getUrl() !== null) {
+                        $title->trailer_url = $cloudTitle->getTrailer()->getUrl();
                     }
 
-                    if (! $title->status || $this->status[$value->getStatus()] !== $title->status) {
-                        $title->status = $this->status[$value->getStatus()];
+                    if (empty($title->status) || HiddenSeeker::getStatus($cloudTitle->getStatus()) !== $title->status) {
+                        $title->status = HiddenSeeker::getStatus($cloudTitle->getStatus());
                     }
 
-                    if (! $title->type) {
-                        $title->type_id = $this->typeById[strtolower($value->getType())];
+                    if (empty($title->type)) {
+                        $title->type_id = HiddenSeeker::getTypeById(strtolower($cloudTitle->getType()));
                     }
 
-                    if (! $title->rating_id || $title->rating_id === 7) {
-                        $title->rating_id = $this->rating[strtolower($value->getRating())] ?? 7;
+                    if (empty($title->rating_id) || $title->rating_id === 7) {
+                        $title->rating_id = is_null($cloudTitle->getRating()) ? $title->rating_id === 7 : HiddenSeeker::getRatingId(strtolower($cloudTitle->getRating()));
                     }
 
                     if ($title->episodies === 0 || $title->episodies === null || empty($title->episodies)) {
-                        $title->episodies = $value->getEpisodes();
+                        $title->episodies = $cloudTitle->getEpisodes();
                     }
 
                     if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
-                        $title->broad_time = Carbon::create($value->getAired()->getFrom())->format('Y-m-d');
+                        $title->broad_time = Carbon::create($cloudTitle->getAired()->getFrom())->format('Y-m-d');
                     }
 
                     if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
-                        $title->broad_finish = Carbon::create($value->getAired()->getTo())->format('Y-m-d');
+                        $title->broad_finish = Carbon::create($cloudTitle->getAired()->getTo())->format('Y-m-d');
                     }
                     $title->save();
 
                     if ($title->genres->count() === 0) {
-                        foreach ($value->getGenres() as $key => $gen) {
+                        foreach ($cloudTitle->getGenres() as $key => $gen) {
                             if ($gen !== '' || $gen !== null) {
-                                $newGenres[] = $this->genres[strtolower($gen->getName())];
+                                $newGenres[] = HiddenSeeker::getGenres(strtolower($gen->getName()));
                             }
                         }
                         $title->genres()->sync($newGenres);
                     }
 
                     $title->save();
-                    $proccess[] = '<p>'.$title->name.' Guardado</p>';
+                    $process[] = '<p>'.$title->name.' Guardado</p>';
                 }
             }
 
@@ -1216,16 +960,16 @@ class TitleController extends Controller
                 'code' => 200,
                 'message' => [
                     'type' => 'Success',
-                    'text' => 'Titulos de la pagina '.$page.' Guardados',
+                    'text' => 'Titulos de la pagina ' . $page . ' Guardados',
                 ],
-                'data' => $proccess,
+                'data' => $process,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'message' => [
                     'type' => 'Error',
-                    'text' => 'Error al procesar la pagina '.$page,
+                    'text' => 'Error al procesar la pagina ' . $page,
                 ],
                 'data' => $e->getMessage(),
             ], 500);
@@ -1241,11 +985,10 @@ class TitleController extends Controller
             $request->get('q') ? $query['q'] = $request->get('q') : '';
             $request->get('letter') ? $query['letter'] = $request->get('letter') : '';
             $request->get('type') ? $query['type'] = $request->get('type') : '';
-            $manga = $request->get('type') === 'manga' || false;
-            //dd($query);
-            //dd($manga);
-            $results = $manga ? $jikan->getMangaSearch($query) : $jikan->getAnimeSearch($query);
-            //dd($results);
+            $isManga = $request->get('type') === 'manga' || false;
+
+            $results = $isManga ? $jikan->getMangaSearch($query) : $jikan->getAnimeSearch($query);
+
             $proccess = [];
             $proccess[] = '<p>Pagina '.$query['page'] ?? 1 .'</p>';
 
@@ -1277,7 +1020,7 @@ class TitleController extends Controller
                             $title->trailer_url = $value->getTrailer()->getUrl();
                         }
                         if (! $title->rating_id || $title->rating_id === 7) {
-                            $title->rating_id = $this->rating[strtolower($value->getRating())] ?? 7;
+                            $title->rating_id = HiddenSeeker::getRatingId(strtolower($value->getRating())) ?? 7;
                         }
 
                         if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
@@ -1289,7 +1032,7 @@ class TitleController extends Controller
                         }
                     }
 
-                    if ($manga) {
+                    if ($isManga) {
                         if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
                             $title->broad_time = Carbon::create($value->getPublished()->getFrom())->format('Y-m-d');
                         }
@@ -1300,28 +1043,28 @@ class TitleController extends Controller
                     }
 
                     if ($title->episodies === 0 || $title->episodies === null || empty($title->episodies)) {
-                        $title->episodies = $manga ? $value->getChapters() : $value->getEpisodes();
+                        $title->episodies = $isManga ? $value->getChapters() : $value->getEpisodes();
                     }
 
-                    if (! $title->status || $this->status[$value->getStatus()] !== $title->status) {
-                        $title->status = $this->status[$value->getStatus()];
+                    if (! $title->status || HiddenSeeker::getStatus($value->getStatus()) !== $title->status) {
+                        $title->status = HiddenSeeker::getStatus($value->getStatus());
                     }
 
                     if (! $title->type) {
-                        $title->type_id = $this->typeById[strtolower($value->getType())];
+                        $title->type_id = HiddenSeeker::getTypeById(strtolower($value->getType()));
                     }
 
                     $title->save();
 
                     if ($title->genres->count() === 0) {
                         foreach ($value->getGenres() as $key => $gen) {
-                            if ($gen !== '' || $gen !== null || $this->genres[strtolower($gen->getName())] || $gen->getName() !== 'Award Winning' || isset($this->genres[strtolower($gen->getName())])) {
-                                $newGenres[] = $this->genres[strtolower($gen->getName())];
+                            if ($gen !== '' || $gen !== null || HiddenSeeker::getGenres(strtolower($gen->getName())) || $gen->getName() !== 'Award Winning' || HiddenSeeker::getGenres(strtolower($gen->getName()))) {
+                                $newGenres[] = HiddenSeeker::getGenres(strtolower($gen->getName()));
                             }
                         }
                         foreach ($value->getDemographics() as $key => $gen) {
-                            if ($gen !== '' || $gen !== null || $this->genres[strtolower($gen->getName())]) {
-                                $newGenres[] = $this->genres[strtolower($gen->getName())];
+                            if ($gen !== '' || $gen !== null || HiddenSeeker::getGenres(strtolower($gen->getName()))) {
+                                $newGenres[] = HiddenSeeker::getGenres(strtolower($gen->getName()));
                             }
                         }
                         $title->genres()->sync($newGenres);

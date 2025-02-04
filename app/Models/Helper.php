@@ -36,12 +36,18 @@ class Helper extends Model
         return compact('type', 'text');
     }
 
+    public static function bbcodeToHtml($string)
+    {
+        $bbcode = new \ChrisKonnertz\BBCode\BBCode();
+        return $bbcode->render($string);
+    }
+
     private static function ConSoSinS($val, $sentence)
     {
         if ($val > 1) {
-            return $val.str_replace(['(s)', '(es)'], ['s', 'es'], $sentence);
+            return $val . str_replace(['(s)', '(es)'], ['s', 'es'], $sentence);
         } else {
-            return $val.str_replace('(s)', '', $sentence);
+            return $val . str_replace('(s)', '', $sentence);
         }
     }
 
@@ -93,11 +99,25 @@ class Helper extends Model
 
     public static function parseBBCode($string)
     {
-        $string = preg_replace('~\[b\](.*?)\[\/b\]~is', '<b>\\1</b>', $string);
-        $string = preg_replace('~\[i\](.*?)\[\/i\]~is', '<i>\\1</i>', $string);
-        $string = preg_replace('~\[u\](.*?)\[\/u\]~is', '<u>\\1</u>', $string);
+        if (empty($string)) {
+            return '';
+        }
+        // proceed to the replacement of all self-closing tags first
+        $result = preg_replace('~\[ (br|hr|img)\b ([^]]*) ]~xi', '<$1$2/>', $string);
 
-        return $string;
+
+        // then replace the innermost tags until there's nothing to replace
+        $count = 0;
+        do {
+            $result = preg_replace('~
+                \[ ( (\w+) [^]]* ) ]     # opening tag
+                ( [^[]*+ )               # content without other bracketed tags
+                \[/ \2 ]                 # closing tag
+            ~xi', '<$1>$3</$2>', $result, -1, $count);
+        } while ($count);
+
+        return $result;
+
     }
 
     public static function split_str($value)
@@ -110,14 +130,6 @@ class Helper extends Model
     public static function removePTagsOnImages($content)
     {
         return preg_replace('​/<p>\s*(<a .*>)?\s*(<img .* \/>)\s*(<\/a>)?\s*<\/p>/iU', '\1\2\3', $content);
-    }
-
-    public static function chageDateToMySQL($date)
-    {
-        ereg('([0-9]{1,2})/([0-9]{1,2})/([0-9]{2,4})', $date, $myDate);
-        $theDate = $myDate[3].'-'.$myDate[2].'-'.$myDate[1];
-
-        return $theDate;
     }
 
     public static function img_post($string)
@@ -318,7 +330,7 @@ class Helper extends Model
 
     protected function getRelatedSlugs($slug, $id = 0)
     {
-        return Product::select('slug')->where('slug', 'like', $slug.'%')
+        return Post::select('slug')->where('slug', 'like', $slug.'%')
             ->whereNotIn($id)
             ->get();
     }
@@ -329,7 +341,7 @@ class Helper extends Model
         $slug = Str::slug($title);
         // Get any that could possibly be related.
         // This cuts the queries down by doing it once.
-        $allSlugs = getRelatedSlugs($slug, $id);
+        $allSlugs = self::getRelatedSlugs($slug, $id);
         // If we haven't used it before then we are all good.
         if (! $allSlugs->contains('slug', $slug)) {
             return $slug;
