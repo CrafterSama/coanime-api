@@ -53,7 +53,7 @@ class PostController extends Controller
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
                 ->whereIn('category_id', $categories)
-                ->whereBetween('postponed_to', [Carbon::now()->subDays(3), Carbon::now()])
+                ->whereBetween('postponed_to', [Carbon::now()->subMonth(24), Carbon::now()])
                 ->where('image', '!=', null)
                 ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
                 ->where('approved', 'yes')
