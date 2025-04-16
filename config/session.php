@@ -157,7 +157,7 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN', 'localhost' | 'coanime.net'),
+    'domain' => env('SESSION_DOMAIN', null),
 
     /*
     |--------------------------------------------------------------------------
@@ -198,6 +198,6 @@ return [
     |
     */
 
-    'same_site' => 'lax',
+    'same_site' => 'none',
 
 ];
