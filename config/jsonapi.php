@@ -31,4 +31,7 @@ return [
     'servers' => [
         'v1' => \App\JsonApi\V1\Server::class,
     ],
+    'schemas' => [
+        'titles' => App\JsonApi\V1\Titles\TitleSchema::class,
+    ],
 ];
