@@ -688,14 +688,17 @@ class TitleController extends Controller
      */
     public function apiShowTitle(string $type, string $slug)
     {
-        //dd($type);
         $type_id = TitleType::where('slug', '=', $type)->pluck('id')->first();
-        //dd(Title::where('type_id', $type_id)->where('slug', '=', $slug)->exists());
+
         if (Title::where('type_id', $type_id)->where('slug', '=', $slug)->exists()) {
             $title = Title::where('type_id', $type_id)->where('slug', '=', $slug)->first();
             $title = $title->load('images', 'rating', 'type', 'genres', 'users', 'posts');
 
-            HiddenSeeker::updateSeriesByTitle($title, $type);
+            /*try{
+                HiddenSeeker::updateSeriesByTitle($title, $type);
+            }catch(\Exception $e){
+                echo $e;
+            }*/
 
             $rates = Rate::all();
             $statistics = Statistics::all();
