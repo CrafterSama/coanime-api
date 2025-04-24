@@ -17,7 +17,7 @@ class TitleResource extends JsonApiResource
     public function relationships($request): iterable
     {
         return [
-            $this->relation('titles-image')->withoutLinks(),
+            $this->relation('images')->withoutLinks(),
         ];
     }
 }
