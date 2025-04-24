@@ -12,7 +12,6 @@
         "chriskonnertz/bbcode": "^1.1",
         "guzzlehttp/guzzle": "^7.5.0",
         "intervention/image": "^2.7.2",
-        "jikan/jikan-php": "^4.1",
         "kitloong/laravel-migrations-generator": "^7.1",
         "laravel-json-api/laravel": "^4.1.1",
         "laravel/framework": "^11.0",
