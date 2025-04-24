@@ -74,7 +74,7 @@ class PostController extends Controller
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->orderBy('postponed_to', 'desc')
-                ->take(4)->get();
+                ->take(5)->get();
 
             $keywords = [];
             foreach ($news as $p) {

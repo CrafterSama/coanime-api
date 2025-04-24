@@ -38,7 +38,7 @@ class TitleSchema extends Schema
             Str::make('other_titles'),
             Str::make('trailer_url'),
             Str::make('type_id')->hidden(),
-            HasOne::make('titles-image'),
+            HasOne::make('images'),
             DateTime::make('created_at')->sortable()->readOnly(),
             DateTime::make('updated_at')->sortable()->readOnly(),
             DateTime::make('deleted_at')->sortable()->readOnly(),
