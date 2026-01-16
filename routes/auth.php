@@ -45,14 +45,14 @@ Route::prefix('external/')->group(function () {
 
     // ** Get Endpoints **
     Route::get('articles', [PostController::class, 'posts'])->name('api.articles');
-    Route::get('articles-japan', [PostController::class, 'postsJapan'])->name('api.articles');
+    Route::get('articles-japan', [PostController::class, 'postsJapan'])->name('api.articles.japan');
     Route::get('articles/{slug}', [PostController::class, 'showApi'])->name('api.articles.show');
 
     Route::get('categories', [PostController::class, 'categories'])->name('api.categories');
     Route::get('categories/{category}', [PostController::class, 'showAllByCategory'])->name('api.home.category');
     Route::get('categories/articles/{category}', [PostController::class, 'postsByCategory'])->name('api.articles.category');
 
-    Route::get('home/tags/{tag}', [PostController::class, 'ShowAllByTag'])->name('api.articles.tag');
+    Route::get('home/tags/{tag}', [PostController::class, 'ShowAllByTag'])->name('api.home.tag');
     Route::get('articles/tags/{tag}', [PostController::class, 'postsByTags'])->name('api.articles.tag');
 
     Route::get('ecma', [EncyclopediaController::class, 'index']);
