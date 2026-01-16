@@ -18,6 +18,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Image;
 use Storage;
@@ -85,13 +86,20 @@ class PostController extends Controller
             $keywords = implode(', ', $keywords);
 
             $broadcastUrl = 'https://api.jikan.moe/v4/schedules/'.date('l');
-            $json = file_get_contents($broadcastUrl);
-            $broadcast = json_decode($json, true);
-            $broadcast = $broadcast['data'];
-            foreach ($broadcast as $key => $value) {
-                $broadcast[$key]['url'] = 'https://coanime.net/ecma/titulos/'. Str::slug($value['type']) .'/' . Str::slug($value['title']);
+            $broadcast = [];
+            try {
+                $response = Http::timeout(10)->get($broadcastUrl);
+                if ($response->successful()) {
+                    $broadcastData = $response->json();
+                    $broadcast = $broadcastData['data'] ?? [];
+                    foreach ($broadcast as $key => $value) {
+                        $broadcast[$key]['url'] = 'https://coanime.net/ecma/titulos/'. Str::slug($value['type']) .'/' . Str::slug($value['title']);
+                    }
+                }
+            } catch (Exception $e) {
+                // Si falla la API de Jikan, continuamos con un array vacío
+                $broadcast = [];
             }
-            //dd($broadcast);
 
             $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(15)->get();
 
@@ -172,8 +180,17 @@ class PostController extends Controller
             $keywords = implode(', ', $keywords);
 
             $broadcastUrl = 'https://api.jikan.moe/v4/schedules/'.strtolower(date('l'));
-            $json = file_get_contents($broadcastUrl);
-            $broadcast = json_decode($json, true);
+            $broadcast = [];
+            try {
+                $response = Http::timeout(10)->get($broadcastUrl);
+                if ($response->successful()) {
+                    $broadcastData = $response->json();
+                    $broadcast = $broadcastData['data'] ?? [];
+                }
+            } catch (Exception $e) {
+                // Si falla la API de Jikan, continuamos con un array vacío
+                $broadcast = [];
+            }
 
             $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(10)->get();
 
@@ -185,7 +202,7 @@ class PostController extends Controller
                 'image' => $news[0]->image,
                 'keywords' => $keywords,
                 'relevants' => $relevants,
-                'broadcast' => $broadcast['data'],
+                'broadcast' => $broadcast,
                 'upcoming' => $upcoming,
                 'result' => $news,
             ], 200);
@@ -699,8 +716,17 @@ class PostController extends Controller
             $keywords = implode(', ', $keywords);
 
             $broadcastUrl = 'https://api.jikan.moe/v4/schedules/'.date('l');
-            $json = file_get_contents($broadcastUrl);
-            $broadcast = json_decode($json, true);
+            $broadcast = [];
+            try {
+                $response = Http::timeout(10)->get($broadcastUrl);
+                if ($response->successful()) {
+                    $broadcastData = $response->json();
+                    $broadcast = $broadcastData['data'] ?? [];
+                }
+            } catch (Exception $e) {
+                // Si falla la API de Jikan, continuamos con un array vacío
+                $broadcast = [];
+            }
 
             return response()->json([
                 'code' => 200,
@@ -708,7 +734,7 @@ class PostController extends Controller
                 'title' => 'Coanime.net - Noticias relacionadas con '.$category_name,
                 'description' => 'Posts y noticias relacionados con la categoria '.$category_name,
                 'keywords' => $keywords,
-                'broadcast' => $broadcast['data'],
+                'broadcast' => $broadcast,
                 /*'events' => $events,*/
                 'relevants' => $relevants,
                 /*'videos' => $videos,*/
