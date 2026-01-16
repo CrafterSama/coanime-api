@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TitleStoreRequest;
+use App\Http\Requests\TitleUpdateRequest;
 use App\Models\Genre;
 use App\Models\Helper;
 use App\Models\HiddenSeeker;
@@ -147,7 +149,7 @@ class TitleController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function store(Request $request)
+    public function store(TitleStoreRequest $request)
     {
         $requestedName = strtolower($request->get('name'));
         $requestedType = $request->get('type_id');
@@ -157,28 +159,15 @@ class TitleController extends Controller
                 'code' => 403,
                 'message' => Helper::errorMessage('El titulo ya existe'),
             ], 403);
-        } else {
-            $this->validate($request, [
-                'name' => 'required',
-                'other_titles' => 'required',
-                'type_id' => 'required',
-                'sinopsis' => 'required',
-                'episodies' => 'numeric',
-                'just_year' => 'required',
-                'broad_time' => 'required|date_format:"Y-m-d"',
-                'broad_finish' => 'date_format:"Y-m-d"',
-                'genre_id' => 'required',
-                'rating_id' => 'required',
-                'images' => 'required',
-            ]);
+        }
 
-            if (empty($request['broad_finish'])) {
-                $request['broad_finish'] = null;
-            }
+        if (empty($request['broad_finish'])) {
+            $request['broad_finish'] = null;
+        }
 
-            if (empty($request['episodies'])) {
-                $request['episodies'] = 0;
-            }
+        if (empty($request['episodies'])) {
+            $request['episodies'] = 0;
+        }
 
             $data = new Title();
 
@@ -268,27 +257,10 @@ class TitleController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function update(Request $request, $id)
+    public function update(TitleUpdateRequest $request, $id)
     {
         try {
-            $this->validate($request, [
-                'name' => 'required',
-                'other_titles' => 'required',
-                'type_id' => 'required',
-                'sinopsis' => 'required',
-                'episodies' => 'numeric',
-                'just_year' => 'required',
-                'broad_time' => 'required|date_format:"Y-m-d"',
-                'genre_id' => 'required',
-                'rating_id' => 'required',
-                'images' => 'string',
-            ]);
-
-            if ($request['broad_finish']) {
-                $this->validate($request, [
-                    'broad_finish' => 'date_format:"Y-m-d"',
-                ]);
-            } else {
+            if (empty($request['broad_finish'])) {
                 $request['broad_finish'] = null;
             }
 

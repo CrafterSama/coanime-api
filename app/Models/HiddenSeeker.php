@@ -6,11 +6,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 use Jikan\JikanPHP\Client;
 use Stichoza\GoogleTranslate\GoogleTranslate;
 use Intervention\Image\Facades\Image;
 use App\Models\Title;
+use Exception;
 
 class HiddenSeeker extends Model
 {
@@ -328,8 +330,13 @@ class HiddenSeeker extends Model
             if (!$title?->images || $title?->images?->name === null || $title?->images?->name === '') {
                 $imageUrl = $cloudTitle->getImages()->getWebp()->getLargeImageUrl() === 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-256.png' ? null : $cloudTitle->getImages()->getWebp()->getLargeImageUrl();
                 if ($imageUrl) {
-                    $processingImage = file_get_contents($imageUrl);
-                    $image = Image::make($processingImage);
+                    try {
+                        $response = Http::timeout(15)->get($imageUrl);
+                        if (!$response->successful()) {
+                            continue;
+                        }
+                        $processingImage = $response->body();
+                        $image = Image::make($processingImage);
                     $fileName = hash('sha256', strval(time()));
                     $image->encode('webp', 100);
 
@@ -350,6 +357,10 @@ class HiddenSeeker extends Model
                         'name' => $imageUrl,
                         'thumbnail' => $imageUrl,
                     ]);
+                    } catch (Exception $e) {
+                        \Log::error('Error fetching image from URL', ['url' => $imageUrl, 'error' => $e->getMessage()]);
+                        // Continuar sin procesar la imagen si hay error
+                    }
                 }
             }
 

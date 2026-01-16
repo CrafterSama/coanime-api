@@ -17,6 +17,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
+use Exception;
 
 class Helper extends Model
 {
@@ -233,16 +235,22 @@ class Helper extends Model
                                 $video_id = $results[1];
                                 // get the thumbnail
                                 try {
-                                    $hash = unserialize(file_get_contents("https://vimeo.com/api/v2/video/$video_id.php"));
-                                    if (! empty($hash) && is_array($hash)) {
-                                        $video_str = 'https://vimeo.com/moogaloop.swf?clip_id=%s';
-                                        $thumbnail_str = $hash[0]['thumbnail_small'];
-                                        $fullsize_str = $hash[0]['thumbnail_large'];
+                                    $response = Http::timeout(10)->get("https://vimeo.com/api/v2/video/$video_id.php");
+                                    if ($response->successful()) {
+                                        $hash = unserialize($response->body());
+                                        if (! empty($hash) && is_array($hash)) {
+                                            $video_str = 'https://vimeo.com/moogaloop.swf?clip_id=%s';
+                                            $thumbnail_str = $hash[0]['thumbnail_small'];
+                                            $fullsize_str = $hash[0]['thumbnail_large'];
+                                        } else {
+                                            // don't use, couldn't find what we need
+                                            unset($video_id);
+                                        }
                                     } else {
-                                        // don't use, couldn't find what we need
                                         unset($video_id);
                                     }
-                                } catch (\Exception $e) {
+                                } catch (Exception $e) {
+                                    \Log::warning('Error fetching Vimeo video data', ['video_id' => $video_id, 'error' => $e->getMessage()]);
                                     unset($video_id);
                                 }
                             }
@@ -294,8 +302,17 @@ class Helper extends Model
     public static function getLastsTvShows()
     {
         $url = 'https://www.ecma.animekaigen.xyz/api/content?cuantos=200&buscar=&ordenado=0&iniciar=2600';
-        $content = file_get_contents($url);
-        $json = json_decode($content, true);
+        try {
+            $response = Http::timeout(15)->get($url);
+            if (!$response->successful()) {
+                \Log::error('Error fetching TV shows from external API', ['url' => $url, 'status' => $response->status()]);
+                return [];
+            }
+            $json = $response->json();
+        } catch (Exception $e) {
+            \Log::error('Error fetching TV shows from external API', ['url' => $url, 'error' => $e->getMessage()]);
+            return [];
+        }
 
         //dd($json);
         $data = [];
