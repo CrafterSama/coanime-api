@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PostStoreRequest;
+use App\Http\Requests\PostUpdateRequest;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Helper;
@@ -13,6 +15,7 @@ use App\Models\Tag;
 use App\Models\Title;
 use App\Models\TitleImage;
 use App\Models\User;
+use App\Services\BroadcastService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -43,8 +46,10 @@ class PostController extends Controller
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->whereIn('category_id', $categories)
-                ->where('postponed_to', '<=', Carbon::now())
-                ->orWhere('postponed_to', null)
+                ->where(function($query) {
+                    $query->where('postponed_to', '<=', Carbon::now())
+                          ->orWhereNull('postponed_to');
+                })
                 ->where('image', '!=', null)
                 ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
                 ->orderBy('view_counter', 'desc')
@@ -70,8 +75,10 @@ class PostController extends Controller
                 ->whereIn('category_id', $categories)
                 ->where('image', '!=', null)
                 ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
-                ->where('postponed_to', '<=', Carbon::now())
-                ->orWhere('postponed_to', null)
+                ->where(function($query) {
+                    $query->where('postponed_to', '<=', Carbon::now())
+                          ->orWhereNull('postponed_to');
+                })
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->orderBy('postponed_to', 'desc')
@@ -85,21 +92,8 @@ class PostController extends Controller
             }
             $keywords = implode(', ', $keywords);
 
-            $broadcastUrl = 'https://api.jikan.moe/v4/schedules/'.date('l');
-            $broadcast = [];
-            try {
-                $response = Http::timeout(10)->get($broadcastUrl);
-                if ($response->successful()) {
-                    $broadcastData = $response->json();
-                    $broadcast = $broadcastData['data'] ?? [];
-                    foreach ($broadcast as $key => $value) {
-                        $broadcast[$key]['url'] = 'https://coanime.net/ecma/titulos/'. Str::slug($value['type']) .'/' . Str::slug($value['title']);
-                    }
-                }
-            } catch (Exception $e) {
-                // Si falla la API de Jikan, continuamos con un array vacío
-                $broadcast = [];
-            }
+            $broadcastService = new BroadcastService();
+            $broadcast = $broadcastService->getTodaySchedule();
 
             $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(15)->get();
 
@@ -164,8 +158,10 @@ class PostController extends Controller
                 ->whereIn('category_id', $categories)
                 ->where('image', '!=', null)
                 ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
-                ->where('postponed_to', '<=', Carbon::now())
-                ->orWhere('postponed_to', null)
+                ->where(function($query) {
+                    $query->where('postponed_to', '<=', Carbon::now())
+                          ->orWhereNull('postponed_to');
+                })
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->orderBy('postponed_to', 'desc')
@@ -179,18 +175,8 @@ class PostController extends Controller
             }
             $keywords = implode(', ', $keywords);
 
-            $broadcastUrl = 'https://api.jikan.moe/v4/schedules/'.strtolower(date('l'));
-            $broadcast = [];
-            try {
-                $response = Http::timeout(10)->get($broadcastUrl);
-                if ($response->successful()) {
-                    $broadcastData = $response->json();
-                    $broadcast = $broadcastData['data'] ?? [];
-                }
-            } catch (Exception $e) {
-                // Si falla la API de Jikan, continuamos con un array vacío
-                $broadcast = [];
-            }
+            $broadcastService = new BroadcastService();
+            $broadcast = $broadcastService->getScheduleByDay();
 
             $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(10)->get();
 
@@ -228,8 +214,10 @@ class PostController extends Controller
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->whereIn('category_id', $categories)
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
+            ->where(function($query) {
+                $query->where('postponed_to', '<=', Carbon::now())
+                      ->orWhereNull('postponed_to');
+            })
             ->where('image', '!=', null)
             ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
             ->orderBy('postponed_to', 'desc')
@@ -246,8 +234,10 @@ class PostController extends Controller
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->whereIn('category_id', $categories)
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
+            ->where(function($query) {
+                $query->where('postponed_to', '<=', Carbon::now())
+                      ->orWhereNull('postponed_to');
+            })
             ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
             ->paginate(15);
@@ -270,8 +260,10 @@ class PostController extends Controller
             ->whereIn('category_id', $categories)
             ->where('image', '!=', null)
             ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
+            ->where(function($query) {
+                $query->where('postponed_to', '<=', Carbon::now())
+                      ->orWhereNull('postponed_to');
+            })
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->orderBy('postponed_to', 'desc')
@@ -291,8 +283,10 @@ class PostController extends Controller
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->whereIn('category_id', $categories)
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
+            ->where(function($query) {
+                $query->where('postponed_to', '<=', Carbon::now())
+                      ->orWhereNull('postponed_to');
+            })
             ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
             ->paginate(15);
@@ -309,8 +303,10 @@ class PostController extends Controller
             ->where('image', '!=', null)
             ->where('draft', '0')
             ->whereNotIn('category_id', [10])
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
+            ->where(function($query) {
+                $query->where('postponed_to', '<=', Carbon::now())
+                      ->orWhereNull('postponed_to');
+            })
             ->orderBy('postponed_to', 'desc')
             ->take(4)->get();
 
@@ -325,8 +321,10 @@ class PostController extends Controller
             ->where('approved', 'yes')
             ->where('draft', '0')
             ->whereIn('category_id', [1])
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
+            ->where(function($query) {
+                $query->where('postponed_to', '<=', Carbon::now())
+                      ->orWhereNull('postponed_to');
+            })
             ->where('image', '!=', null)
             ->orderBy('postponed_to', 'desc')
             ->paginate(8);
@@ -401,8 +399,10 @@ class PostController extends Controller
         $posts = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
             ->where('image', '!=', null)
-            ->where('postponed_to', '<=', Carbon::now())
-            ->orWhere('postponed_to', null)
+            ->where(function($query) {
+                $query->where('postponed_to', '<=', Carbon::now())
+                      ->orWhereNull('postponed_to');
+            })
             ->where('category_id', $category)
             /*->where('approved', 'yes')
             ->where('draft', '0')*/
@@ -439,8 +439,10 @@ class PostController extends Controller
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->where('category_id', '!=', 10)
-                ->where('postponed_to', '<=', Carbon::now())
-                ->orWhere('postponed_to', null)
+                ->where(function($query) {
+                    $query->where('postponed_to', '<=', Carbon::now())
+                          ->orWhereNull('postponed_to');
+                })
                 ->where('image', '!=', null)
                 /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
                 ->orderBy('postponed_to', 'desc')
@@ -551,16 +553,8 @@ class PostController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function store(Request $request)
+    public function store(PostStoreRequest $request)
     {
-        $this->validate($request, [
-            'title' => 'required|max:255',
-            'excerpt' => 'required|max:255',
-            'content' => 'required',
-            'postponed_to' => 'date_format: "Y-m-d H:i:s"',
-            'category_id' => 'required',
-            'image' => 'required|max:255',
-        ]);
 
         $data = new Post();
         $data = $request->all();
@@ -700,8 +694,10 @@ class PostController extends Controller
                 ->where('draft', '0')
                 ->whereNotIn('category_id', [10])
                 ->where('category_id', $category_id)
-                ->where('postponed_to', '<=', Carbon::now())
-                ->orWhere('postponed_to', null)
+                ->where(function($query) {
+                    $query->where('postponed_to', '<=', Carbon::now())
+                          ->orWhereNull('postponed_to');
+                })
                 ->orderBy('postponed_to', 'desc')
                 ->take(4)
                 ->get();
@@ -715,18 +711,8 @@ class PostController extends Controller
 
             $keywords = implode(', ', $keywords);
 
-            $broadcastUrl = 'https://api.jikan.moe/v4/schedules/'.date('l');
-            $broadcast = [];
-            try {
-                $response = Http::timeout(10)->get($broadcastUrl);
-                if ($response->successful()) {
-                    $broadcastData = $response->json();
-                    $broadcast = $broadcastData['data'] ?? [];
-                }
-            } catch (Exception $e) {
-                // Si falla la API de Jikan, continuamos con un array vacío
-                $broadcast = [];
-            }
+            $broadcastService = new BroadcastService();
+            $broadcast = $broadcastService->getTodaySchedule();
 
             return response()->json([
                 'code' => 200,
@@ -1038,14 +1024,8 @@ class PostController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function update(Request $request, $id)
+    public function update(PostUpdateRequest $request, $id)
     {
-        $this->validate($request, [
-            'title' => 'required|max:255',
-            'content' => 'required',
-            'category_id' => 'required',
-            'file' => 'max:2048|mimes:jpg,jpeg,gif,bmp,png',
-        ]);
 
         $data = Post::with('users', 'categories', 'titles', 'tags')->find($id);
         $post = $request->all();

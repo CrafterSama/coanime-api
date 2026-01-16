@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PeopleStoreRequest;
 use App\Models\City;
 use App\Models\Country;
 use App\Models\Helper;
 use App\Models\People;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class PeopleController extends Controller
@@ -157,7 +159,7 @@ class PeopleController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function store(Request $request)
+    public function store(PeopleStoreRequest $request)
     {
         if (People::where('name', 'like', $request->get('name'))->where('birthday', '=', $request->get('birthday'))->count() > 0) {
             return response()->json([
@@ -169,38 +171,26 @@ class PeopleController extends Controller
                 'title' => 'Coanime.net - Crear Persona',
                 'description' => 'Crear una nueva persona',
             ], 400);
-        } else {
-            $this->validate($request, [
-                'name' => 'required|max:255',
-                'japanese_name' => 'required',
-                'areas_skills_hobbies' => 'required',
-                'bio' => 'required',
-                'city_id' => 'required',
-                'birthday' => 'date_format:"Y-m-d H:i:s"',
-                'country_code' => 'required',
-                'falldown' => 'required',
-                'falldown_date' => 'date_format:"Y-m-d H:i:s"',
-                'image-client' => 'max:2048|mimes:jpeg,gif,bmp,png',
-            ]);
+        }
 
-            if (empty($request['birthday'])) {
-                $request['birthday'] = null;
-            }
+        if (empty($request['birthday'])) {
+            $request['birthday'] = null;
+        }
 
-            if (empty($request['falldown_date'])) {
-                $request['falldown_date'] = null;
-            }
+        if (empty($request['falldown_date'])) {
+            $request['falldown_date'] = null;
+        }
 
-            $data = new People();
+        $data = new People();
 
-            $request['user_id'] = Auth::user()->id;
-            $request['slug'] = Str::slug($request['name']);
+        $request['user_id'] = Auth::user()->id;
+        $request['slug'] = Str::slug($request['name']);
 
-            if (People::where('slug', 'like', $request['slug'])->count() > 0) {
-                $request['slug'] = Str::slug($request['name']).'1';
-            }
+        if (People::where('slug', 'like', $request['slug'])->count() > 0) {
+            $request['slug'] = Str::slug($request['name']).'1';
+        }
 
-            if ($request->file('image-client')) {
+        if ($request->file('image-client')) {
                 $file = $request->file('image-client');
                 //Creamos una instancia de la libreria instalada
                 $image = Image::make($request->file('image-client')->getRealPath());
@@ -225,34 +215,33 @@ class PeopleController extends Controller
                 // Guardar
                 $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
 
-                $request['image'] = $fileName.'.jpg';
-            } else {
-                $request['image'] = null;
-            }
+            $request['image'] = $fileName.'.jpg';
+        } else {
+            $request['image'] = null;
+        }
 
-            //dd($data);
+        //dd($data);
 
-            if ($data = People::create($request->all())) {
-                return response()->json([
-                    'code' => 200,
-                    'message' => [
-                        'type' => 'success',
-                        'text' => 'Persona creada correctamente',
-                    ],
-                    'title' => 'Coanime.net - Crear Persona',
-                    'description' => 'Crear una nueva persona',
-                ], 200);
-            } else {
-                return response()->json([
-                    'code' => 400,
-                    'message' => [
-                        'type' => 'error',
-                        'text' => 'Error al crear la persona',
-                    ],
-                    'title' => 'Coanime.net - Crear Persona',
-                    'description' => 'Crear una nueva persona',
-                ], 400);
-            }
+        if ($data = People::create($request->all())) {
+            return response()->json([
+                'code' => 200,
+                'message' => [
+                    'type' => 'success',
+                    'text' => 'Persona creada correctamente',
+                ],
+                'title' => 'Coanime.net - Crear Persona',
+                'description' => 'Crear una nueva persona',
+            ], 200);
+        } else {
+            return response()->json([
+                'code' => 400,
+                'message' => [
+                    'type' => 'error',
+                    'text' => 'Error al crear la persona',
+                ],
+                'title' => 'Coanime.net - Crear Persona',
+                'description' => 'Crear una nueva persona',
+            ], 400);
         }
     }
 
