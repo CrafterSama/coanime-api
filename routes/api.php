@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\ActivityLogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use LaravelJsonApi\Laravel\Facades\JsonApiRoute;
@@ -33,4 +33,12 @@ JsonApiRoute::server('v1')->prefix('external')->resources(function ($server) {
     $server->resource('tags', JsonApiController::class)->readOnly();
     $server->resource('categories', JsonApiController::class)->readOnly();
     $server->resource('titles', JsonApiController::class)->readOnly();
+});
+
+// Rutas para logs de actividad
+Route::prefix('external')->group(function () {
+    Route::get('activity-logs', [ActivityLogController::class, 'index']);
+    Route::get('activity-logs/stats', [ActivityLogController::class, 'stats']);
+    Route::get('activity-logs/{id}', [ActivityLogController::class, 'show']);
+    Route::get('activity-logs/user/{userId}', [ActivityLogController::class, 'userLogs']);
 });

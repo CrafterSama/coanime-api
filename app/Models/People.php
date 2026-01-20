@@ -6,10 +6,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class People extends Model
 {
     use SoftDeletes;
+    use LogsActivity;
 
     /**
      * The table associated with the model.
@@ -53,5 +56,20 @@ class People extends Model
     public function country()
     {
         return $this->belongsTo(Country::class, 'country_code', 'iso3');
+    }
+
+    /**
+     * Configuración de logs de actividad para el modelo People.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'japanese_name', 'slug', 'user_id', 'bio', 'areas_skills_hobbies', 'city_id', 'country_code', 'birthday', 'falldown', 'falldown_date', 'approved', 'image'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(function (string $eventName) {
+                $name = $this->name ?? 'Sin nombre';
+                return "People {$eventName}: {$name}";
+            });
     }
 }

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AnimeController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -63,7 +64,7 @@ Route::prefix('external/')->group(function () {
     Route::get('titles/{type}/{slug}', [TitleController::class, 'apiShowTitle']);
     Route::get('titles/{type}/{slug}/posts', [TitleController::class, 'postsTitle']);
 
-    Route::get('animes', [TitleController::class, 'consumeAnimes']);
+    Route::get('animes', [AnimeController::class, 'consumeAnimes']);
 
     Route::get('user/title-list', [TitleController::class, 'userTitleList']);
 

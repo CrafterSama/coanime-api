@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -18,6 +20,7 @@ class User extends Authenticatable
     use Notifiable;
     use HasRoles;
     use InteractsWithMedia;
+    use LogsActivity;
 
     /**
      * The attributes that are mass assignable.
@@ -92,5 +95,17 @@ class User extends Authenticatable
         if ($this->hasRole('administrator')) {
             return true;
         }
+    }
+
+    /**
+     * Configuración de logs de actividad para el modelo User.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'email', 'slug', 'profile_photo_path', 'profile_cover_path'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName) => "Usuario {$eventName}");
     }
 }

@@ -22,6 +22,18 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $user = Auth::user();
+
+        // Registrar evento de login
+        activity()
+            ->causedBy($user)
+            ->withProperties([
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'email' => $request->input('email'),
+            ])
+            ->log('Inició sesión');
+
         return response()->noContent();
     }
 
@@ -32,6 +44,19 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request)
     {
+        $user = Auth::user();
+
+        // Registrar evento de logout antes de cerrar la sesión
+        if ($user) {
+            activity()
+                ->causedBy($user)
+                ->withProperties([
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ])
+                ->log('Cerro sesión');
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->flush();

@@ -11,10 +11,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Title extends Model
 {
     use SoftDeletes;
+    use LogsActivity;
 
     /**
      * The attributes that should be mutated to dates.
@@ -112,5 +115,20 @@ class Title extends Model
         }
 
         return Carbon::parse($value)->format('Y-m-d');
+    }
+
+    /**
+     * Configuración de logs de actividad para el modelo Title.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'slug', 'user_id', 'type_id', 'other_titles', 'sinopsis', 'status', 'rating_id', 'broad_time', 'broad_finish', 'updated_by'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(function (string $eventName) {
+                $name = $this->name ?? 'Sin nombre';
+                return "Title {$eventName}: {$name}";
+            });
     }
 }

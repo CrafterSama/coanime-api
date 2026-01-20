@@ -7,10 +7,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Post extends Model
 {
     use SoftDeletes;
+    use LogsActivity;
 
     /**
      * The attributes that should be mutated to dates.
@@ -104,6 +107,21 @@ class Post extends Model
                 'categories.name as category_name',
                 'categories.slug as category_slug'
             );
+    }
+
+    /**
+     * Configuración de logs de actividad para el modelo Post.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['title', 'excerpt', 'slug', 'category_id', 'user_id', 'approved', 'draft', 'image', 'postponed_to'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(function (string $eventName) {
+                $title = $this->title ?? 'Sin título';
+                return "Post {$eventName}: {$title}";
+            });
     }
 
     /*public function toSearchableArray()
