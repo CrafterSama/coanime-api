@@ -18,7 +18,7 @@ return [
     */
 
     'paths' => ['api/*', 'external/*', 'internal/*', 'sanctum/csrf-cookie', 'login', 'logout'],
-    'allowed_origins' => [env('FRONTEND_URL', 'https://coanime.net')],
+    'allowed_origins' => [env('FRONTEND_URL', 'https://coanime.net:3000')],
     'supports_credentials' => true,
     'allowed_methods' => ['*'],
     'allowed_headers' => ['*'],
