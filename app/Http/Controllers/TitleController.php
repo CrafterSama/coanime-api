@@ -21,7 +21,6 @@ use App\Models\TitleStatistics;
 use App\Models\TitleType;
 use App\Models\User;
 use Carbon\Carbon;
-use Goutte\Client as GoutteClient;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -210,7 +209,6 @@ class TitleController extends Controller
                     'description' => 'El titulo no se ha podido agregar',
                 ], 400);
             }
-        }
     }
 
     /**
@@ -526,6 +524,32 @@ class TitleController extends Controller
             'description' => 'Se han encontrado los generos',
             'data' => $genre,
         ], 200);
+    }
+
+    /**
+     * Get all genres in JSON format for the API.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function apiAllByGenre(Request $request)
+    {
+        try {
+            $genres = Genre::withCount('titles')->orderBy('name', 'asc')->get();
+
+            return response()->json([
+                'code' => 200,
+                'message' => Helper::successMessage('Géneros encontrados'),
+                'title' => 'Coanime.net - Géneros',
+                'description' => 'Lista de todos los géneros disponibles en la enciclopedia',
+                'result' => $genres,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'message' => Helper::errorMessage('Error al obtener géneros'),
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -1069,28 +1093,5 @@ class TitleController extends Controller
                 'data' => $e->getMessage(),
             ], 500);
         }
-    }
-
-    public function consumeAnimes(Request $request)
-    {
-        $client = new GoutteClient();
-        $page = $client->request('GET', 'https://jkanime.net/directorio/');
-        $result = [];
-        $page->filter('div.card.mb-3.custom_item2')->each(function ($node) use ($client) {
-            $node->filter('a')->each(function ($node) use ($client) {
-                $url = $node->attr('href');
-                $page = $client->request('GET', $url);
-                $result[] = $page;
-            });
-        });
-
-        return response()->json([
-            'code' => 200,
-            'message' => [
-                'type' => 'Success',
-                'text' => 'Pagina Cargada',
-            ],
-            'data' => $result,
-        ], 200);
     }
 }

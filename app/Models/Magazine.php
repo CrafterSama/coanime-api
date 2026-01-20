@@ -6,10 +6,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Magazine extends Model
 {
     use SoftDeletes;
+    use LogsActivity;
 
     /**
      * The table associated with the model.
@@ -53,5 +56,20 @@ class Magazine extends Model
     public function image()
     {
         return $this->hasOne(MagazineImage::class);
+    }
+
+    /**
+     * Configuración de logs de actividad para el modelo Magazine.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'slug', 'user_id', 'about', 'foundation_date', 'type_id', 'release_id', 'country_code', 'website'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(function (string $eventName) {
+                $name = $this->name ?? 'Sin nombre';
+                return "Magazine {$eventName}: {$name}";
+            });
     }
 }

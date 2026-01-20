@@ -18,7 +18,13 @@ return [
     */
 
     'paths' => ['api/*', 'external/*', 'internal/*', 'sanctum/csrf-cookie', 'login', 'logout'],
-    'allowed_origins' => [env('FRONTEND_URL', 'https://coanime.net:3000')],
+    'allowed_origins' => array_filter([
+        env('FRONTEND_URL', 'https://coanime.net:3000'),
+        'https://coanime.net:3000',
+        'https://coanime.net',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+    ]),
     'supports_credentials' => true,
     'allowed_methods' => ['*'],
     'allowed_headers' => ['*'],
