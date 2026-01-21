@@ -17,7 +17,16 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'external/*', 'internal/*', 'sanctum/csrf-cookie', 'login', 'logout'],
+    'paths' => [
+        'api/*',
+        'external/*',
+        'internal/*',
+        'sanctum/csrf-cookie',
+        'login',
+        'logout',
+        'forgot-password',
+        'reset-password',
+    ],
     'allowed_origins' => array_filter([
         env('FRONTEND_URL', 'https://coanime.net'),
         'https://coanime.net',
