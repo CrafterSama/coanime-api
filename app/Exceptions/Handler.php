@@ -50,7 +50,27 @@ class Handler extends ExceptionHandler
         );
 
         $this->reportable(function (Throwable $e) {
-            //
+            // Registrar errores críticos en activity log si hay un request disponible
+            if (request() && ! $e instanceof \Illuminate\Validation\ValidationException) {
+                try {
+                    $request = request();
+                    activity()
+                        ->withProperties([
+                            'ip_address' => $request->ip(),
+                            'user_agent' => $request->userAgent(),
+                            'method' => $request->method(),
+                            'url' => $request->fullUrl(),
+                            'path' => $request->path(),
+                            'error_type' => get_class($e),
+                            'error_message' => $e->getMessage(),
+                            'route' => $request->route()?->getName(),
+                            'status' => 'error',
+                        ])
+                        ->log("Error no manejado: {$e->getMessage()}");
+                } catch (\Exception $loggingException) {
+                    // Si falla el logging, no hacer nada para evitar loops infinitos
+                }
+            }
         });
     }
 }

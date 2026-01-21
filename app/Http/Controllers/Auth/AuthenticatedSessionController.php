@@ -18,23 +18,71 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request)
     {
-        $request->authenticate();
+        try {
+            $email = $request->input('email');
+            $ipAddress = $request->ip();
+            $userAgent = $request->userAgent();
 
-        $request->session()->regenerate();
+            // Intentar autenticación
+            $request->authenticate();
 
-        $user = Auth::user();
+            $request->session()->regenerate();
 
-        // Registrar evento de login
-        activity()
-            ->causedBy($user)
-            ->withProperties([
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
+            $user = Auth::user();
+
+            // Registrar evento de login exitoso
+            activity()
+                ->causedBy($user)
+                ->withProperties([
+                    'ip_address' => $ipAddress,
+                    'user_agent' => $userAgent,
+                    'email' => $email,
+                    'status' => 'success',
+                    'route' => $request->route()?->getName(),
+                    'url' => $request->fullUrl(),
+                ])
+                ->log('Inició sesión exitosamente');
+
+            return response()->noContent();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Registrar intento de login fallido
+            activity()
+                ->withProperties([
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'email' => $request->input('email'),
+                    'status' => 'failed',
+                    'error_type' => 'validation',
+                    'errors' => $e->errors(),
+                    'route' => $request->route()?->getName(),
+                    'url' => $request->fullUrl(),
+                ])
+                ->log('Intento de inicio de sesión fallido');
+
+            throw $e;
+        } catch (\Exception $e) {
+            // Registrar error inesperado en login
+            activity()
+                ->withProperties([
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'email' => $request->input('email'),
+                    'status' => 'error',
+                    'error_type' => 'exception',
+                    'error_message' => $e->getMessage(),
+                    'route' => $request->route()?->getName(),
+                    'url' => $request->fullUrl(),
+                ])
+                ->log('Error al intentar iniciar sesión');
+
+            \Illuminate\Support\Facades\Log::error('Error en login', [
                 'email' => $request->input('email'),
-            ])
-            ->log('Inició sesión');
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
-        return response()->noContent();
+            throw $e;
+        }
     }
 
     /**
