@@ -86,6 +86,9 @@ class NewPasswordController extends Controller
             return response()->json(['status' => __($status)]);
         } catch (ValidationException $e) {
             // Registrar error de validación
+            $errors = method_exists($e, 'errors') ? $e->errors() : [];
+            $errorMessages = $e->validator ? $e->validator->errors()->all() : [$e->getMessage()];
+
             activity()
                 ->withProperties([
                     'ip_address' => $request->ip(),
@@ -93,13 +96,13 @@ class NewPasswordController extends Controller
                     'email' => $request->input('email'),
                     'status' => 'failed',
                     'error_type' => 'validation',
-                    'errors' => $e->errors(),
+                    'errors' => $errors,
                     'route' => $request->route()?->getName(),
                     'url' => $request->fullUrl(),
                 ])
                 ->log('Error de validación en restablecimiento de contraseña');
 
-            throw $e;
+            return response()->json(['errors' => $errorMessages], 422);
         } catch (\Exception $e) {
             // Registrar error inesperado
             activity()
