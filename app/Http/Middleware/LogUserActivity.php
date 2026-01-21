@@ -58,16 +58,30 @@ class LogUserActivity
         // Medir tiempo de inicio
         $startTime = microtime(true);
 
-        // Procesar la petición
-        $response = $next($request);
+        try {
+            // Procesar la petición
+            $response = $next($request);
 
-        // Calcular tiempo de respuesta
-        $responseTime = (int) ((microtime(true) - $startTime) * 1000);
+            // Calcular tiempo de respuesta
+            $responseTime = (int) ((microtime(true) - $startTime) * 1000);
 
-        // Registrar la actividad
-        $this->logActivity($request, $response, $responseTime);
+            // Determinar si fue exitoso o error basado en el código de estado
+            $statusCode = $response->getStatusCode();
+            $isSuccess = $statusCode >= 200 && $statusCode < 400;
 
-        return $response;
+            // Registrar la actividad
+            $this->logActivity($request, $response, $responseTime, $isSuccess);
+
+            return $response;
+        } catch (\Exception $e) {
+            // Calcular tiempo de respuesta incluso en caso de error
+            $responseTime = (int) ((microtime(true) - $startTime) * 1000);
+
+            // Registrar error
+            $this->logError($request, $e, $responseTime);
+
+            throw $e;
+        }
     }
 
     /**
@@ -102,7 +116,50 @@ class LogUserActivity
     /**
      * Registra la actividad del usuario.
      */
-    protected function logActivity(Request $request, Response $response, int $responseTime): void
+    protected function logActivity(Request $request, Response $response, int $responseTime, bool $isSuccess = true): void
+    {
+        try {
+            $user = $request->user();
+            $routeName = $request->route()?->getName();
+            $action = $this->determineAction($request);
+            $statusCode = $response->getStatusCode();
+
+            // Preparar datos de la petición (excluir información sensible)
+            $requestData = $this->prepareRequestData($request);
+
+            // Agregar prefijo según el resultado
+            $logMessage = $isSuccess ? $action : "Error: {$action}";
+
+            activity()
+                ->causedBy($user)
+                ->withProperties([
+                    'ip_address' => $this->getClientIp($request),
+                    'user_agent' => $request->userAgent(),
+                    'method' => $request->method(),
+                    'route' => $routeName,
+                    'url' => $request->fullUrl(),
+                    'path' => $request->path(),
+                    'request_data' => $requestData,
+                    'status_code' => $statusCode,
+                    'response_time' => $responseTime,
+                    'status' => $isSuccess ? 'success' : 'error',
+                    'controller' => $request->route()?->getControllerClass(),
+                    'method_name' => $request->route()?->getActionMethod(),
+                ])
+                ->log($logMessage);
+        } catch (\Exception $e) {
+            // Si falla el registro, loguear en el sistema de logs de Laravel
+            \Illuminate\Support\Facades\Log::error('Error al registrar actividad del usuario', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    /**
+     * Registra errores en las peticiones.
+     */
+    protected function logError(Request $request, \Exception $exception, int $responseTime): void
     {
         try {
             $user = $request->user();
@@ -122,16 +179,19 @@ class LogUserActivity
                     'url' => $request->fullUrl(),
                     'path' => $request->path(),
                     'request_data' => $requestData,
-                    'status_code' => $response->getStatusCode(),
+                    'status' => 'error',
+                    'error_type' => get_class($exception),
+                    'error_message' => $exception->getMessage(),
                     'response_time' => $responseTime,
                     'controller' => $request->route()?->getControllerClass(),
                     'method_name' => $request->route()?->getActionMethod(),
                 ])
-                ->log($action);
+                ->log("Error: {$action} - {$exception->getMessage()}");
         } catch (\Exception $e) {
             // Si falla el registro, loguear en el sistema de logs de Laravel
-            \Illuminate\Support\Facades\Log::error('Error al registrar actividad del usuario', [
-                'error' => $e->getMessage(),
+            \Illuminate\Support\Facades\Log::error('Error al registrar error de actividad', [
+                'original_error' => $exception->getMessage(),
+                'logging_error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
         }

@@ -21,6 +21,10 @@ class PasswordResetLinkController extends Controller
     public function store(Request $request)
     {
         try {
+            $email = $request->input('email');
+            $ipAddress = $request->ip();
+            $userAgent = $request->userAgent();
+
             $request->validate([
                 'email' => ['required', 'email'],
             ]);
@@ -33,14 +37,78 @@ class PasswordResetLinkController extends Controller
             );
 
             if ($status != Password::RESET_LINK_SENT) {
+                // Registrar intento fallido de solicitud de reset
+                activity()
+                    ->withProperties([
+                        'ip_address' => $ipAddress,
+                        'user_agent' => $userAgent,
+                        'email' => $email,
+                        'status' => 'failed',
+                        'error_type' => 'password_reset',
+                        'error_message' => __($status),
+                        'route' => $request->route()?->getName(),
+                        'url' => $request->fullUrl(),
+                    ])
+                    ->log('Intento de solicitud de reset de contraseña fallido');
+
                 throw ValidationException::withMessages([
                     'email' => [__($status)],
                 ]);
             }
 
+            // Registrar solicitud exitosa de reset
+            activity()
+                ->withProperties([
+                    'ip_address' => $ipAddress,
+                    'user_agent' => $userAgent,
+                    'email' => $email,
+                    'status' => 'success',
+                    'route' => $request->route()?->getName(),
+                    'url' => $request->fullUrl(),
+                ])
+                ->log('Solicitud de reset de contraseña enviada exitosamente');
+
             return response()->json(['status' => __($status)]);
         } catch (ValidationException $e) {
-            return response()->json(['errors' => $e->validator->errors()->all()], 422);
+            // Registrar error de validación
+            $errors = method_exists($e, 'errors') ? $e->errors() : [];
+            $errorMessages = $e->validator ? $e->validator->errors()->all() : [$e->getMessage()];
+
+            activity()
+                ->withProperties([
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'email' => $request->input('email'),
+                    'status' => 'failed',
+                    'error_type' => 'validation',
+                    'errors' => $errors,
+                    'route' => $request->route()?->getName(),
+                    'url' => $request->fullUrl(),
+                ])
+                ->log('Error de validación en solicitud de reset de contraseña');
+
+            return response()->json(['errors' => $errorMessages], 422);
+        } catch (\Exception $e) {
+            // Registrar error inesperado
+            activity()
+                ->withProperties([
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'email' => $request->input('email'),
+                    'status' => 'error',
+                    'error_type' => 'exception',
+                    'error_message' => $e->getMessage(),
+                    'route' => $request->route()?->getName(),
+                    'url' => $request->fullUrl(),
+                ])
+                ->log('Error al procesar solicitud de reset de contraseña');
+
+            \Illuminate\Support\Facades\Log::error('Error en PasswordResetLinkController', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw $e;
         }
     }
 }
