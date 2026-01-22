@@ -17,16 +17,7 @@ return [
     |
     */
 
-    'paths' => [
-        'api/*',
-        'external/*',
-        'internal/*',
-        'sanctum/csrf-cookie',
-        'login',
-        'logout',
-        'forgot-password',
-        'reset-password',
-    ],
+    'paths' => ['*'],
     'allowed_origins' => array_filter([
         env('FRONTEND_URL', 'https://coanime.net'),
         'https://coanime.net',
@@ -35,8 +26,8 @@ return [
         'http://localhost:3000',
         'http://127.0.0.1:3000',
     ]),
-    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    'allowed_headers' => ['X-CSRF-TOKEN','X-CSRF-Token', 'X-XSRF-TOKEN', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Content-Type', 'Date', 'X-Api-Version', 'Authorization'],
+    'allowed_methods' => ['*'],
+    'allowed_headers' => ['*'],
     'supports_credentials' => true,
     'allowed_origins_patterns' => [],
     'exposed_headers' => [],
