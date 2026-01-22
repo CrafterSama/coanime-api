@@ -36,7 +36,7 @@ return [
         'http://127.0.0.1:3000',
     ]),
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    'allowed_headers' => ['X-CSRF-Token', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Content-Type', 'Date', 'X-Api-Version', 'Authorization'],
+    'allowed_headers' => ['X-CSRF-TOKEN','X-CSRF-Token', 'X-XSRF-TOKEN', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Content-Type', 'Date', 'X-Api-Version', 'Authorization'],
     'supports_credentials' => true,
     'allowed_origins_patterns' => [],
     'exposed_headers' => [],
