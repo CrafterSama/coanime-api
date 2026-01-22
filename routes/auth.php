@@ -166,14 +166,14 @@ Route::middleware(['web','auth:sanctum'])->group(function () {
 
         // ** Auth User Endpoints **
         Route::get('users', [UserController::class, 'index'])->name('users');
+        // Route::get('me', [UserController::class, 'me'])->name('me');
         Route::get('me', function (Request $request) {
-                dd([
-                    'cookies' => request()->cookies->all(),
-                    'session' => session()->all(),
-                    'user' => auth()->user(),
-                ])/*[UserController::class, 'me']*/
-            }
-        )->name('me');
+            dd([
+                'cookies' => request()->cookies->all(),
+                'session' => session()->all(),
+                'user' => auth()->user(),
+            ]);
+        })->name('me');
         Route::put('me', [UserController::class, 'updateMe'])->name('me.update');
     });
 });
