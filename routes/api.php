@@ -24,12 +24,7 @@ use App\Http\Controllers\ActivityLogController;
 });*/
 
 Route::middleware(['web','auth:sanctum'])->get('/user', function (Request $request) {
-    dd([
-        'cookies' => request()->cookies->all(),
-        'session' => session()->all(),
-        'user' => auth()->user(),
-    ]);
-    // return $request->user()->load('roles');
+    return $request->user()->load('roles');
 });
 
 JsonApiRoute::server('v1')->prefix('external')->resources(function ($server) {
