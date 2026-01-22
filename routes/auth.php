@@ -118,7 +118,7 @@ Route::prefix('external/')->group(function () {
     Route::post('vote', [PostVoteController::class, 'vote']);
 });
 
-Route::middleware(['web','auth:sanctum'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::prefix('internal/')->group(function () {
         // ** Posts Endpoints **
         Route::get('dashboard', [PostController::class, 'dashboard'])->name('dashboard');
