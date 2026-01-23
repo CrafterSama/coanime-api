@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -26,9 +27,10 @@ class AuthenticatedSessionController extends Controller
             // Intentar autenticación
             $request->authenticate();
 
-            $request->session()->regenerate();
+            $user = Auth::guard('api')->user();
 
-            $user = Auth::user();
+            // Generar token JWT
+            $token = JWTAuth::fromUser($user);
 
             // Registrar evento de login exitoso
             activity()
@@ -43,7 +45,13 @@ class AuthenticatedSessionController extends Controller
                 ])
                 ->log('Inició sesión exitosamente');
 
-            return response()->noContent();
+            // Retornar token y usuario
+            return response()->json([
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => JWTAuth::factory()->getTTL() * 60, // en segundos
+                'user' => $user->load('roles'),
+            ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Registrar intento de login fallido
             activity()
@@ -92,27 +100,26 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request)
     {
-        $user = Auth::user();
+        try {
+            $user = Auth::guard('api')->user();
 
-        // Registrar evento de logout antes de cerrar la sesión
-        if ($user) {
-            activity()
-                ->causedBy($user)
-                ->withProperties([
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                ])
-                ->log('Cerro sesión');
+            // Registrar evento de logout antes de cerrar la sesión
+            if ($user) {
+                activity()
+                    ->causedBy($user)
+                    ->withProperties([
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                    ])
+                    ->log('Cerro sesión');
+            }
+
+            // Invalidar el token JWT
+            JWTAuth::invalidate(JWTAuth::getToken());
+
+            return response()->json(['message' => 'Sesión cerrada exitosamente']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al cerrar sesión'], 500);
         }
-
-        Auth::guard('web')->logout();
-
-        $request->session()->flush();
-
-        $request->session()->invalidate();
-
-        $request->session()->regenerateToken();
-
-        return response()->noContent();
     }
 }

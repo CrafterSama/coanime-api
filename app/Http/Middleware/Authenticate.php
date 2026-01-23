@@ -24,8 +24,9 @@ class Authenticate extends Middleware
 
     public function handle($request, Closure $next, ...$guards)
     {
-        if ($xcsrf = $request->cookie('XSRF-TOKEN')) {
-            $request->headers->set('Authorization', 'Bearer '.$xcsrf);
+        // Si no se especifica un guard y es una petición API, usar guard 'api' por defecto
+        if (empty($guards) && $request->is('api/*')) {
+            $guards = ['api'];
         }
 
         $this->authenticate($request, $guards);
