@@ -24,13 +24,27 @@ class AuthenticatedSessionController extends Controller
             $ipAddress = $request->ip();
             $userAgent = $request->userAgent();
 
-            // Intentar autenticación
-            $request->authenticate();
+            // Validar rate limiting
+            $request->ensureIsNotRateLimited();
 
-            $user = Auth::guard('api')->user();
+            // Intentar autenticación con JWT
+            $credentials = $request->only('email', 'password');
+            $token = JWTAuth::attempt($credentials);
 
-            // Generar token JWT
-            $token = JWTAuth::fromUser($user);
+            if (!$token) {
+                // Incrementar rate limiter en caso de fallo
+                \Illuminate\Support\Facades\RateLimiter::hit($request->throttleKey());
+
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'email' => __('auth.failed'),
+                ]);
+            }
+
+            // Limpiar rate limiter después de éxito
+            \Illuminate\Support\Facades\RateLimiter::clear($request->throttleKey());
+
+            // Obtener el usuario autenticado
+            $user = JWTAuth::user();
 
             // Registrar evento de login exitoso
             activity()
@@ -101,7 +115,8 @@ class AuthenticatedSessionController extends Controller
     public function destroy(Request $request)
     {
         try {
-            $user = Auth::guard('api')->user();
+            // Obtener el usuario del token JWT
+            $user = JWTAuth::parseToken()->authenticate();
 
             // Registrar evento de logout antes de cerrar la sesión
             if ($user) {
@@ -118,6 +133,10 @@ class AuthenticatedSessionController extends Controller
             JWTAuth::invalidate(JWTAuth::getToken());
 
             return response()->json(['message' => 'Sesión cerrada exitosamente']);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+            return response()->json(['message' => 'Token inválido'], 401);
+        } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+            return response()->json(['message' => 'Token expirado'], 401);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al cerrar sesión'], 500);
         }
