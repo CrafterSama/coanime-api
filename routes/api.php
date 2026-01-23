@@ -23,7 +23,7 @@ use App\Http\Controllers\ActivityLogController;
     Route::get('/user', [UserController::class, 'user']);
 });*/
 
-Route::middleware(['web','auth:sanctum'])->get('/user', function (Request $request) {
+Route::middleware(['auth:api'])->get('/user', function (Request $request) {
     return $request->user()->load('roles');
 });
 

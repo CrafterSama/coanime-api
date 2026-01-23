@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class RegisteredUserController extends Controller
 {
@@ -54,7 +55,8 @@ class RegisteredUserController extends Controller
 
             event(new Registered($user));
 
-            Auth::login($user);
+            // Generar token JWT
+            $token = JWTAuth::fromUser($user);
 
             // Registrar evento de registro exitoso
             activity()
@@ -70,7 +72,12 @@ class RegisteredUserController extends Controller
                 ])
                 ->log('Usuario registrado exitosamente');
 
-            return response()->noContent();
+            return response()->json([
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => JWTAuth::factory()->getTTL() * 60, // en segundos
+                'user' => $user->load('roles'),
+            ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Registrar intento de registro fallido por validación
             activity()
