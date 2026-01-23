@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     $baseUrl = url('/');
-    
+
     return response()->json([
         'message' => 'Welcome to the Coanime.net API',
         'status' => 'online',
@@ -29,9 +29,15 @@ Route::get('/', function () {
             'note' => 'Rate limits are applied per IP address or authenticated user',
         ],
         'authentication' => [
-            'type' => 'Sanctum Token Authentication',
+            'type' => 'JWT Token Authentication',
             'header' => 'Authorization: Bearer {token}',
-            'note' => 'Internal routes require authentication. Use /login to obtain a token.',
+            'note' => 'Internal routes require authentication. Use /login to obtain a token. Tokens expire after 60 minutes by default.',
+            'login_response' => [
+                'access_token' => 'JWT token string',
+                'token_type' => 'bearer',
+                'expires_in' => 'Token expiration time in seconds',
+                'user' => 'Authenticated user object with roles',
+            ],
         ],
         'response_format' => [
             'success' => [
@@ -56,13 +62,31 @@ Route::get('/', function () {
                 'login' => [
                     'method' => 'POST',
                     'url' => $baseUrl . '/login',
-                    'description' => 'Authenticate user and receive access token',
+                    'description' => 'Authenticate user and receive JWT access token',
                     'parameters' => ['email' => 'string (required)', 'password' => 'string (required)', 'remember' => 'boolean (optional)'],
+                    'response' => [
+                        'access_token' => 'JWT token string',
+                        'token_type' => 'bearer',
+                        'expires_in' => 'Token expiration time in seconds (default: 3600)',
+                        'user' => 'Authenticated user object with roles',
+                    ],
                 ],
                 'register' => [
                     'method' => 'POST',
                     'url' => $baseUrl . '/register',
-                    'description' => 'Register a new user account',
+                    'description' => 'Register a new user account and receive JWT access token',
+                    'parameters' => [
+                        'name' => 'string (required, max:255)',
+                        'email' => 'string (required, unique)',
+                        'password' => 'string (required, min:8, mixed case, numbers, symbols)',
+                        'password_confirmation' => 'string (required)',
+                    ],
+                    'response' => [
+                        'access_token' => 'JWT token string',
+                        'token_type' => 'bearer',
+                        'expires_in' => 'Token expiration time in seconds (default: 3600)',
+                        'user' => 'Newly registered user object with roles',
+                    ],
                 ],
                 'logout' => [
                     'method' => 'POST',
@@ -393,7 +417,36 @@ Route::get('/', function () {
             ],
             'api' => [
                 '_note' => 'Routes under /api prefix',
-                'user' => $baseUrl . '/api/user',
+                'user' => [
+                    'method' => 'GET',
+                    'url' => $baseUrl . '/api/user',
+                    'description' => 'Get authenticated user information with roles',
+                    'auth_required' => true,
+                    'header' => 'Authorization: Bearer {token}',
+                ],
+                'activity_logs' => [
+                    'list' => [
+                        'method' => 'GET',
+                        'url' => $baseUrl . '/api/external/activity-logs',
+                        'description' => 'Get paginated list of activity logs',
+                        'query_params' => ['page' => 'integer (optional)', 'per_page' => 'integer (optional)'],
+                    ],
+                    'stats' => [
+                        'method' => 'GET',
+                        'url' => $baseUrl . '/api/external/activity-logs/stats',
+                        'description' => 'Get activity logs statistics',
+                    ],
+                    'show' => [
+                        'method' => 'GET',
+                        'url' => $baseUrl . '/api/external/activity-logs/{id}',
+                        'description' => 'Get single activity log by ID',
+                    ],
+                    'by_user' => [
+                        'method' => 'GET',
+                        'url' => $baseUrl . '/api/external/activity-logs/user/{userId}',
+                        'description' => 'Get activity logs for a specific user',
+                    ],
+                ],
                 'jsonapi' => [
                     '_note' => 'JSON:API specification endpoints',
                     'posts' => $baseUrl . '/api/external/posts',

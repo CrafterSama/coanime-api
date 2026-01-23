@@ -22,15 +22,15 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/verify-email/{id}/{hash}', [VerifyEmailController::class, '__invoke'])
-    ->middleware(['auth', 'signed', 'throttle:6,1'])
+    ->middleware(['auth:api', 'signed', 'throttle:6,1'])
     ->name('verification.verify');
 
 Route::post('/email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
-    ->middleware(['auth', 'throttle:6,1'])
+    ->middleware(['auth:api', 'throttle:6,1'])
     ->name('verification.send');
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->middleware('auth')
+    ->middleware('auth:api')
     ->name('logout');
 
 Route::post('/register', [RegisteredUserController::class, 'store'])->name('register');
@@ -118,7 +118,7 @@ Route::prefix('external/')->group(function () {
     Route::post('vote', [PostVoteController::class, 'vote']);
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth:api'])->group(function () {
     Route::prefix('internal/')->group(function () {
         // ** Posts Endpoints **
         Route::get('dashboard', [PostController::class, 'dashboard'])->name('dashboard');

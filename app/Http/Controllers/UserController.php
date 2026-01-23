@@ -85,14 +85,14 @@ class UserController extends Controller
 
     public function user(Request $request)
     {
-        $id = Auth::user()->id;
+        $id = Auth::guard('api')->user()->id;
 
         return User::find($id)->with('roles')->first();
     }
 
     public function me(Request $request)
     {
-        $id = Auth::user()->id;
+        $id = Auth::guard('api')->user()->id;
 
         if ($user = User::with('roles')->find($id)) {
             return response()->json([
@@ -115,7 +115,7 @@ class UserController extends Controller
 
     public function updateMe(Request $request)
     {
-        $user = User::find(Auth::user()->id);
+        $user = User::find(Auth::guard('api')->user()->id);
         if (! empty($request->password)) {
             $request->validate([
                 'password' => [
