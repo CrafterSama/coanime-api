@@ -18,7 +18,52 @@ class EventController extends Controller
      */
     public function index(Request $request)
     {
-        $events = Event::search($request->name)->with('users', 'city', 'country')->orderBy('date_start', 'desc')->paginate(30);
+        $query = Event::search($request->name)->with('users', 'city', 'country');
+
+        // Filters
+        if ($request->has('country_code') && $request->country_code) {
+            $query->where('country_code', $request->country_code);
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'date_start');
+        $sortDirection = $request->get('sort_direction', 'desc');
+        
+        // Validate sort direction
+        $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) ? strtolower($sortDirection) : 'desc';
+        
+        // Allowed sort columns
+        $allowedSortColumns = ['date_start', 'date_end', 'name', 'created_at', 'updated_at', 'id'];
+        if (in_array($sortBy, $allowedSortColumns)) {
+            $query->orderBy($sortBy, $sortDirection);
+        } else {
+            $query->orderBy('date_start', 'desc');
+        }
+
+        // Pagination
+        $perPage = $request->get('per_page', 30);
+        $perPage = min(max((int) $perPage, 1), 100); // Between 1 and 100
+
+        $events = $query->paginate($perPage);
+
+        // Get filter options (solo si se solicita con ?include_filters=1)
+        if ($request->get('include_filters')) {
+            $countries = \App\Models\Country::whereHas('events')->orderBy('name', 'asc')->get(['iso3 as id', 'name']);
+
+            return response()->json([
+                'code' => 200,
+                'message' => [
+                    'type' => 'success',
+                    'text' => 'Lista de Eventos Encontrada',
+                ],
+                'title' => 'Coanime.net - Eventos',
+                'description' => 'Lista de Eventos en Coanime.net',
+                'result' => $events,
+                'filters' => [
+                    'countries' => $countries,
+                ],
+            ], 200);
+        }
 
         if ($events->count() > 0) {
             return response()->json([

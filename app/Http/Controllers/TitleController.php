@@ -40,7 +40,75 @@ class TitleController extends Controller
      */
     public function index(Request $request)
     {
-        if ($titles = Title::search($request->name)->with('images', 'rating', 'type', 'genres', 'users')->orderBy('created_at', 'desc')->paginate()) {
+        $query = Title::search($request->name)
+            ->with('images', 'rating', 'type', 'genres', 'users');
+
+        // Filters
+        if ($request->has('type_id') && $request->type_id) {
+            $query->where('title_type_id', $request->type_id);
+        }
+
+        if ($request->has('rating_id') && $request->rating_id) {
+            $query->where('rating_id', $request->rating_id);
+        }
+
+        if ($request->has('genre_id') && $request->genre_id) {
+            $query->whereHas('genres', function($q) use ($request) {
+                $q->where('genres.id', $request->genre_id);
+            });
+        }
+
+        if ($request->has('user_id') && $request->user_id) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortDirection = $request->get('sort_direction', 'desc');
+        
+        // Validate sort direction
+        $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) ? strtolower($sortDirection) : 'desc';
+        
+        // Allowed sort columns
+        $allowedSortColumns = ['created_at', 'updated_at', 'name', 'id'];
+        if (in_array($sortBy, $allowedSortColumns)) {
+            $query->orderBy($sortBy, $sortDirection);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        // Pagination
+        $perPage = $request->get('per_page', 15);
+        $perPage = min(max((int) $perPage, 1), 100); // Between 1 and 100
+
+        $titles = $query->paginate($perPage);
+
+        // Get filter options (solo si se solicita con ?include_filters=1)
+        if ($request->get('include_filters')) {
+            $types = TitleType::orderBy('name', 'asc')->get();
+            $genres = Genre::orderBy('name', 'asc')->get();
+            $ratings = \App\Models\Ratings::orderBy('name', 'asc')->get();
+            $users = \App\Models\User::whereHas('titles')->orderBy('name', 'asc')->get(['id', 'name']);
+
+            return response()->json([
+                'code' => 200,
+                'message' => [
+                    'type' => 'success',
+                    'text' => 'Resultados encontrados',
+                ],
+                'title' => 'Coanime.net - Lista de Títulos',
+                'description' => 'Lista de títulos en la enciclopedia de Coanime.net',
+                'result' => $titles,
+                'filters' => [
+                    'types' => $types,
+                    'genres' => $genres,
+                    'ratings' => $ratings,
+                    'users' => $users,
+                ],
+            ], 200);
+        }
+
+        if ($titles->count() > 0) {
             $types = TitleType::orderBy('name', 'asc')->get();
             $genres = Genre::orderBy('name', 'asc')->get();
 
