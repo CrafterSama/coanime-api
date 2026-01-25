@@ -19,8 +19,8 @@ class MediaController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // Load media - model will be loaded lazily or manually in transform
-        $query = Media::query();
+        // Load media with model relationship - this ensures model_type and model_id are always available
+        $query = Media::with('model');
 
         // Search by file name or model name
         if ($request->has('search') && $request->search) {
@@ -88,8 +88,18 @@ class MediaController extends Controller
 
         // Transform data to include model information
         $media->getCollection()->transform(function($item) {
-            // Always get model type from model_type field first
-            $modelName = $item->model_type ? class_basename($item->model_type) : null;
+            // Always get model type from model_type field - this should always exist in media table
+            $modelName = null;
+            if ($item->model_type) {
+                $modelName = class_basename($item->model_type);
+            } elseif ($item->model_id) {
+                // If model_type is null but model_id exists, try to infer from custom_properties
+                $customProps = $item->custom_properties ?? [];
+                if (isset($customProps['model_type'])) {
+                    $modelName = class_basename($customProps['model_type']);
+                }
+            }
+            
             $modelId = $item->model_id;
             $modelTitle = null;
             $modelSlug = null;
@@ -141,6 +151,19 @@ class MediaController extends Controller
                 }
             }
 
+            // Ensure collection_name is never null or empty - use actual value
+            $collectionName = $item->collection_name;
+            if (empty($collectionName) || $collectionName === 'default') {
+                $collectionName = null; // Let frontend handle null display
+            }
+
+            // Ensure created_at is never null - this should always exist
+            $createdAt = $item->created_at;
+            if (!$createdAt) {
+                // If created_at is null (shouldn't happen), use updated_at or current time
+                $createdAt = $item->updated_at ?? now();
+            }
+
             return [
                 'id' => $item->id,
                 'uuid' => $item->uuid,
@@ -148,7 +171,7 @@ class MediaController extends Controller
                 'file_name' => $item->file_name ?? '',
                 'mime_type' => $item->mime_type ?? 'image/jpeg',
                 'size' => $item->size ?? 0,
-                'collection_name' => $item->collection_name ?? 'default',
+                'collection_name' => $collectionName,
                 'disk' => $item->disk ?? 's3',
                 'url' => $item->getUrl(),
                 'thumb_url' => $item->hasGeneratedConversion('thumb') ? $item->getUrl('thumb') : null,
@@ -158,8 +181,8 @@ class MediaController extends Controller
                 'model_id' => $modelId,
                 'model_title' => $modelTitle,
                 'model_slug' => $modelSlug,
-                'created_at' => $item->created_at ? $item->created_at->toIso8601String() : now()->toIso8601String(),
-                'updated_at' => $item->updated_at ? $item->updated_at->toIso8601String() : now()->toIso8601String(),
+                'created_at' => $createdAt->toIso8601String(),
+                'updated_at' => ($item->updated_at ?? now())->toIso8601String(),
             ];
         });
 
