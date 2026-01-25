@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\Category as CategoryEnum;
+use App\Enums\PostApproved;
+use App\Enums\PostDraft;
+use App\Enums\TitleStatus;
 use App\Http\Requests\PostStoreRequest;
 use App\Http\Requests\PostUpdateRequest;
 use App\Models\Category;
@@ -37,14 +41,13 @@ class PostController extends Controller
     {
         try {
             $categoryId = Category::where('slug', $request->category)->pluck('id')->first();
-            $categories = $request->category ? [$categoryId] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 11];
+            $categories = $request->category ? [$categoryId] : CategoryEnum::defaultIds();
 
             $relevants = $request->category
             ? Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
-                ->where('approved', 'yes')
-                ->where('draft', '0')
+                ->publishedAndApproved()
                 ->whereIn('category_id', $categories)
                 ->where(function($query) {
                     $query->where('postponed_to', '<=', Carbon::now())
@@ -79,8 +82,7 @@ class PostController extends Controller
                     $query->where('postponed_to', '<=', Carbon::now())
                           ->orWhereNull('postponed_to');
                 })
-                ->where('approved', 'yes')
-                ->where('draft', '0')
+                ->publishedAndApproved()
                 ->orderBy('postponed_to', 'desc')
                 ->take(5)->get();
 
@@ -95,7 +97,7 @@ class PostController extends Controller
             $broadcastService = new BroadcastService();
             $broadcast = $broadcastService->getTodaySchedule();
 
-            $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(15)->get();
+            $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', TitleStatus::ESTRENO->value)->orderBy('broad_time', 'asc')->take(15)->get();
 
             return response()->json([
                 'code' => 200,
@@ -128,7 +130,7 @@ class PostController extends Controller
     {
         try {
             $tag_id = Tag::where('slug', '=', $tag)->pluck('id');
-            $categories = [1, 2, 3, 4, 5, 6, 7, 8, 9, 11];
+            $categories = CategoryEnum::defaultIds();
 
             /* $posts = Post::whereHas('tags', function ($q) use ($tag_id) {
                 $q->where('tag_id', $tag_id);
@@ -143,8 +145,7 @@ class PostController extends Controller
                 ->whereBetween('postponed_to', [Carbon::now()->subDays(3), Carbon::now()])
                 ->where('image', '!=', null)
                 ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
-                ->where('approved', 'yes')
-                ->where('draft', '0')
+                ->publishedAndApproved()
                 ->where('view_counter', '>', 5)
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
@@ -162,8 +163,8 @@ class PostController extends Controller
                     $query->where('postponed_to', '<=', Carbon::now())
                           ->orWhereNull('postponed_to');
                 })
-                ->where('approved', 'yes')
-                ->where('draft', '0')
+                ->where('approved', PostApproved::YES->value)
+                ->where('draft', PostDraft::PUBLISHED->value)
                 ->orderBy('postponed_to', 'desc')
                 ->take(4)->get();
 
@@ -178,7 +179,7 @@ class PostController extends Controller
             $broadcastService = new BroadcastService();
             $broadcast = $broadcastService->getScheduleByDay();
 
-            $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->take(10)->get();
+            $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', TitleStatus::ESTRENO->value)->orderBy('broad_time', 'asc')->take(10)->get();
 
             return response()->json([
                 'code' => 200,
@@ -207,12 +208,12 @@ class PostController extends Controller
     public function posts(Request $request)
     {
         $categoryId = Category::where('slug', $request->category)->pluck('id')->first();
-        $categories = $request->category ? [$categoryId] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 11];
+        $categories = $request->category ? [$categoryId] : CategoryEnum::defaultIds();
         $news = Post::search($request->name)
             ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
             ->with('users', 'categories', 'titles', 'tags')
-            ->where('approved', 'yes')
-            ->where('draft', '0')
+            ->where('approved', PostApproved::YES->value)
+            ->where('draft', PostDraft::PUBLISHED->value)
             ->whereIn('category_id', $categories)
             ->where(function($query) {
                 $query->where('postponed_to', '<=', Carbon::now())
@@ -231,8 +232,8 @@ class PostController extends Controller
         $posts = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
             ->whereNotIn('id', $ids)
-            ->where('approved', 'yes')
-            ->where('draft', '0')
+            ->where('approved', PostApproved::YES->value)
+            ->where('draft', PostDraft::PUBLISHED->value)
             ->whereIn('category_id', $categories)
             ->where(function($query) {
                 $query->where('postponed_to', '<=', Carbon::now())
@@ -251,7 +252,7 @@ class PostController extends Controller
     public function postsByTags(Request $request, $tag)
     {
         $tag_id = Tag::where('slug', '=', $tag)->pluck('id');
-        $categories = [1, 2, 3, 4, 5, 6, 7, 8, 9, 11];
+        $categories = CategoryEnum::defaultIds();
         $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
             ->whereHas('tags', function ($q) use ($tag_id) {
                 $q->where('tag_id', $tag_id);
@@ -264,8 +265,8 @@ class PostController extends Controller
                 $query->where('postponed_to', '<=', Carbon::now())
                       ->orWhereNull('postponed_to');
             })
-            ->where('approved', 'yes')
-            ->where('draft', '0')
+            ->where('approved', PostApproved::YES->value)
+            ->where('draft', PostDraft::PUBLISHED->value)
             ->orderBy('postponed_to', 'desc')
             ->take(4)->get();
 
@@ -280,8 +281,8 @@ class PostController extends Controller
             })
             ->with('users', 'categories', 'titles', 'tags')
             ->whereNotIn('id', $ids)
-            ->where('approved', 'yes')
-            ->where('draft', '0')
+            ->where('approved', PostApproved::YES->value)
+            ->where('draft', PostDraft::PUBLISHED->value)
             ->whereIn('category_id', $categories)
             ->where(function($query) {
                 $query->where('postponed_to', '<=', Carbon::now())
@@ -302,7 +303,7 @@ class PostController extends Controller
             ->where('approved', 'yes')
             ->where('image', '!=', null)
             ->where('draft', '0')
-            ->whereNotIn('category_id', [10])
+            ->whereNotIn('category_id', [CategoryEnum::CATEGORY_10->value])
             ->where(function($query) {
                 $query->where('postponed_to', '<=', Carbon::now())
                       ->orWhereNull('postponed_to');
@@ -318,8 +319,8 @@ class PostController extends Controller
         return Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
             ->whereNotIn('id', $ids)
-            ->where('approved', 'yes')
-            ->where('draft', '0')
+            ->where('approved', PostApproved::YES->value)
+            ->where('draft', PostDraft::PUBLISHED->value)
             ->whereIn('category_id', [1])
             ->where(function($query) {
                 $query->where('postponed_to', '<=', Carbon::now())
@@ -334,8 +335,7 @@ class PostController extends Controller
     {
         $query = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
-            ->where('approved', 'yes')
-            ->where('draft', '0');
+            ->publishedAndApproved();
 
         // Filters
         if ($request->has('category_id') && $request->category_id) {
@@ -386,8 +386,8 @@ class PostController extends Controller
         if ($includeFilters == '1' || $includeFilters == 1 || $includeFilters === true || $includeFilters === 'true') {
             $categories = Category::orderBy('name', 'asc')->get(['id', 'name']);
             $users = \App\Models\User::whereHas('posts', function($q) {
-                $q->where('approved', 'yes')
-                  ->where('draft', '0')
+                $q->where('approved', PostApproved::YES->value)
+                  ->where('draft', PostDraft::PUBLISHED->value)
                   ->where(function($query) {
                       $query->where('postponed_to', '<=', Carbon::now())
                             ->orWhereNull('postponed_to');
@@ -397,8 +397,8 @@ class PostController extends Controller
             ->orderBy('name', 'asc')
             ->get(['id', 'name']);
             $tags = \App\Models\Tag::whereHas('posts', function($q) {
-                $q->where('approved', 'yes')
-                  ->where('draft', '0')
+                $q->where('approved', PostApproved::YES->value)
+                  ->where('draft', PostDraft::PUBLISHED->value)
                   ->where(function($query) {
                       $query->where('postponed_to', '<=', Carbon::now())
                             ->orWhereNull('postponed_to');
@@ -427,13 +427,13 @@ class PostController extends Controller
 
     public function apiSearchPosts(Request $request)
     {
-        $categories = $request->category ? [$request->category] : [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13];
+        $categories = $request->category ? [$request->category] : CategoryEnum::extendedDefaultIds();
         if ($request->name && $posts = Post::search($request->name)
             ->select('title', 'slug', 'category_id', 'image', 'postponed_to')
             ->with('categories')
             ->whereIn('category_id', $categories)
-            ->where('posts.approved', 'yes')
-            ->where('posts.draft', '0')
+            ->where('posts.approved', PostApproved::YES->value)
+            ->where('posts.draft', PostDraft::PUBLISHED->value)
             ->where('postponed_to', '<=', Carbon::now())
             ->orderBy('postponed_to', 'desc')
             ->paginate()) {
@@ -506,9 +506,9 @@ class PostController extends Controller
             $relevants = Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
-                ->where('approved', 'yes')
-                ->where('draft', '0')
-                ->where('category_id', '!=', 10)
+                ->where('approved', PostApproved::YES->value)
+                ->where('draft', PostDraft::PUBLISHED->value)
+                ->where('category_id', '!=', CategoryEnum::CATEGORY_10->value)
                 ->where('view_counter', '>', 5)
                 ->whereBetween('postponed_to', [Carbon::now()->subMonths(36), Carbon::now()])
                 ->orWhere('postponed_to', null)
@@ -521,9 +521,9 @@ class PostController extends Controller
             $posts = Post::search($request->name)
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
-                ->where('approved', 'yes')
-                ->where('draft', '0')
-                ->where('category_id', '!=', 10)
+                ->where('approved', PostApproved::YES->value)
+                ->where('draft', PostDraft::PUBLISHED->value)
+                ->where('category_id', '!=', CategoryEnum::CATEGORY_10->value)
                 ->where(function($query) {
                     $query->where('postponed_to', '<=', Carbon::now())
                           ->orWhereNull('postponed_to');
@@ -625,7 +625,7 @@ class PostController extends Controller
         $data = new Post();
         $data->user_id = $currentUser;
         $data->category_id = 1;
-        $data->draft = 1;
+        $data->draft = PostDraft::DRAFT->value;
         $data->postponed_to = Carbon::now()->format('Y-m-d H:i:s');
         $data->save();
         $id = $data->id;
@@ -760,9 +760,9 @@ class PostController extends Controller
 
             $relevants = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
-                ->where('approved', 'yes')
-                ->where('draft', '0')
-                ->whereNotIn('category_id', [10])
+                ->where('approved', PostApproved::YES->value)
+                ->where('draft', PostDraft::PUBLISHED->value)
+                ->whereNotIn('category_id', [CategoryEnum::CATEGORY_10->value])
                 ->where('view_counter', '>', 50)
                 ->where('category_id', $category_id)
                 ->whereBetween('postponed_to', [Carbon::now()->subMonths(12), Carbon::now()])
@@ -775,9 +775,9 @@ class PostController extends Controller
             $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
                 ->where('image', '!=', null)
-                ->where('approved', 'yes')
-                ->where('draft', '0')
-                ->whereNotIn('category_id', [10])
+                ->where('approved', PostApproved::YES->value)
+                ->where('draft', PostDraft::PUBLISHED->value)
+                ->whereNotIn('category_id', [CategoryEnum::CATEGORY_10->value])
                 ->where('category_id', $category_id)
                 ->where(function($query) {
                     $query->where('postponed_to', '<=', Carbon::now())
@@ -1134,7 +1134,7 @@ class PostController extends Controller
 
         //dd($data['postponed_to']);
 
-        $data['draft'] = 0;
+        $data['draft'] = PostDraft::PUBLISHED->value;
 
         if ($data->update($post)) {
             if (! empty($request['title_id'])) {

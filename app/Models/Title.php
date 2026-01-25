@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\TitleStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -29,6 +30,15 @@ class Title extends Model
     protected $fillable = ['name', 'user_id', 'episodies', 'sinopsis', 'slug', 'type_id', 'other_titles', 'trailer_url', 'status', 'rating_id', 'broad_time', 'broad_finish', 'updated_by', 'just_year'];
 
     /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'status' => TitleStatus::class,
+    ];
+
+    /**
      * The table associated with the model.
      *
      * @var string
@@ -46,6 +56,65 @@ class Title extends Model
     {
         return $query->where('name', 'like', $name.'%')
             ->orWhere('other_titles', 'like', $name.'%');
+    }
+
+    /**
+     * Scope to filter titles by status
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param TitleStatus $status
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByStatus($query, TitleStatus $status)
+    {
+        return $query->where('status', $status->value);
+    }
+
+    /**
+     * Scope to filter titles that are Estreno
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeEstreno($query)
+    {
+        return $query->where('status', TitleStatus::ESTRENO->value);
+    }
+
+    /**
+     * Scope to filter titles that are Finalizado
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeFinalizado($query)
+    {
+        return $query->where('status', TitleStatus::FINALIZADO->value);
+    }
+
+    /**
+     * Scope to filter titles that are En emisión
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeEnEmision($query)
+    {
+        return $query->where('status', TitleStatus::EN_EMISION->value);
+    }
+
+    /**
+     * Scope to filter active titles (Estreno or En emisión)
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', [
+            TitleStatus::ESTRENO->value,
+            TitleStatus::EN_EMISION->value,
+        ]);
     }
 
     /*public function scopeByGenre($genre, $query) {

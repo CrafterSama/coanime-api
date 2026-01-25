@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PostApproved;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -71,7 +72,11 @@ class User extends Authenticatable implements JWTSubject
 
     public function posts()
     {
-        return $this->hasMany(Post::class)->where('approved', 'yes')->whereRaw('TIMESTAMP(postponed_to) <= NOW()')->orWhere('postponed_to', null)->orderBy('id', 'desc');
+        return $this->hasMany(Post::class)
+            ->publishedAndApproved()
+            ->whereRaw('TIMESTAMP(postponed_to) <= NOW()')
+            ->orWhere('postponed_to', null)
+            ->orderBy('id', 'desc');
     }
 
     public function titles()

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\TitleStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class TitleUpdateRequest extends FormRequest
 {
@@ -36,7 +38,7 @@ class TitleUpdateRequest extends FormRequest
             'genre_id.*' => ['integer', 'exists:genres,id'],
             'rating_id' => ['required', 'integer', 'exists:ratings,id'],
             'images' => ['nullable', 'string'],
-            'status' => ['nullable', 'string'],
+            'status' => ['nullable', Rule::enum(TitleStatus::class)],
             'score' => ['nullable', 'numeric', 'min:0', 'max:10'],
         ];
     }

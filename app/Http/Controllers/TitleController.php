@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\TitleStatus;
 use App\Http\Requests\TitleStoreRequest;
 use App\Http\Requests\TitleUpdateRequest;
 use App\Models\Genre;
@@ -723,7 +724,7 @@ class TitleController extends Controller
      */
     public function apiTitlesUpcoming(Request $request)
     {
-        if ($titles = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->where('broad_time', '>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->paginate()) {
+        if ($titles = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->where('broad_time', '>', Carbon::now())->where('status', \App\Enums\TitleStatus::ESTRENO->value)->orderBy('broad_time', 'asc')->paginate()) {
             return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage('Titulos encontrados'),

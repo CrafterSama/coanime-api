@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Category as CategoryEnum;
+use App\Enums\PostApproved;
+use App\Enums\PostDraft;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +28,16 @@ class Post extends Model
     protected $fillable = ['title', 'excerpt', 'content', 'category_id', 'user_id', 'slug', 'approved', 'draft', 'image', 'postponed_to', 'created_at'];
 
     /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'approved' => PostApproved::class,
+        'draft' => PostDraft::class,
+    ];
+
+    /**
      * The table associated with the model.
      *
      * @var string
@@ -41,6 +54,79 @@ class Post extends Model
     public function scopeNotPagesCategories($query, $category)
     {
         return $query->whereNotIn('category_id', [$category]);
+    }
+
+    /**
+     * Scope to filter approved posts
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('approved', PostApproved::YES->value);
+    }
+
+    /**
+     * Scope to filter not approved posts
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeNotApproved($query)
+    {
+        return $query->where('approved', PostApproved::NO->value);
+    }
+
+    /**
+     * Scope to filter published posts (not drafts)
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('draft', PostDraft::PUBLISHED->value);
+    }
+
+    /**
+     * Scope to filter draft posts
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeDrafts($query)
+    {
+        return $query->where('draft', PostDraft::DRAFT->value);
+    }
+
+    /**
+     * Scope to filter published and approved posts
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePublishedAndApproved($query)
+    {
+        return $query->where('approved', PostApproved::YES->value)
+                     ->where('draft', PostDraft::PUBLISHED->value);
+    }
+
+    /**
+     * Scope to filter posts that are ready to be displayed
+     * (approved, published, and not postponed or postponed date has passed)
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeReadyToDisplay($query)
+    {
+        return $query->where('approved', PostApproved::YES->value)
+                     ->where('draft', PostDraft::PUBLISHED->value)
+                     ->where(function($q) {
+                         $q->where('postponed_to', '<=', now())
+                           ->orWhereNull('postponed_to');
+                     });
     }
 
     public function fullContent($id)
@@ -82,7 +168,7 @@ class Post extends Model
     public function getVideoLinksAttribute(): array
     {
         $videoLinks = [];
-        if ($this->category_id === 13) {
+        if ($this->category_id === CategoryEnum::CATEGORY_13->value) {
             $videoLinks = Helper::getVideoLink($this->content);
         }
 
