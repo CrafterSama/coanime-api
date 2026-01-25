@@ -123,4 +123,49 @@ class User extends Authenticatable implements JWTSubject
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => "Usuario {$eventName}");
     }
+
+    /**
+     * Scope para filtrar usuarios con más de la mitad de su perfil completado.
+     * 
+     * Evalúa los siguientes campos del perfil:
+     * - name, email, bio, website
+     * - profile_photo_path, profile_cover_path
+     * - twitter, facebook, instagram, youtube, pinterest, tiktok
+     * - slug
+     * 
+     * Total: 13 campos. Más de la mitad = 7 o más campos completos.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWithCompleteProfile($query)
+    {
+        $profileFields = [
+            'name',
+            'email',
+            'bio',
+            'website',
+            'profile_photo_path',
+            'profile_cover_path',
+            'twitter',
+            'facebook',
+            'instagram',
+            'youtube',
+            'pinterest',
+            'tiktok',
+            'slug',
+        ];
+
+        $totalFields = count($profileFields);
+        $minimumFields = (int) ceil($totalFields / 2) + 1; // Más de la mitad
+
+        // Construir la expresión SQL de forma más mantenible
+        $caseExpressions = array_map(function ($field) {
+            return "(CASE WHEN {$field} IS NOT NULL AND {$field} != '' THEN 1 ELSE 0 END)";
+        }, $profileFields);
+
+        $sqlExpression = '(' . implode(' + ', $caseExpressions) . ') > ' . ($minimumFields - 1);
+
+        return $query->whereRaw($sqlExpression);
+    }
 }

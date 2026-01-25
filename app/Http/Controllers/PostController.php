@@ -392,7 +392,10 @@ class PostController extends Controller
                       $query->where('postponed_to', '<=', Carbon::now())
                             ->orWhereNull('postponed_to');
                   });
-            })->orderBy('name', 'asc')->get(['id', 'name']);
+            })
+            ->withCompleteProfile()
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name']);
             $tags = \App\Models\Tag::whereHas('posts', function($q) {
                 $q->where('approved', 'yes')
                   ->where('draft', '0')
