@@ -19,7 +19,8 @@ class MediaController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Media::with('model');
+        // Load media - model will be loaded lazily or manually in transform
+        $query = Media::query();
 
         // Search by file name or model name
         if ($request->has('search') && $request->search) {
@@ -87,41 +88,68 @@ class MediaController extends Controller
 
         // Transform data to include model information
         $media->getCollection()->transform(function($item) {
-            $model = $item->model;
-            $modelName = null;
-            $modelId = null;
+            // Always get model type from model_type field first
+            $modelName = $item->model_type ? class_basename($item->model_type) : null;
+            $modelId = $item->model_id;
             $modelTitle = null;
             $modelSlug = null;
+            $model = null;
 
-            if ($model) {
-                $modelName = class_basename($item->model_type);
-                $modelId = $item->model_id;
-                
-                // Get title/name based on model type
-                if ($model instanceof \App\Models\Post) {
-                    $modelTitle = $model->title;
-                    $modelSlug = $model->slug;
-                } elseif ($model instanceof \App\Models\Title) {
-                    $modelTitle = $model->name;
-                    $modelSlug = $model->slug;
-                } elseif ($model instanceof \App\Models\User) {
-                    $modelTitle = $model->name;
-                    $modelSlug = $model->slug;
-                } elseif ($model instanceof \App\Models\Magazine) {
-                    $modelTitle = $model->name;
-                    $modelSlug = $model->slug;
+            // Try to load model (handles both eager loaded and lazy loaded cases, including soft deletes)
+            if ($item->model_type && $item->model_id) {
+                try {
+                    // First try to get from relationship (if eager loaded)
+                    $model = $item->model;
+                    
+                    // If not loaded, try to load manually
+                    if (!$model) {
+                        $modelClass = $item->model_type;
+                        if (class_exists($modelClass)) {
+                            // Check if model uses SoftDeletes trait
+                            $usesSoftDeletes = in_array(
+                                \Illuminate\Database\Eloquent\SoftDeletes::class,
+                                class_uses_recursive($modelClass)
+                            );
+                            
+                            if ($usesSoftDeletes) {
+                                $model = $modelClass::withTrashed()->find($item->model_id);
+                            } else {
+                                $model = $modelClass::find($item->model_id);
+                            }
+                        }
+                    }
+                    
+                    // Extract model information if loaded
+                    if ($model) {
+                        if ($model instanceof \App\Models\Post) {
+                            $modelTitle = $model->title ?? null;
+                            $modelSlug = $model->slug ?? null;
+                        } elseif ($model instanceof \App\Models\Title) {
+                            $modelTitle = $model->name ?? null;
+                            $modelSlug = $model->slug ?? null;
+                        } elseif ($model instanceof \App\Models\User) {
+                            $modelTitle = $model->name ?? null;
+                            $modelSlug = $model->slug ?? null;
+                        } elseif ($model instanceof \App\Models\Magazine) {
+                            $modelTitle = $model->name ?? null;
+                            $modelSlug = $model->slug ?? null;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Model doesn't exist or can't be loaded, keep modelName from model_type field
+                    \Log::debug("Could not load model for media {$item->id}: " . $e->getMessage());
                 }
             }
 
             return [
                 'id' => $item->id,
                 'uuid' => $item->uuid,
-                'name' => $item->name,
-                'file_name' => $item->file_name,
-                'mime_type' => $item->mime_type,
-                'size' => $item->size,
-                'collection_name' => $item->collection_name,
-                'disk' => $item->disk,
+                'name' => $item->name ?? '',
+                'file_name' => $item->file_name ?? '',
+                'mime_type' => $item->mime_type ?? 'image/jpeg',
+                'size' => $item->size ?? 0,
+                'collection_name' => $item->collection_name ?? 'default',
+                'disk' => $item->disk ?? 's3',
                 'url' => $item->getUrl(),
                 'thumb_url' => $item->hasGeneratedConversion('thumb') ? $item->getUrl('thumb') : null,
                 'is_placeholder' => $item->getCustomProperty('is_placeholder', false),
@@ -130,8 +158,8 @@ class MediaController extends Controller
                 'model_id' => $modelId,
                 'model_title' => $modelTitle,
                 'model_slug' => $modelSlug,
-                'created_at' => $item->created_at?->toIso8601String(),
-                'updated_at' => $item->updated_at?->toIso8601String(),
+                'created_at' => $item->created_at ? $item->created_at->toIso8601String() : now()->toIso8601String(),
+                'updated_at' => $item->updated_at ? $item->updated_at->toIso8601String() : now()->toIso8601String(),
             ];
         });
 

@@ -250,12 +250,34 @@ class TitleController extends Controller
             }
 
             $data = $request->all();
+            
+            // Remove images from data array - we'll handle it separately with Media Library
+            $imageUrl = $data['images'] ?? null;
+            unset($data['images']);
 
             if ($data = Title::create($data)) {
-                $images = $data->images ?: new TitleImage();
-                $images->name = $request['images'];
-                $images->thumbnail = $request['images'];
-                $data->images()->save($images);
+                // Handle image upload via Media Library
+                if ($request->hasFile('images')) {
+                    $data->addMediaFromRequest('images')
+                        ->usingName("Title {$data->id} - {$data->name}")
+                        ->toMediaCollection('cover');
+                } elseif ($imageUrl) {
+                    // If image is a URL (from ImageController), add from URL
+                    try {
+                        $media = $data->addMediaFromUrl($imageUrl)
+                            ->usingName("Title {$data->id} - {$data->name}")
+                            ->toMediaCollection('cover');
+                        
+                        // Store thumbnail URL in custom properties if provided
+                        if ($request->has('thumbnail') && $request->thumbnail !== $imageUrl) {
+                            $media->setCustomProperty('original_thumbnail', $request->thumbnail);
+                            $media->save();
+                        }
+                    } catch (\Exception $e) {
+                        \Log::warning("Could not add image from URL for title {$data->id}: " . $e->getMessage());
+                    }
+                }
+                
                 $data->genres()->sync($request['genre_id']);
 
                 return response()->json([
@@ -340,17 +362,40 @@ class TitleController extends Controller
             $request['edited_by'] = Auth::user()->id;
             $request['slug'] = Str::slug($request['name']);
 
-            if ($data->update($request->all())) {
-                if ($request->images) {
-                    $images = '';
-                    if (TitleImage::where('title_id', $id)->count() > 0) {
-                        $images = $data->images ?: TitleImage::where('title_id', $id);
-                    } else {
-                        $images = $data->images ?: new TitleImage();
+            // Handle image separately for Media Library
+            $imageUrl = $request->images ?? null;
+            $updateData = $request->all();
+            unset($updateData['images']);
+
+            if ($data->update($updateData)) {
+                // Handle image upload via Media Library
+                if ($request->hasFile('images')) {
+                    // Remove old image
+                    $data->clearMediaCollection('cover');
+                    
+                    // Add new image
+                    $data->addMediaFromRequest('images')
+                        ->usingName("Title {$data->id} - {$data->name}")
+                        ->toMediaCollection('cover');
+                } elseif ($imageUrl) {
+                    // Check if image URL has changed
+                    $existingMedia = $data->getFirstMedia('cover');
+                    if (!$existingMedia || $existingMedia->getUrl() !== $imageUrl) {
+                        try {
+                            $data->clearMediaCollection('cover');
+                            $media = $data->addMediaFromUrl($imageUrl)
+                                ->usingName("Title {$data->id} - {$data->name}")
+                                ->toMediaCollection('cover');
+                            
+                            // Store thumbnail URL in custom properties if provided
+                            if ($request->has('thumbnail') && $request->thumbnail !== $imageUrl) {
+                                $media->setCustomProperty('original_thumbnail', $request->thumbnail);
+                                $media->save();
+                            }
+                        } catch (\Exception $e) {
+                            \Log::warning("Could not add image from URL for title {$data->id}: " . $e->getMessage());
+                        }
                     }
-                    $images->name = $request['images'];
-                    $images->thumbnail = $request['images'];
-                    $data->images()->save($images);
                 }
 
                 $data->genres()->sync($request['genre_id']);
