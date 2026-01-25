@@ -186,11 +186,16 @@ class User extends Authenticatable implements JWTSubject, HasMedia
     /**
      * Get profile photo path - compatible with old code
      * Falls back to old 'profile_photo_path' field if media doesn't exist
+     * Returns original URL if media is a placeholder
      */
     public function getProfilePhotoPathAttribute($value)
     {
         $media = $this->getFirstMedia('avatar');
         if ($media) {
+            // If it's a placeholder, return the original URL
+            if ($media->getCustomProperty('is_placeholder', false)) {
+                return $media->getCustomProperty('original_url', $value);
+            }
             return $media->getUrl();
         }
 
@@ -200,11 +205,16 @@ class User extends Authenticatable implements JWTSubject, HasMedia
     /**
      * Get profile cover path - compatible with old code
      * Falls back to old 'profile_cover_path' or 'cover_photo_path' field if media doesn't exist
+     * Returns original URL if media is a placeholder
      */
     public function getProfileCoverPathAttribute($value)
     {
         $media = $this->getFirstMedia('cover');
         if ($media) {
+            // If it's a placeholder, return the original URL
+            if ($media->getCustomProperty('is_placeholder', false)) {
+                return $media->getCustomProperty('original_url', $value ?? $this->attributes['cover_photo_path'] ?? null);
+            }
             return $media->getUrl();
         }
 

@@ -9,6 +9,9 @@ use App\Models\Post;
 use App\Models\Title;
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class MigrateToMediaLibrary extends Command
 {
@@ -91,15 +94,39 @@ class MigrateToMediaLibrary extends Command
             }
 
             try {
-                $post->addMediaFromUrl($imageUrl)
-                    ->usingName("Post {$post->id} - {$post->title}")
-                    ->usingFileName($this->getFileNameFromUrl($imageUrl))
-                    ->toMediaCollection('featured-image');
-
-                $this->line("  ✓ Migrated post #{$post->id}");
+                // Try to use S3 directly if URL points to S3
+                if ($this->isS3Url($imageUrl)) {
+                    try {
+                        $this->migrateFromS3($post, $imageUrl, 'featured-image', "Post {$post->id} - {$post->title}");
+                        $this->line("  ✓ Migrated post #{$post->id} (from S3)");
+                    } catch (\Exception $e) {
+                        // If S3 fails, try HTTP or create placeholder
+                        $this->createPlaceholderMedia($post, $imageUrl, 'featured-image', "Post {$post->id} - {$post->title}", [
+                            'model_type' => 'Post',
+                            'model_id' => $post->id,
+                            'model_title' => $post->title,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $this->line("  ⚠ Created placeholder for post #{$post->id} (S3 access failed)");
+                    }
+                } else {
+                    $post->addMediaFromUrl($imageUrl)
+                        ->usingName("Post {$post->id} - {$post->title}")
+                        ->usingFileName($this->getFileNameFromUrl($imageUrl))
+                        ->toMediaCollection('featured-image');
+                    $this->line("  ✓ Migrated post #{$post->id}");
+                }
                 $count++;
             } catch (\Exception $e) {
-                $this->warn("  ✗ Failed post #{$post->id}: " . $e->getMessage());
+                // Create placeholder even if migration fails
+                $this->createPlaceholderMedia($post, $imageUrl, 'featured-image', "Post {$post->id} - {$post->title}", [
+                    'model_type' => 'Post',
+                    'model_id' => $post->id,
+                    'model_title' => $post->title,
+                    'error' => $e->getMessage(),
+                ]);
+                $this->warn("  ⚠ Created placeholder for post #{$post->id} (URL not accessible): " . substr($e->getMessage(), 0, 60));
+                $count++;
             }
         }
 
@@ -131,13 +158,34 @@ class MigrateToMediaLibrary extends Command
                     $count++;
                 } else {
                     try {
-                        $user->addMediaFromUrl($user->profile_photo_path)
-                            ->usingName("User {$user->id} - {$user->name} - Avatar")
-                            ->usingFileName($this->getFileNameFromUrl($user->profile_photo_path))
-                            ->toMediaCollection('avatar');
+                        if ($this->isS3Url($user->profile_photo_path)) {
+                            try {
+                                $this->migrateFromS3($user, $user->profile_photo_path, 'avatar', "User {$user->id} - {$user->name} - Avatar");
+                            } catch (\Exception $e) {
+                                $this->createPlaceholderMedia($user, $user->profile_photo_path, 'avatar', "User {$user->id} - {$user->name} - Avatar", [
+                                    'model_type' => 'User',
+                                    'model_id' => $user->id,
+                                    'model_name' => $user->name,
+                                    'error' => $e->getMessage(),
+                                ]);
+                                $this->line("  ⚠ Created placeholder for user #{$user->id} avatar");
+                            }
+                        } else {
+                            $user->addMediaFromUrl($user->profile_photo_path)
+                                ->usingName("User {$user->id} - {$user->name} - Avatar")
+                                ->usingFileName($this->getFileNameFromUrl($user->profile_photo_path))
+                                ->toMediaCollection('avatar');
+                        }
                         $count++;
                     } catch (\Exception $e) {
-                        $this->warn("  ✗ Failed user #{$user->id} avatar: " . $e->getMessage());
+                        $this->createPlaceholderMedia($user, $user->profile_photo_path, 'avatar', "User {$user->id} - {$user->name} - Avatar", [
+                            'model_type' => 'User',
+                            'model_id' => $user->id,
+                            'model_name' => $user->name,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $this->warn("  ⚠ Created placeholder for user #{$user->id} avatar: " . substr($e->getMessage(), 0, 60));
+                        $count++;
                     }
                 }
             }
@@ -154,13 +202,34 @@ class MigrateToMediaLibrary extends Command
                     $count++;
                 } else {
                     try {
-                        $user->addMediaFromUrl($coverPath)
-                            ->usingName("User {$user->id} - {$user->name} - Cover")
-                            ->usingFileName($this->getFileNameFromUrl($coverPath))
-                            ->toMediaCollection('cover');
+                        if ($this->isS3Url($coverPath)) {
+                            try {
+                                $this->migrateFromS3($user, $coverPath, 'cover', "User {$user->id} - {$user->name} - Cover");
+                            } catch (\Exception $e) {
+                                $this->createPlaceholderMedia($user, $coverPath, 'cover', "User {$user->id} - {$user->name} - Cover", [
+                                    'model_type' => 'User',
+                                    'model_id' => $user->id,
+                                    'model_name' => $user->name,
+                                    'error' => $e->getMessage(),
+                                ]);
+                                $this->line("  ⚠ Created placeholder for user #{$user->id} cover");
+                            }
+                        } else {
+                            $user->addMediaFromUrl($coverPath)
+                                ->usingName("User {$user->id} - {$user->name} - Cover")
+                                ->usingFileName($this->getFileNameFromUrl($coverPath))
+                                ->toMediaCollection('cover');
+                        }
                         $count++;
                     } catch (\Exception $e) {
-                        $this->warn("  ✗ Failed user #{$user->id} cover: " . $e->getMessage());
+                        $this->createPlaceholderMedia($user, $coverPath, 'cover', "User {$user->id} - {$user->name} - Cover", [
+                            'model_type' => 'User',
+                            'model_id' => $user->id,
+                            'model_name' => $user->name,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $this->warn("  ⚠ Created placeholder for user #{$user->id} cover: " . substr($e->getMessage(), 0, 60));
+                        $count++;
                     }
                 }
             }
@@ -196,10 +265,24 @@ class MigrateToMediaLibrary extends Command
             }
 
             try {
-                $media = $title->addMediaFromUrl($imageUrl)
-                    ->usingName("Title {$title->id} - {$title->name}")
-                    ->usingFileName($this->getFileNameFromUrl($imageUrl))
-                    ->toMediaCollection('cover');
+                if ($this->isS3Url($imageUrl)) {
+                    try {
+                        $media = $this->migrateFromS3($title, $imageUrl, 'cover', "Title {$title->id} - {$title->name}");
+                    } catch (\Exception $e) {
+                        $media = $this->createPlaceholderMedia($title, $imageUrl, 'cover', "Title {$title->id} - {$title->name}", [
+                            'model_type' => 'Title',
+                            'model_id' => $title->id,
+                            'model_name' => $title->name,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $this->line("  ⚠ Created placeholder for title #{$title->id}");
+                    }
+                } else {
+                    $media = $title->addMediaFromUrl($imageUrl)
+                        ->usingName("Title {$title->id} - {$title->name}")
+                        ->usingFileName($this->getFileNameFromUrl($imageUrl))
+                        ->toMediaCollection('cover');
+                }
 
                 if ($title->images->thumbnail && $title->images->thumbnail !== $imageUrl) {
                     $media->setCustomProperty('original_thumbnail', $title->images->thumbnail);
@@ -209,7 +292,18 @@ class MigrateToMediaLibrary extends Command
                 $this->line("  ✓ Migrated title #{$title->id}");
                 $count++;
             } catch (\Exception $e) {
-                $this->warn("  ✗ Failed title #{$title->id}: " . $e->getMessage());
+                $media = $this->createPlaceholderMedia($title, $imageUrl, 'cover', "Title {$title->id} - {$title->name}", [
+                    'model_type' => 'Title',
+                    'model_id' => $title->id,
+                    'model_name' => $title->name,
+                    'error' => $e->getMessage(),
+                ]);
+                if ($title->images->thumbnail && $title->images->thumbnail !== $imageUrl) {
+                    $media->setCustomProperty('original_thumbnail', $title->images->thumbnail);
+                    $media->save();
+                }
+                $this->warn("  ⚠ Created placeholder for title #{$title->id}: " . substr($e->getMessage(), 0, 60));
+                $count++;
             }
         }
 
@@ -243,15 +337,36 @@ class MigrateToMediaLibrary extends Command
             }
 
             try {
-                $magazine->addMediaFromUrl($imageUrl)
-                    ->usingName("Magazine {$magazine->id} - {$magazine->name}")
-                    ->usingFileName($this->getFileNameFromUrl($imageUrl))
-                    ->toMediaCollection('cover');
-
-                $this->line("  ✓ Migrated magazine #{$magazine->id}");
+                if ($this->isS3Url($imageUrl)) {
+                    try {
+                        $this->migrateFromS3($magazine, $imageUrl, 'cover', "Magazine {$magazine->id} - {$magazine->name}");
+                        $this->line("  ✓ Migrated magazine #{$magazine->id} (from S3)");
+                    } catch (\Exception $e) {
+                        $this->createPlaceholderMedia($magazine, $imageUrl, 'cover', "Magazine {$magazine->id} - {$magazine->name}", [
+                            'model_type' => 'Magazine',
+                            'model_id' => $magazine->id,
+                            'model_name' => $magazine->name,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $this->line("  ⚠ Created placeholder for magazine #{$magazine->id}");
+                    }
+                } else {
+                    $magazine->addMediaFromUrl($imageUrl)
+                        ->usingName("Magazine {$magazine->id} - {$magazine->name}")
+                        ->usingFileName($this->getFileNameFromUrl($imageUrl))
+                        ->toMediaCollection('cover');
+                    $this->line("  ✓ Migrated magazine #{$magazine->id}");
+                }
                 $count++;
             } catch (\Exception $e) {
-                $this->warn("  ✗ Failed magazine #{$magazine->id}: " . $e->getMessage());
+                $this->createPlaceholderMedia($magazine, $imageUrl, 'cover', "Magazine {$magazine->id} - {$magazine->name}", [
+                    'model_type' => 'Magazine',
+                    'model_id' => $magazine->id,
+                    'model_name' => $magazine->name,
+                    'error' => $e->getMessage(),
+                ]);
+                $this->warn("  ⚠ Created placeholder for magazine #{$magazine->id}: " . substr($e->getMessage(), 0, 60));
+                $count++;
             }
         }
 
@@ -292,5 +407,147 @@ class MigrateToMediaLibrary extends Command
         }
 
         return $filename;
+    }
+
+    /**
+     * Check if URL points to S3 storage
+     */
+    private function isS3Url(string $url): bool
+    {
+        $s3Patterns = [
+            'api.coanime.net/storage',
+            's3.amazonaws.com',
+            '.s3.',
+            'storage/images',
+        ];
+
+        foreach ($s3Patterns as $pattern) {
+            if (str_contains($url, $pattern)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Migrate from S3 directly without HTTP download
+     */
+    private function migrateFromS3($model, string $url, string $collection, string $name)
+    {
+        // Extract path from URL
+        $path = $this->extractS3PathFromUrl($url);
+        
+        if (!$path) {
+            throw new \Exception("Could not extract S3 path from URL: {$url}");
+        }
+
+        // Check if file exists in S3
+        if (!Storage::disk('s3')->exists($path)) {
+            throw new \Exception("File does not exist in S3: {$path}");
+        }
+
+        // Get file from S3
+        $fileContents = Storage::disk('s3')->get($path);
+        $fileName = $this->getFileNameFromUrl($url);
+
+        // Create temporary file
+        $tempPath = sys_get_temp_dir() . '/' . uniqid('media_', true) . '_' . $fileName;
+        file_put_contents($tempPath, $fileContents);
+
+        try {
+            // Add media from temporary file
+            $media = $model->addMedia($tempPath)
+                ->usingName($name)
+                ->usingFileName($fileName)
+                ->toMediaCollection($collection);
+
+            return $media;
+        } finally {
+            // Clean up temporary file
+            if (file_exists($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
+    }
+
+    /**
+     * Extract S3 path from URL
+     */
+    private function extractS3PathFromUrl(string $url): ?string
+    {
+        // Handle api.coanime.net/storage/images/posts/...
+        if (str_contains($url, 'api.coanime.net/storage/')) {
+            $path = parse_url($url, PHP_URL_PATH);
+            // Remove leading /
+            $path = ltrim($path, '/');
+            // Remove 'storage/' prefix if present
+            if (str_starts_with($path, 'storage/')) {
+                $path = substr($path, 8); // Remove 'storage/'
+            }
+            return $path;
+        }
+
+        // Handle direct S3 URLs
+        if (str_contains($url, '.s3.') || str_contains($url, 's3.amazonaws.com')) {
+            $parsed = parse_url($url);
+            return ltrim($parsed['path'] ?? '', '/');
+        }
+
+        return null;
+    }
+
+    /**
+     * Create a placeholder media record when URL is not accessible
+     * This allows tracking which images need to be replaced
+     */
+    private function createPlaceholderMedia($model, string $url, string $collection, string $name, array $metadata = []): Media
+    {
+        $fileName = $this->getFileNameFromUrl($url);
+        $mimeType = $this->guessMimeType($fileName);
+
+        // Create media record manually
+        $media = new Media();
+        $media->model_type = get_class($model);
+        $media->model_id = $model->id;
+        $media->uuid = \Illuminate\Support\Str::uuid()->toString();
+        $media->collection_name = $collection;
+        $media->name = $name;
+        $media->file_name = $fileName;
+        $media->mime_type = $mimeType;
+        $media->disk = 's3'; // Use S3 disk even if file doesn't exist yet
+        $media->size = 0; // File size unknown
+        $media->manipulations = [];
+        $media->custom_properties = array_merge([
+            'original_url' => $url,
+            'is_placeholder' => true,
+            'file_not_accessible' => true,
+            'migration_date' => now()->toIso8601String(),
+        ], $metadata);
+        $media->generated_conversions = [];
+        $media->responsive_images = [];
+        $media->order_column = 1;
+        $media->save();
+
+        return $media;
+    }
+
+    /**
+     * Guess MIME type from file extension
+     */
+    private function guessMimeType(string $filename): string
+    {
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        $mimeTypes = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'svg' => 'image/svg+xml',
+        ];
+
+        return $mimeTypes[$extension] ?? 'image/jpeg';
     }
 }

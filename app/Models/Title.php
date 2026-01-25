@@ -231,11 +231,16 @@ class Title extends Model implements HasMedia
     /**
      * Get cover image URL - compatible with old code
      * Falls back to old 'images' relationship if media doesn't exist
+     * Returns original URL if media is a placeholder
      */
     public function getCoverImageUrlAttribute(): ?string
     {
         $media = $this->getFirstMedia('cover');
         if ($media) {
+            // If it's a placeholder, return the original URL
+            if ($media->getCustomProperty('is_placeholder', false)) {
+                return $media->getCustomProperty('original_url', $this->images?->name);
+            }
             return $media->getUrl();
         }
 

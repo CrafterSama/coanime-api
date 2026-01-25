@@ -240,12 +240,17 @@ class Post extends Model implements HasMedia
     /**
      * Get image URL - compatible with old code
      * Falls back to old 'image' field if media doesn't exist
+     * Returns original URL if media is a placeholder
      */
     public function getImageAttribute($value)
     {
         // Try to get from Media Library first
         $media = $this->getFirstMedia('featured-image');
         if ($media) {
+            // If it's a placeholder, return the original URL
+            if ($media->getCustomProperty('is_placeholder', false)) {
+                return $media->getCustomProperty('original_url', $value);
+            }
             return $media->getUrl();
         }
 
