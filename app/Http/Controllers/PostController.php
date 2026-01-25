@@ -332,12 +332,88 @@ class PostController extends Controller
 
     public function postsDashboard(Request $request)
     {
-        return Post::search($request->name)
+        $query = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
             ->where('approved', 'yes')
-            ->where('draft', '0')
-            ->orderBy('postponed_to', 'desc')
-            ->paginate();
+            ->where('draft', '0');
+
+        // Filters
+        if ($request->has('category_id') && $request->category_id) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->has('user_id') && $request->user_id) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->has('tag_id') && $request->tag_id) {
+            $query->whereHas('tags', function($q) use ($request) {
+                $q->where('tags.id', $request->tag_id);
+            });
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'postponed_to');
+        $sortDirection = $request->get('sort_direction', 'desc');
+        
+        // Validate sort direction
+        $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) ? strtolower($sortDirection) : 'desc';
+        
+        // Allowed sort columns
+        $allowedSortColumns = ['postponed_to', 'created_at', 'updated_at', 'title', 'view_counter'];
+        if (in_array($sortBy, $allowedSortColumns)) {
+            $query->orderBy($sortBy, $sortDirection);
+        } else {
+            $query->orderBy('postponed_to', 'desc');
+        }
+
+        // Pagination
+        $perPage = $request->get('per_page', 15);
+        $perPage = min(max((int) $perPage, 1), 100); // Between 1 and 100
+
+        $posts = $query->paginate($perPage);
+
+        // Get filter options (solo si se solicita con ?include_filters=1)
+        // Debug: verificar qué parámetros llegan
+        \Log::info('Posts Dashboard Request', [
+            'all_params' => $request->all(),
+            'include_filters' => $request->get('include_filters'),
+            'includeFilters' => $request->get('includeFilters'),
+            'has_include_filters' => $request->has('include_filters'),
+        ]);
+        
+        $includeFilters = $request->get('include_filters') ?? $request->get('includeFilters');
+        if ($includeFilters == '1' || $includeFilters == 1 || $includeFilters === true || $includeFilters === 'true') {
+            $categories = Category::orderBy('name', 'asc')->get(['id', 'name']);
+            $users = \App\Models\User::whereHas('posts', function($q) {
+                $q->where('approved', 'yes')->where('draft', '0');
+            })->orderBy('name', 'asc')->get(['id', 'name']);
+            $tags = \App\Models\Tag::whereHas('posts', function($q) {
+                $q->where('approved', 'yes')->where('draft', '0');
+            })->orderBy('name', 'asc')->get(['id', 'name']);
+
+            return response()->json([
+                'code' => 200,
+                'message' => 'Success',
+                'result' => $posts,
+                'filters' => [
+                    'categories' => $categories,
+                    'users' => $users,
+                    'tags' => $tags,
+                ],
+            ], 200);
+        }
+
+        return response()->json([
+                'code' => 200,
+                'message' => 'Success',
+                'result' => $posts,
+                'filters' => [
+                    'categories' => $categories,
+                    'users' => $users,
+                    'tags' => $tags,
+                ],
+            ], 200);
     }
 
     public function apiSearchPosts(Request $request)

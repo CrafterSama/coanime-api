@@ -19,7 +19,65 @@ class MagazineController extends Controller
      */
     public function index(Request $request)
     {
-        $magazine = Magazine::search($request->name)->with('type', 'image', 'release', 'country')->orderBy('name', 'asc')->paginate(30);
+        $query = Magazine::search($request->name)->with('type', 'image', 'release', 'country');
+
+        // Filters
+        if ($request->has('type_id') && $request->type_id) {
+            $query->where('magazine_type_id', $request->type_id);
+        }
+
+        if ($request->has('release_id') && $request->release_id) {
+            $query->where('release_id', $request->release_id);
+        }
+
+        if ($request->has('country_code') && $request->country_code) {
+            $query->where('country_code', $request->country_code);
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'name');
+        $sortDirection = $request->get('sort_direction', 'asc');
+        
+        // Validate sort direction
+        $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) ? strtolower($sortDirection) : 'asc';
+        
+        // Allowed sort columns
+        $allowedSortColumns = ['name', 'created_at', 'updated_at', 'id', 'foundation_date'];
+        if (in_array($sortBy, $allowedSortColumns)) {
+            $query->orderBy($sortBy, $sortDirection);
+        } else {
+            $query->orderBy('name', 'asc');
+        }
+
+        // Pagination
+        $perPage = $request->get('per_page', 30);
+        $perPage = min(max((int) $perPage, 1), 100); // Between 1 and 100
+
+        $magazine = $query->paginate($perPage);
+
+        // Get filter options (solo si se solicita con ?include_filters=1)
+        if ($request->get('include_filters')) {
+            $types = \App\Models\MagazineType::orderBy('name', 'asc')->get();
+            $releases = \App\Models\Release::orderBy('name', 'asc')->get();
+            $countries = \App\Models\Country::whereHas('magazines')->orderBy('name', 'asc')->get(['iso3 as id', 'name']);
+
+            return response()->json([
+                'code' => 200,
+                'message' => [
+                    'type' => 'success',
+                    'text' => 'Resultados encontrados',
+                ],
+                'title' => 'Coanime.net - Lista de Revistas',
+                'description' => 'Lista de revistas en la enciclopedia de coanime.net',
+                'result' => $magazine,
+                'filters' => [
+                    'types' => $types,
+                    'releases' => $releases,
+                    'countries' => $countries,
+                ],
+            ], 200);
+        }
+
         if ($magazine->count() > 0) {
             return response()->json([
                 'code' => 200,

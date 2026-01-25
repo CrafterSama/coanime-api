@@ -21,7 +21,50 @@ class CompanyController extends Controller
      */
     public function index(Request $request)
     {
-        $companies = Company::search($request->name)->with('country', 'city')->orderBy('name', 'asc')->paginate(30);
+        $query = Company::search($request->name)->with('country', 'city');
+
+        // Filters
+        if ($request->has('country_code') && $request->country_code) {
+            $query->where('country_code', $request->country_code);
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'name');
+        $sortDirection = $request->get('sort_direction', 'asc');
+        
+        // Validate sort direction
+        $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) ? strtolower($sortDirection) : 'asc';
+        
+        // Allowed sort columns
+        $allowedSortColumns = ['name', 'created_at', 'updated_at', 'id'];
+        if (in_array($sortBy, $allowedSortColumns)) {
+            $query->orderBy($sortBy, $sortDirection);
+        } else {
+            $query->orderBy('name', 'asc');
+        }
+
+        // Pagination
+        $perPage = $request->get('per_page', 30);
+        $perPage = min(max((int) $perPage, 1), 100); // Between 1 and 100
+
+        $companies = $query->paginate($perPage);
+
+        // Get filter options (solo si se solicita con ?include_filters=1)
+        if ($request->get('include_filters')) {
+            $countries = \App\Models\Country::whereHas('companies')->orderBy('name', 'asc')->get(['iso3 as id', 'name']);
+
+            return response()->json([
+                'code' => 200,
+                'message' => Helper::successMessage(),
+                'title' => 'Coanime.net - Entidades',
+                'description' => 'Lista de Entidades relacionadas con el medio en Coanime.net',
+                'result' => $companies,
+                'filters' => [
+                    'countries' => $countries,
+                ],
+            ], 200);
+        }
+
         if ($companies->count() > 0) {
             return response()->json([
                 'code' => 200,
