@@ -168,5 +168,10 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('users', [UserController::class, 'index'])->name('users');
         Route::get('me', [UserController::class, 'me'])->name('me');
         Route::put('me', [UserController::class, 'updateMe'])->name('me.update');
+
+        // ** Auth Media Endpoints **
+        Route::get('media', [\App\Http\Controllers\MediaController::class, 'index'])->name('media');
+        Route::get('media/{id}', [\App\Http\Controllers\MediaController::class, 'show']);
+        Route::put('media/{id}', [\App\Http\Controllers\MediaController::class, 'update']);
     });
 });
