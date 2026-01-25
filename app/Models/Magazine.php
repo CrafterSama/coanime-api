@@ -8,11 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Magazine extends Model
+class Magazine extends Model implements HasMedia
 {
     use SoftDeletes;
     use LogsActivity;
+    use InteractsWithMedia;
 
     /**
      * The table associated with the model.
@@ -56,6 +60,68 @@ class Magazine extends Model
     public function image()
     {
         return $this->hasOne(MagazineImage::class);
+    }
+
+    /**
+     * Register media collections for Magazine model
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('cover')
+            ->singleFile()
+            ->useDisk('s3')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    }
+
+    /**
+     * Register media conversions for Magazine model
+     */
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(300)
+            ->height(400)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('cover');
+
+        $this->addMediaConversion('medium')
+            ->width(600)
+            ->height(800)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('cover');
+
+        $this->addMediaConversion('large')
+            ->width(1200)
+            ->height(1600)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('cover');
+    }
+
+    /**
+     * Get cover image URL - compatible with old code
+     * Falls back to old 'image' relationship if media doesn't exist
+     */
+    public function getCoverImageUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('cover');
+        if ($media) {
+            return $media->getUrl();
+        }
+
+        // Fallback to old relationship
+        return $this->image?->name;
+    }
+
+    /**
+     * Get thumbnail URL
+     */
+    public function getThumbnailUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('cover');
+        return $media ? $media->getUrl('thumb') : null;
     }
 
     /**
