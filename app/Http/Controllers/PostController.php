@@ -386,10 +386,20 @@ class PostController extends Controller
         if ($includeFilters == '1' || $includeFilters == 1 || $includeFilters === true || $includeFilters === 'true') {
             $categories = Category::orderBy('name', 'asc')->get(['id', 'name']);
             $users = \App\Models\User::whereHas('posts', function($q) {
-                $q->where('approved', 'yes')->where('draft', '0');
+                $q->where('approved', 'yes')
+                  ->where('draft', '0')
+                  ->where(function($query) {
+                      $query->where('postponed_to', '<=', Carbon::now())
+                            ->orWhereNull('postponed_to');
+                  });
             })->orderBy('name', 'asc')->get(['id', 'name']);
             $tags = \App\Models\Tag::whereHas('posts', function($q) {
-                $q->where('approved', 'yes')->where('draft', '0');
+                $q->where('approved', 'yes')
+                  ->where('draft', '0')
+                  ->where(function($query) {
+                      $query->where('postponed_to', '<=', Carbon::now())
+                            ->orWhereNull('postponed_to');
+                  });
             })->orderBy('name', 'asc')->get(['id', 'name']);
 
             return response()->json([
@@ -404,15 +414,11 @@ class PostController extends Controller
             ], 200);
         }
 
+        // Si no se solicitan filtros, devolver solo los posts sin filtros
         return response()->json([
                 'code' => 200,
                 'message' => 'Success',
                 'result' => $posts,
-                'filters' => [
-                    'categories' => $categories,
-                    'users' => $users,
-                    'tags' => $tags,
-                ],
             ], 200);
     }
 
