@@ -108,7 +108,7 @@ class Title extends Model implements HasMedia
     }
 
     /**
-     * Scope to filter active titles (Estreno or En emisión)
+     * Scope to filter active titles (Estreno, En emisión or Publicándose)
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -118,6 +118,7 @@ class Title extends Model implements HasMedia
         return $query->whereIn('status', [
             TitleStatus::ESTRENO->value,
             TitleStatus::EN_EMISION->value,
+            TitleStatus::PUBLICANDOSE->value,
         ]);
     }
 
