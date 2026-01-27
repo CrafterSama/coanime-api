@@ -1101,6 +1101,9 @@ class PostController extends Controller
             $currentUser = Auth::user()->id;
             $data = new Post();
             $data->user_id = $currentUser;
+            $data->category_id = 1;
+            $data->draft = PostDraft::DRAFT->value;
+            $data->postponed_to = Carbon::now()->format('Y-m-d H:i:s');
             $data->save();
             $id = $data->id;
         }

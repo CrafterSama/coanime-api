@@ -12,6 +12,8 @@ use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ImageController extends Controller
 {
@@ -23,6 +25,29 @@ class ImageController extends Controller
     public function index()
     {
         //
+    }
+
+    private function storeTemporaryPostImage(Request $request, string $modelName)
+    {
+        $file = $request->file('file');
+        if (! $file) {
+            return response()->json([
+                'code' => 400,
+                'message' => 'No file provided',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $folder = sprintf('uploads/%s/%s', $modelName, now()->format('Y/m'));
+        $filename = sprintf('%s.%s', Str::uuid()->toString(), $file->getClientOriginalExtension());
+        $filePath = Storage::disk('s3')->putFileAs($folder, $file, $filename, 'public');
+        $url = Storage::disk('s3')->url($filePath);
+
+        return response()->json([
+            'code' => 200,
+            'message' => Helper::successMessage('Image uploaded successfully'),
+            'url' => $url,
+            'media_id' => null,
+        ], Response::HTTP_OK);
     }
 
     /**
@@ -62,38 +87,30 @@ class ImageController extends Controller
 
             $modelClass = $modelClasses[$modelName];
 
-            // If model_id is provided, use existing model, otherwise create a temporary one
             if ($modelId) {
                 $model = $modelClass::findOrFail($modelId);
-            } else {
-                // For temporary uploads (like in editor), create a temporary model instance
-                // This is a workaround - ideally the frontend should provide model_id
-                $model = new $modelClass();
-                // For posts, we might need to create a draft first
-                if ($modelName === 'posts') {
-                    $model->user_id = auth()->id() ?? 1;
-                    $model->save();
-                } else {
-                    // For other models, we can't create without required fields
-                    // So we'll just upload to a generic location
-                    return response()->json([
-                        'code' => 400,
-                        'message' => 'model_id is required for this model type',
-                    ], Response::HTTP_BAD_REQUEST);
-                }
+
+                // Add media using Spatie Media Library
+                $media = $model->addMediaFromRequest('file')
+                    ->usingName($request->file('file')->getClientOriginalName())
+                    ->toMediaCollection($collection);
+
+                return response()->json([
+                    'code' => 200,
+                    'message' => Helper::successMessage('Image uploaded successfully'),
+                    'url' => $media->getUrl(),
+                    'media_id' => $media->id,
+                ], Response::HTTP_OK);
             }
 
-            // Add media using Spatie Media Library
-            $media = $model->addMediaFromRequest('file')
-                ->usingName($request->file('file')->getClientOriginalName())
-                ->toMediaCollection($collection);
+            if ($modelName === 'posts') {
+                return $this->storeTemporaryPostImage($request, $modelName);
+            }
 
             return response()->json([
-                'code' => 200,
-                'message' => Helper::successMessage('Image uploaded successfully'),
-                'url' => $media->getUrl(),
-                'media_id' => $media->id,
-            ], Response::HTTP_OK);
+                'code' => 400,
+                'message' => 'model_id is required for this model type',
+            ], Response::HTTP_BAD_REQUEST);
         } catch (Exception $e) {
             return response()->json([
                 'code' => 500,
