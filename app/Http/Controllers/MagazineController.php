@@ -59,7 +59,7 @@ class MagazineController extends Controller
         // Get filter options (solo si se solicita con ?include_filters=1)
         if ($request->get('include_filters')) {
             $types = \App\Models\MagazineType::orderBy('name', 'asc')->get();
-            $releases = \App\Models\Release::orderBy('name', 'asc')->get();
+            $releases = \App\Models\MagazineRelease::orderBy('name', 'asc')->get();
             $countries = \App\Models\Country::whereHas('magazines')->orderBy('name', 'asc')->get(['iso3 as id', 'name']);
 
             return response()->json([
