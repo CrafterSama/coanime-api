@@ -332,10 +332,8 @@ class HiddenSeeker extends Model
                 if ($imageUrl) {
                     try {
                         $response = Http::timeout(15)->get($imageUrl);
-                        if (!$response->successful()) {
-                            continue;
-                        }
-                        $processingImage = $response->body();
+                        if ($response->successful()) {
+                            $processingImage = $response->body();
                         $image = Image::make($processingImage);
                     $fileName = hash('sha256', strval(time()));
                     $image->encode('webp', 100);
@@ -357,6 +355,7 @@ class HiddenSeeker extends Model
                         'name' => $imageUrl,
                         'thumbnail' => $imageUrl,
                     ]);
+                        }
                     } catch (Exception $e) {
                         \Log::error('Error fetching image from URL', ['url' => $imageUrl, 'error' => $e->getMessage()]);
                         // Continuar sin procesar la imagen si hay error

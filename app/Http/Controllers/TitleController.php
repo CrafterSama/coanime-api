@@ -8,6 +8,7 @@ use App\Enums\TitleStatus;
 use App\Http\Requests\TitleStoreRequest;
 use App\Http\Requests\TitleUpdateRequest;
 use App\Models\Genre;
+use App\Services\JikanSeasonSyncService;
 use App\Models\Helper;
 use App\Models\HiddenSeeker;
 use App\Models\Post;
@@ -981,116 +982,39 @@ class TitleController extends Controller
 
     public function saveTitlesBySeason(Request $request)
     {
-        $jikan = Client::create();
-        $page = intval($request->get('page')) ?? 1;
-        $year = intval($request->get('year')) ?? 2024;
+        $page = (int) ($request->get('page') ?? 1) ?: 1;
+        $year = (int) ($request->get('year') ?? date('Y'));
         $season = $request->get('season') ?? 'winter';
-        try {
-            $results = $jikan->getSeason($year, $season, compact('page'));
-            $process = [];
-            //dd($results->getData());
-            $process[] = '<p>Pagina '.$page.'</p>';
-            foreach ($results->getData() as $key => $cloudTitle) {
-                $title = new Title();
-                $newGenres = [];
-                $title->name = $cloudTitle->getTitle();
 
-                $title->slug = Str::slug($cloudTitle->getTitle());
-                $title->user_id = 1;
-                $title->just_year = 'false';
-                if (Title::where('slug', $title->slug)->first()) {
-                    $process[] = '<p>'.$title->name.' Ya existe</p>';
-                } elseif ($cloudTitle->getType() === null || $cloudTitle->getType() === 'Unknown' || $cloudTitle->getType() === 'Music') {
-                    $process[] = '<p>'.$title->name.' No tiene determinado el Tipo</p>';
-                } else {
-                    $process[] = '<p>'.$title->name.' Procesando</p>';
+        $service = app(JikanSeasonSyncService::class);
+        $result = $service->sync(['year' => $year, 'season' => $season, 'page' => $page]);
 
-                    if ($cloudTitle?->getTitles() !== null) {
-                        $otherTitles = [];
-                        foreach ($cloudTitle->getTitles() as $value) {
-                            if (strtolower($value->getType()) === 'english') {
-                                $titleEnglish = $value->getTitle().' (Inglés)';
-                                if (!in_array($titleEnglish, $otherTitles)) {
-                                    $otherTitles[] = $titleEnglish;
-                                }
-                            }
-                            if (strtolower($value->getType()) === 'japanese') {
-                                $titleJapanese = $value->getTitle().' (Japonés)';
-                                if (!in_array($titleJapanese, $otherTitles)) {
-                                    $otherTitles[] = $titleJapanese;
-                                }
-                            }
-                            $title->other_titles = implode(', ', $otherTitles);
-                            //$title->save();
-                        }
-                    }
-
-
-                    if ((empty($title->sinopsis) || $title->sinopsis == 'Sinopsis no disponible' || $title->sinopsis == 'Pendiente de agregar sinopsis...' || $title->sinopsis == 'Sinopsis no disponible.' || $title->sinopsis == 'Sinopsis en Proceso') && $cloudTitle->getSynopsis() !== null) {
-                        $title->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
-                    }
-
-                    if ((empty($title->trailer_url) || $title->trailer_url === null || $title->trailer_url === '') && $cloudTitle->getTrailer()->getUrl() !== null) {
-                        $title->trailer_url = $cloudTitle->getTrailer()->getUrl();
-                    }
-
-                    if (empty($title->status) || HiddenSeeker::getStatus($cloudTitle->getStatus()) !== $title->status) {
-                        $title->status = HiddenSeeker::getStatus($cloudTitle->getStatus());
-                    }
-
-                    if (empty($title->type)) {
-                        $title->type_id = HiddenSeeker::getTypeById(strtolower($cloudTitle->getType()));
-                    }
-
-                    if (empty($title->rating_id) || $title->rating_id === 7) {
-                        $title->rating_id = is_null($cloudTitle->getRating()) ? $title->rating_id === 7 : HiddenSeeker::getRatingId(strtolower($cloudTitle->getRating()));
-                    }
-
-                    if ($title->episodies === 0 || $title->episodies === null || empty($title->episodies)) {
-                        $title->episodies = $cloudTitle->getEpisodes();
-                    }
-
-                    if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
-                        $title->broad_time = Carbon::create($cloudTitle->getAired()->getFrom())->format('Y-m-d');
-                    }
-
-                    if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
-                        $title->broad_finish = Carbon::create($cloudTitle->getAired()->getTo())->format('Y-m-d');
-                    }
-                    $title->save();
-
-                    if ($title->genres->count() === 0) {
-                        foreach ($cloudTitle->getGenres() as $key => $gen) {
-                            if ($gen !== '' || $gen !== null) {
-                                $newGenres[] = HiddenSeeker::getGenres(strtolower($gen->getName()));
-                            }
-                        }
-                        $title->genres()->sync($newGenres);
-                    }
-
-                    $title->save();
-                    $process[] = '<p>'.$title->name.' Guardado</p>';
-                }
+        $data = $result['lines'];
+        if ($result['errors'] !== []) {
+            foreach ($result['errors'] as $err) {
+                $data[] = $err;
             }
+        }
 
-            return response()->json([
-                'code' => 200,
-                'message' => [
-                    'type' => 'Success',
-                    'text' => 'Titulos de la pagina ' . $page . ' Guardados',
-                ],
-                'data' => $process,
-            ], 200);
-        } catch (\Exception $e) {
+        if ($result['errors'] !== []) {
             return response()->json([
                 'code' => 500,
                 'message' => [
                     'type' => 'Error',
                     'text' => 'Error al procesar la pagina ' . $page,
                 ],
-                'data' => $e->getMessage(),
+                'data' => $data,
             ], 500);
         }
+
+        return response()->json([
+            'code' => 200,
+            'message' => [
+                'type' => 'Success',
+                'text' => 'Titulos de la pagina ' . $page . ' Guardados (saved: ' . $result['saved'] . ', skipped: ' . $result['skipped'] . ', invalid_type: ' . $result['invalid_type'] . ')',
+            ],
+            'data' => $data,
+        ], 200);
     }
 
     public function saveTitlesByAlphabetic(Request $request)
