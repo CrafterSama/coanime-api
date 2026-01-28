@@ -27,7 +27,11 @@ class ImageController extends Controller
         //
     }
 
-    private function storeTemporaryPostImage(Request $request, string $modelName)
+    /**
+     * Store image temporarily (no model_id). Used for create flows (posts, titles, magazines).
+     * Returns public URL so the frontend can send it when creating the record.
+     */
+    private function storeTemporaryImage(Request $request, string $modelName)
     {
         $file = $request->file('file');
         if (! $file) {
@@ -90,7 +94,11 @@ class ImageController extends Controller
             if ($modelId) {
                 $model = $modelClass::findOrFail($modelId);
 
-                // Add media using Spatie Media Library
+                // Replace previous media when single-file collections (cover, avatar, featured-image)
+                if (in_array($collection, ['cover', 'avatar', 'featured-image'], true)) {
+                    $model->clearMediaCollection($collection);
+                }
+
                 $media = $model->addMediaFromRequest('file')
                     ->usingName($request->file('file')->getClientOriginalName())
                     ->toMediaCollection($collection);
@@ -103,8 +111,8 @@ class ImageController extends Controller
                 ], Response::HTTP_OK);
             }
 
-            if ($modelName === 'posts') {
-                return $this->storeTemporaryPostImage($request, $modelName);
+            if (in_array($modelName, ['posts', 'titles', 'magazines', 'users'], true)) {
+                return $this->storeTemporaryImage($request, $modelName);
             }
 
             return response()->json([

@@ -44,6 +44,13 @@ class Title extends Model implements HasMedia
     ];
 
     /**
+     * Accessors to append to array/JSON (cover uses Spatie media; fallback to images).
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['cover_image_url'];
+
+    /**
      * The table associated with the model.
      *
      * @var string

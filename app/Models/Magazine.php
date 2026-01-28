@@ -57,6 +57,13 @@ class Magazine extends Model implements HasMedia
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
+    /**
+     * Accessors to append to array/JSON (cover uses Spatie media; fallback to image).
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['cover_image_url'];
+
     public function image()
     {
         return $this->hasOne(MagazineImage::class);
