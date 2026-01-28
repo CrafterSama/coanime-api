@@ -35,7 +35,7 @@ class TitleStoreRequest extends FormRequest
             'broad_time' => ['required', 'date_format:Y-m-d'],
             'broad_finish' => ['nullable', 'date_format:Y-m-d'],
             'genre_id' => ['required', 'array'],
-            'genre_id.*' => ['integer', 'exists:genres,id'],
+            'genre_id.*' => ['integer', 'exists:genre,id'],
             'rating_id' => ['required', 'integer', 'exists:ratings,id'],
             'images' => ['required', 'string'],
             'status' => ['nullable', Rule::enum(TitleStatus::class)],

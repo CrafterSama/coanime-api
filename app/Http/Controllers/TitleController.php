@@ -54,8 +54,8 @@ class TitleController extends Controller
         }
 
         if ($request->has('genre_id') && $request->genre_id) {
-            $query->whereHas('genres', function($q) use ($request) {
-                $q->where('genres.id', $request->genre_id);
+            $query->whereHas('genres', function ($q) use ($request) {
+                $q->where('genre.id', $request->genre_id);
             });
         }
 
