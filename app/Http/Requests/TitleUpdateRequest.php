@@ -28,7 +28,7 @@ class TitleUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'other_titles' => ['required', 'string'],
-            'type_id' => ['required', 'integer', 'exists:title_types,id'],
+            'type_id' => ['required', 'integer', 'exists:titles_type,id'],
             'sinopsis' => ['required', 'string'],
             'episodies' => ['nullable', 'integer', 'min:0'],
             'just_year' => ['required', 'string'],
