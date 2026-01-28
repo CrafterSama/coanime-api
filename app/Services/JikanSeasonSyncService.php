@@ -82,7 +82,7 @@ class JikanSeasonSyncService
         return $out;
     }
 
-    protected function currentSeason(): string
+    public function currentSeason(): string
     {
         $m = (int) date('n');
         if ($m >= 3 && $m <= 5) {
@@ -96,6 +96,30 @@ class JikanSeasonSyncService
         }
 
         return 'winter';
+    }
+
+    /**
+     * Next season (winter -> spring -> summer -> fall -> winter).
+     */
+    public function nextSeason(): string
+    {
+        $s = $this->currentSeason();
+        return match ($s) {
+            'winter' => 'spring',
+            'spring' => 'summer',
+            'summer' => 'fall',
+            'fall' => 'winter',
+            default => 'spring',
+        };
+    }
+
+    /**
+     * Year for next season. Current year except when moving fall -> winter (next year).
+     */
+    public function nextSeasonYear(): int
+    {
+        $y = (int) date('Y');
+        return $this->currentSeason() === 'fall' ? $y + 1 : $y;
     }
 
     protected function createTitleFromCloud(mixed $cloudTitle): Title
