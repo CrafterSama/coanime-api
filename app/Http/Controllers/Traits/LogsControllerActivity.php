@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Traits;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 trait LogsControllerActivity
 {
@@ -57,22 +58,31 @@ trait LogsControllerActivity
                 }
             }
 
-            $activity->withProperties([
-                    'controller' => static::class,
-                    'controller_name' => $controllerName,
-                    'method' => $method,
-                    'ip_address' => $this->getClientIp($request),
-                    'user_agent' => $request->userAgent(),
-                    'http_method' => $request->method(),
-                    'route' => $request->route()?->getName(),
-                    'url' => $request->fullUrl(),
-                    'path' => $request->path(),
-                    'request_data' => $this->prepareRequestData($request),
-                    'route_parameters' => $request->route()?->parameters(),
-                    'status_code' => $response?->getStatusCode(),
-                    'resource_type' => $resourceType ? class_basename($resourceType) : null,
-                    'resource_id' => $resourceId,
-                ])
+            $responseData = $this->prepareResponseData($response);
+
+            $properties = [
+                'controller' => static::class,
+                'controller_name' => $controllerName,
+                'method' => $method,
+                'ip_address' => $this->getClientIp($request),
+                'user_agent' => $request->userAgent(),
+                'http_method' => $request->method(),
+                'route' => $request->route()?->getName(),
+                'url' => $request->fullUrl(),
+                'path' => $request->path(),
+                'request_data' => $this->prepareRequestData($request),
+                'route_parameters' => $request->route()?->parameters(),
+                'status_code' => $response?->getStatusCode(),
+                'resource_type' => $resourceType ? class_basename($resourceType) : null,
+                'resource_id' => $resourceId,
+            ];
+
+            if ($responseData !== null) {
+                $properties['response_body'] = $responseData['body'];
+                $properties['response_truncated'] = $responseData['truncated'];
+            }
+
+            $activity->withProperties($properties)
                 ->log($action);
         } catch (\Exception $e) {
             // Si falla el registro, loguear en el sistema de logs de Laravel
@@ -159,6 +169,86 @@ trait LogsControllerActivity
 
             return $value;
         }, $data);
+
+        return $data;
+    }
+
+    /**
+     * Prepara el body de la respuesta del servidor para almacenarlo en el log.
+     * Se trunca más en 2xx (500 chars) y se permite más en 4xx/5xx (4000 chars)
+     * para facilitar el debugging de errores.
+     *
+     * @return array{body: string, truncated: bool}|null
+     */
+    protected function prepareResponseData($response): ?array
+    {
+        if (! $response instanceof Response) {
+            return null;
+        }
+
+        $content = $response->getContent();
+        if ($content === false || $content === '') {
+            return null;
+        }
+
+        $contentType = $response->headers->get('Content-Type', '');
+        $isText = str_contains($contentType, 'json') ||
+            str_contains($contentType, 'text/') ||
+            str_contains($contentType, 'javascript') ||
+            str_contains($contentType, 'xml');
+
+        if (! $isText) {
+            return [
+                'body' => '[non-text response; Content-Type: '.$contentType.']',
+                'truncated' => false,
+            ];
+        }
+
+        $maxSuccess = 500;
+        $maxError = 4000;
+        $status = $response->getStatusCode();
+        $max = $status >= 400 ? $maxError : $maxSuccess;
+
+        $decoded = json_decode($content, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $decoded = $this->redactResponseSensitiveKeys($decoded);
+            $content = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        }
+
+        $truncated = strlen($content) > $max;
+        $body = $truncated ? substr($content, 0, $max)."\n... [TRUNCATED]" : $content;
+
+        return [
+            'body' => $body,
+            'truncated' => $truncated,
+        ];
+    }
+
+    /**
+     * Redacta claves sensibles en arrays de respuesta (p. ej. tokens, passwords).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function redactResponseSensitiveKeys(array $data): array
+    {
+        $sensitive = [
+            'token', 'access_token', 'refresh_token', 'api_token',
+            'password', 'password_confirmation', 'secret', 'authorization',
+        ];
+
+        foreach ($data as $key => $value) {
+            $lower = strtolower((string) $key);
+            foreach ($sensitive as $s) {
+                if (str_contains($lower, $s)) {
+                    $data[$key] = '***REDACTED***';
+                    break;
+                }
+            }
+            if (is_array($value) && $data[$key] !== '***REDACTED***') {
+                $data[$key] = $this->redactResponseSensitiveKeys($value);
+            }
+        }
 
         return $data;
     }
