@@ -8,6 +8,7 @@ use App\Models\HiddenSeeker;
 use App\Models\Title;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 use Jikan\JikanPHP\Client;
 use Stichoza\GoogleTranslate\GoogleTranslate;
 use Throwable;
@@ -15,6 +16,8 @@ use Throwable;
 class JikanSeasonSyncService
 {
     protected const DEFAULT_USER_ID = 1;
+
+    protected const MAL_PLACEHOLDER_IMAGE = 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-256.png';
 
     /**
      * Sync titles from Jikan MAL API by season.
@@ -216,6 +219,52 @@ class JikanSeasonSyncService
             }
         }
 
+        $this->attachCoverFromCloud($title, $cloudTitle);
+
         return $title;
+    }
+
+    /**
+     * Attach cover image from Jikan MAL data to the title (Spatie Media, cover collection).
+     * Skips if no URL, MAL placeholder, or on failure (logged).
+     */
+    protected function attachCoverFromCloud(Title $title, mixed $cloudTitle): void
+    {
+        $imageUrl = $this->getCoverImageUrlFromCloud($cloudTitle);
+        if ($imageUrl === null || $imageUrl === '') {
+            return;
+        }
+
+        try {
+            $title->addMediaFromUrl($imageUrl)
+                ->usingName("Title {$title->id} - {$title->name}")
+                ->usingFileName('title-' . $title->id . '-cover.webp')
+                ->toMediaCollection('cover');
+        } catch (Throwable $e) {
+            Log::warning('JikanSeasonSyncService: could not attach cover for title', [
+                'title_id' => $title->id,
+                'name' => $title->name,
+                'url' => $imageUrl,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    protected function getCoverImageUrlFromCloud(mixed $cloudTitle): ?string
+    {
+        $images = $cloudTitle->getImages();
+        if ($images === null) {
+            return null;
+        }
+        $webp = method_exists($images, 'getWebp') ? $images->getWebp() : null;
+        if ($webp === null) {
+            return null;
+        }
+        $url = method_exists($webp, 'getLargeImageUrl') ? $webp->getLargeImageUrl() : null;
+        if ($url === null || $url === '' || $url === self::MAL_PLACEHOLDER_IMAGE) {
+            return null;
+        }
+
+        return $url;
     }
 }

@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\TitleStatus;
 use App\Http\Requests\TitleStoreRequest;
 use App\Http\Requests\TitleUpdateRequest;
+use App\Jobs\EnrichTitleFromMalJob;
 use App\Models\Genre;
 use App\Services\JikanSeasonSyncService;
 use App\Models\Helper;
@@ -26,6 +27,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Image;
@@ -313,6 +315,15 @@ class TitleController extends Controller
     public function show(Request $request, $id)
     {
         if ($title = Title::with('genres', 'type', 'images', 'users', 'rating')->find($id)) {
+            if ($title->hasMissingMalInfo()) {
+                try {
+                    EnrichTitleFromMalJob::dispatch($title->id);
+                    Log::info('TitleController::show: dispatched EnrichTitleFromMalJob', ['title_id' => $title->id, 'name' => $title->name]);
+                } catch (\Throwable $e) {
+                    Log::warning('TitleController::show: could not dispatch EnrichTitleFromMalJob', ['title_id' => $title->id, 'error' => $e->getMessage()]);
+                }
+            }
+
             $ratings = Ratings::all();
             $genres = Genre::all();
             $types = TitleType::all();
@@ -809,11 +820,14 @@ class TitleController extends Controller
             $title = Title::where('type_id', $type_id)->where('slug', '=', $slug)->first();
             $title = $title->load('images', 'rating', 'type', 'genres', 'users', 'posts');
 
-            /*try{
-                HiddenSeeker::updateSeriesByTitle($title, $type);
-            }catch(\Exception $e){
-                echo $e;
-            }*/
+            if ($title->hasMissingMalInfo()) {
+                try {
+                    EnrichTitleFromMalJob::dispatch($title->id);
+                    Log::info('TitleController::apiShowTitle: dispatched EnrichTitleFromMalJob', ['title_id' => $title->id, 'name' => $title->name]);
+                } catch (\Throwable $e) {
+                    Log::warning('TitleController::apiShowTitle: could not dispatch EnrichTitleFromMalJob', ['title_id' => $title->id, 'error' => $e->getMessage()]);
+                }
+            }
 
             $rates = Rate::all();
             $statistics = Statistics::all();
@@ -913,7 +927,7 @@ class TitleController extends Controller
                         'text' => 'Posts encontrados',
                     ],
                     'title' => 'Coanime.net - Posts - '.$slug,
-                    'descripcion' => 'Posts de la Enciclopedia en el aparatado de '.$slug,
+                    'description' => 'Posts de la Enciclopedia en el aparatado de '.$slug,
                     'quantity' => $postsCount,
                     'data' => $posts,
                 ], 200);

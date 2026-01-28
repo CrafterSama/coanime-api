@@ -130,6 +130,58 @@ class Title extends Model implements HasMedia
         ]);
     }
 
+    /**
+     * Whether this title is missing MAL-enrichable info (cover, sinopsis, trailer, genres, etc.).
+     * Used by TitleObserver to dispatch EnrichTitleFromMalJob. Requires type_id.
+     */
+    public function hasMissingMalInfo(): bool
+    {
+        if ($this->type_id === null) {
+            return false;
+        }
+
+        if ($this->getFirstMedia('cover') === null) {
+            return true;
+        }
+
+        $synopsis = trim((string) ($this->sinopsis ?? ''));
+        $placeholders = [
+            'Sinopsis no disponible',
+            'Sinopsis no disponible.',
+            'Pendiente de agregar sinopsis...',
+            'Sinopsis en Proceso',
+        ];
+        if ($synopsis === '' || in_array($synopsis, $placeholders, true)) {
+            return true;
+        }
+
+        if ($this->trailer_url === null || $this->trailer_url === '') {
+            return true;
+        }
+
+        if ($this->genres()->count() === 0) {
+            return true;
+        }
+
+        if ($this->rating_id === null || $this->rating_id === 7) {
+            return true;
+        }
+
+        if ($this->episodies === null || (int) $this->episodies === 0) {
+            return true;
+        }
+
+        $zero = '0000-00-00 00:00:00';
+        if ($this->broad_time === null || $this->broad_time === $zero) {
+            return true;
+        }
+        if ($this->broad_finish === null || $this->broad_finish === $zero) {
+            return true;
+        }
+
+        return false;
+    }
+
     /*public function scopeByGenre($genre, $query) {
         return $query->whereHas('Genre', function ($q) use ($genre) {
             $q->where('genre_id', $genre->id);
