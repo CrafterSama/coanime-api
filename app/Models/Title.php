@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Casts\TitleStatusCast;
 use App\Enums\TitleStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,7 +40,7 @@ class Title extends Model implements HasMedia
      * @var array<string, string>
      */
     protected $casts = [
-        'status' => TitleStatus::class,
+        'status' => TitleStatusCast::class,
     ];
 
     /**

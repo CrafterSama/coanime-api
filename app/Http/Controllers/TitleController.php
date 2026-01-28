@@ -729,12 +729,16 @@ class TitleController extends Controller
         $types = TitleType::orderBy('name', 'asc')->get();
         $genres = Genre::orderBy('name', 'asc')->get();
 
+        $descripcion = 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros';
+        $keywords = 'TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros';
+
         return response()->json([
             'code' => 200,
             'message' => Helper::successMessage('Titulos encontrados'),
             'title' => 'Coanime.net - Titulos',
-            'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
-            'keywords' => 'TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
+            'descripcion' => $descripcion,
+            'description' => $descripcion,
+            'keywords' => $keywords,
             'result' => $titles,
             'types' => $types,
             'genres' => $genres,
