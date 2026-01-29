@@ -146,6 +146,15 @@ class MediaController extends Controller
                         } elseif ($model instanceof \App\Models\Magazine) {
                             $modelTitle = $model->name ?? null;
                             $modelSlug = $model->slug ?? null;
+                        } elseif ($model instanceof \App\Models\People) {
+                            $modelTitle = $model->name ?? null;
+                            $modelSlug = $model->slug ?? null;
+                        } elseif ($model instanceof \App\Models\Company) {
+                            $modelTitle = $model->name ?? null;
+                            $modelSlug = $model->slug ?? null;
+                        } elseif ($model instanceof \App\Models\Event) {
+                            $modelTitle = $model->name ?? null;
+                            $modelSlug = $model->slug ?? null;
                         }
                     }
                 } catch (\Exception $e) {
@@ -260,6 +269,15 @@ class MediaController extends Controller
                 $modelTitle = $model->name;
                 $modelSlug = $model->slug;
             } elseif ($model instanceof \App\Models\Magazine) {
+                $modelTitle = $model->name;
+                $modelSlug = $model->slug;
+            } elseif ($model instanceof \App\Models\People) {
+                $modelTitle = $model->name;
+                $modelSlug = $model->slug;
+            } elseif ($model instanceof \App\Models\Company) {
+                $modelTitle = $model->name;
+                $modelSlug = $model->slug;
+            } elseif ($model instanceof \App\Models\Event) {
                 $modelTitle = $model->name;
                 $modelSlug = $model->slug;
             }

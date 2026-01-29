@@ -8,11 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class People extends Model
+class People extends Model implements HasMedia
 {
     use SoftDeletes;
     use LogsActivity;
+    use InteractsWithMedia;
 
     /**
      * The table associated with the model.
@@ -23,6 +27,28 @@ class People extends Model
 
     protected $dates = ['deleted_at', 'birthday', 'falldown_date', 'created_at', 'updated_at'];
     protected $fillable = ['name', 'japanese_name', 'areas_skills_hobbies', 'bio', 'city_id', 'country_code', 'slug', 'birthday', 'falldown', 'falldown_date', 'approved', 'image', 'user_id'];
+
+    /**
+     * Register media collections for People model (single cover/avatar).
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('default')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp']);
+    }
+
+    /**
+     * Register media conversions for People model.
+     */
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(300)
+            ->keepOriginalAspectRatio()
+            ->sharpen(10)
+            ->performOnCollections('default');
+    }
 
     public function scopeSearch($query, $name)
     {
@@ -59,14 +85,18 @@ class People extends Model
     }
 
     /**
-     * Get image URL - returns full URL for API/frontend (no legacy path building).
+     * Get image URL - from Spatie Media first, then legacy column for backward compatibility.
      */
     public function getImageAttribute($value)
     {
+        $media = $this->getFirstMedia('default');
+        if ($media) {
+            return $media->getUrl();
+        }
         if (empty($value)) {
             return null;
         }
-        if (str_starts_with($value, 'http')) {
+        if (str_starts_with((string) $value, 'http')) {
             return $value;
         }
 

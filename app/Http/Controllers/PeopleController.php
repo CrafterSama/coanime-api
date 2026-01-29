@@ -186,6 +186,27 @@ class PeopleController extends Controller
     }
 
     /**
+     * Return countries and cities for the people create/edit form.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function formFilters()
+    {
+        $countries = Country::orderBy('name', 'asc')->get(['iso3 as id', 'name']);
+        $cities = City::orderBy('name', 'asc')->get(['id', 'name']);
+
+        return response()->json([
+            'code' => 200,
+            'message' => [
+                'type' => 'success',
+                'text' => 'Filtros cargados',
+            ],
+            'countries' => $countries,
+            'cities' => $cities,
+        ], 200);
+    }
+
+    /**
      * Show the form for creating a new resource.
      *
      * @return \Illuminate\Http\JsonResponse
@@ -236,39 +257,13 @@ class PeopleController extends Controller
             $request['slug'] = Str::slug($request['name']).'1';
         }
 
-        if ($request->file('image-client')) {
-                $file = $request->file('image-client');
-                //Creamos una instancia de la libreria instalada
-                $image = Image::make($request->file('image-client')->getRealPath());
-                //Ruta donde queremos guardar las imagenes
-                $originalPath = public_path().'/images/encyclopedia/people/';
-                //Ruta donde se guardaran los Thumbnails
-                $thumbnailPath = public_path().'/images/encyclopedia/people/thumbnails/';
-                // Guardar Original
-                $fileName = hash('sha256', Str::slug($request['name']).strval(time()));
-
-                $watermark = Image::make(public_path().'/images/logo_homepage.png');
-
-                $watermark->opacity(30);
-
-                $image->insert($watermark, 'bottom-right', 10, 10);
-
-                $image->save($originalPath.$fileName.'.jpg');
-                // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-                $image->resize(300, null, function ($constraint) {
-                    $constraint->aspectRatio();
-                });
-                // Guardar
-                $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
-
-            $request['image'] = $fileName.'.jpg';
-        } else {
-            $request['image'] = null;
-        }
-
-        //dd($data);
+        $request['image'] = null;
 
         if ($data = People::create($request->all())) {
+            if ($request->file('image-client')) {
+                $data->clearMediaCollection('default');
+                $data->addMediaFromRequest('image-client')->toMediaCollection('default');
+            }
             return response()->json([
                 'code' => 200,
                 'message' => [
@@ -392,35 +387,11 @@ class PeopleController extends Controller
         $request['user_id'] = Auth::user()->id;
         $request['slug'] = Str::slug($request['name']);
 
-        if ($request->file('image-client')) {
-            $file = $request->file('image-client');
-            //Creamos una instancia de la libreria instalada
-            $image = Image::make($request->file('image-client')->getRealPath());
-            //Ruta donde queremos guardar las imagenes
-            $originalPath = public_path().'/images/encyclopedia/people/';
-            //Ruta donde se guardaran los Thumbnails
-            $thumbnailPath = public_path().'/images/encyclopedia/people/thumbnails/';
-            // Guardar Original
-            $fileName = hash('sha256', Str::slug($request['name']).strval(time()));
-
-            $watermark = Image::make(public_path().'/images/logo_homepage.png');
-
-            $watermark->opacity(30);
-
-            $image->insert($watermark, 'bottom-right', 10, 10);
-
-            $image->save($originalPath.$fileName.'.jpg');
-            // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-            $image->resize(300, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-            // Guardar
-            $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
-
-            $request['image'] = $fileName.'.jpg';
-        }
-
         if ($data->update($request->all())) {
+            if ($request->file('image-client')) {
+                $data->clearMediaCollection('default');
+                $data->addMediaFromRequest('image-client')->toMediaCollection('default');
+            }
             return response()->json([
                 'code' => 200,
                 'message' => [

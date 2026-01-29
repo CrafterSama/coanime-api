@@ -172,6 +172,10 @@ class CompanyController extends Controller
 
             try {
                 $data = Company::create($request->all());
+                if ($request->file('image-client')) {
+                    $data->clearMediaCollection('default');
+                    $data->addMediaFromRequest('image-client')->toMediaCollection('default');
+                }
 
                 return response()->json([
                     'code' => 200,
@@ -278,7 +282,11 @@ class CompanyController extends Controller
         $request['edited_by'] = Auth::user()->id;
 
         try {
-            if ($data->update($request->all())) {
+            if ($data->update($request->except(['image-client']))) {
+                if ($request->file('image-client')) {
+                    $data->clearMediaCollection('default');
+                    $data->addMediaFromRequest('image-client')->toMediaCollection('default');
+                }
                 return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage('Entity updated successfully'),
