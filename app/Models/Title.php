@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Casts\TitleStatusCast;
 use App\Enums\TitleStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,11 +15,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Title extends Model
+class Title extends Model implements HasMedia
 {
     use SoftDeletes;
     use LogsActivity;
+    use InteractsWithMedia;
 
     /**
      * The attributes that should be mutated to dates.
@@ -35,8 +40,15 @@ class Title extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'status' => TitleStatus::class,
+        'status' => TitleStatusCast::class,
     ];
+
+    /**
+     * Accessors to append to array/JSON (cover uses Spatie media; fallback to images).
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['cover_image_url'];
 
     /**
      * The table associated with the model.
@@ -104,7 +116,7 @@ class Title extends Model
     }
 
     /**
-     * Scope to filter active titles (Estreno or En emisión)
+     * Scope to filter active titles (Estreno, En emisión or Publicándose)
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -114,7 +126,60 @@ class Title extends Model
         return $query->whereIn('status', [
             TitleStatus::ESTRENO->value,
             TitleStatus::EN_EMISION->value,
+            TitleStatus::PUBLICANDOSE->value,
         ]);
+    }
+
+    /**
+     * Whether this title is missing MAL-enrichable info (cover, sinopsis, trailer, genres, etc.).
+     * Used by TitleObserver to dispatch EnrichTitleFromMalJob. Requires type_id.
+     */
+    public function hasMissingMalInfo(): bool
+    {
+        if ($this->type_id === null) {
+            return false;
+        }
+
+        if ($this->getFirstMedia('cover') === null) {
+            return true;
+        }
+
+        $synopsis = trim((string) ($this->sinopsis ?? ''));
+        $placeholders = [
+            'Sinopsis no disponible',
+            'Sinopsis no disponible.',
+            'Pendiente de agregar sinopsis...',
+            'Sinopsis en Proceso',
+        ];
+        if ($synopsis === '' || in_array($synopsis, $placeholders, true)) {
+            return true;
+        }
+
+        if ($this->trailer_url === null || $this->trailer_url === '') {
+            return true;
+        }
+
+        if ($this->genres()->count() === 0) {
+            return true;
+        }
+
+        if ($this->rating_id === null || $this->rating_id === 7) {
+            return true;
+        }
+
+        if ($this->episodies === null || (int) $this->episodies === 0) {
+            return true;
+        }
+
+        $zero = '0000-00-00 00:00:00';
+        if ($this->broad_time === null || $this->broad_time === $zero) {
+            return true;
+        }
+        if ($this->broad_finish === null || $this->broad_finish === $zero) {
+            return true;
+        }
+
+        return false;
     }
 
     /*public function scopeByGenre($genre, $query) {
@@ -184,6 +249,78 @@ class Title extends Model
         }
 
         return Carbon::parse($value)->format('Y-m-d');
+    }
+
+    /**
+     * Register media collections for Title model
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('cover')
+            ->singleFile()
+            ->useDisk('s3')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    }
+
+    /**
+     * Register media conversions for Title model
+     */
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(300)
+            ->height(450)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('cover');
+
+        $this->addMediaConversion('medium')
+            ->width(600)
+            ->height(900)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('cover');
+
+        $this->addMediaConversion('large')
+            ->width(1200)
+            ->height(1800)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('cover');
+    }
+
+    /**
+     * Get cover image URL - compatible with old code
+     * Falls back to old 'images' relationship if media doesn't exist
+     * Returns original URL if media is a placeholder
+     */
+    public function getCoverImageUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('cover');
+        if ($media) {
+            // If it's a placeholder, return the original URL
+            if ($media->getCustomProperty('is_placeholder', false)) {
+                return $media->getCustomProperty('original_url', $this->images?->name);
+            }
+            return $media->getUrl();
+        }
+
+        // Fallback to old relationship
+        return $this->images?->name;
+    }
+
+    /**
+     * Get thumbnail URL
+     */
+    public function getThumbnailUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('cover');
+        if ($media) {
+            return $media->getUrl('thumb');
+        }
+
+        // Fallback to old relationship
+        return $this->images?->thumbnail ?? $this->images?->name;
     }
 
     /**

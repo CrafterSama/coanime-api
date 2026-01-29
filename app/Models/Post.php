@@ -12,11 +12,15 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Post extends Model
+class Post extends Model implements HasMedia
 {
     use SoftDeletes;
     use LogsActivity;
+    use InteractsWithMedia;
 
     /**
      * The attributes that should be mutated to dates.
@@ -193,6 +197,83 @@ class Post extends Model
                 'categories.name as category_name',
                 'categories.slug as category_slug'
             );
+    }
+
+    /**
+     * Register media collections for Post model
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('featured-image')
+            ->singleFile()
+            ->useDisk('s3')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    }
+
+    /**
+     * Register media conversions for Post model
+     */
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(300)
+            ->height(300)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured-image');
+
+        $this->addMediaConversion('medium')
+            ->width(800)
+            ->height(600)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured-image');
+
+        $this->addMediaConversion('large')
+            ->width(1920)
+            ->height(1080)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured-image');
+    }
+
+    /**
+     * Get image URL - compatible with old code
+     * Falls back to old 'image' field if media doesn't exist
+     * Returns original URL if media is a placeholder
+     */
+    public function getImageAttribute($value)
+    {
+        // Try to get from Media Library first
+        $media = $this->getFirstMedia('featured-image');
+        if ($media) {
+            // If it's a placeholder, return the original URL
+            if ($media->getCustomProperty('is_placeholder', false)) {
+                return $media->getCustomProperty('original_url', $value);
+            }
+            return $media->getUrl();
+        }
+
+        // Fallback to old field
+        return $value;
+    }
+
+    /**
+     * Get thumbnail URL
+     */
+    public function getThumbnailUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('featured-image');
+        return $media ? $media->getUrl('thumb') : null;
+    }
+
+    /**
+     * Get medium image URL
+     */
+    public function getMediumImageUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('featured-image');
+        return $media ? $media->getUrl('medium') : null;
     }
 
     /**

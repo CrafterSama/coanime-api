@@ -141,11 +141,47 @@ class UserController extends Controller
         $user->facebook = $request->facebook;
         $user->tiktok = $request->tiktok;
         $user->pinterest = $request->pinterest;
-        if ($request->profile_photo_path) {
-            $user->profile_photo_path = $request->profile_photo_path;
+        
+        // Handle avatar upload via Media Library
+        if ($request->hasFile('profile_photo_path')) {
+            $user->clearMediaCollection('avatar');
+            $user->addMediaFromRequest('profile_photo_path')
+                ->usingName("User {$user->id} - {$user->name} - Avatar")
+                ->toMediaCollection('avatar');
+        } elseif ($request->profile_photo_path) {
+            // If it's a URL (from ImageController), add from URL
+            $existingMedia = $user->getFirstMedia('avatar');
+            if (!$existingMedia || $existingMedia->getUrl() !== $request->profile_photo_path) {
+                try {
+                    $user->clearMediaCollection('avatar');
+                    $user->addMediaFromUrl($request->profile_photo_path)
+                        ->usingName("User {$user->id} - {$user->name} - Avatar")
+                        ->toMediaCollection('avatar');
+                } catch (\Exception $e) {
+                    \Log::warning("Could not add avatar from URL for user {$user->id}: " . $e->getMessage());
+                }
+            }
         }
-        if ($request->profile_cover_path) {
-            $user->profile_cover_path = $request->profile_cover_path;
+        
+        // Handle cover upload via Media Library
+        if ($request->hasFile('profile_cover_path')) {
+            $user->clearMediaCollection('cover');
+            $user->addMediaFromRequest('profile_cover_path')
+                ->usingName("User {$user->id} - {$user->name} - Cover")
+                ->toMediaCollection('cover');
+        } elseif ($request->profile_cover_path) {
+            // If it's a URL (from ImageController), add from URL
+            $existingMedia = $user->getFirstMedia('cover');
+            if (!$existingMedia || $existingMedia->getUrl() !== $request->profile_cover_path) {
+                try {
+                    $user->clearMediaCollection('cover');
+                    $user->addMediaFromUrl($request->profile_cover_path)
+                        ->usingName("User {$user->id} - {$user->name} - Cover")
+                        ->toMediaCollection('cover');
+                } catch (\Exception $e) {
+                    \Log::warning("Could not add cover from URL for user {$user->id}: " . $e->getMessage());
+                }
+            }
         }
         try {
             if ($user->save()) {

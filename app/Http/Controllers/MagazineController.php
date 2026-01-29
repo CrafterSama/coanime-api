@@ -8,6 +8,7 @@ use App\Models\Magazine;
 use App\Models\MagazineImage;
 use App\Models\MagazineType;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class MagazineController extends Controller
@@ -58,7 +59,7 @@ class MagazineController extends Controller
         // Get filter options (solo si se solicita con ?include_filters=1)
         if ($request->get('include_filters')) {
             $types = \App\Models\MagazineType::orderBy('name', 'asc')->get();
-            $releases = \App\Models\Release::orderBy('name', 'asc')->get();
+            $releases = \App\Models\MagazineRelease::orderBy('name', 'asc')->get();
             $countries = \App\Models\Country::whereHas('magazines')->orderBy('name', 'asc')->get(['iso3 as id', 'name']);
 
             return response()->json([
@@ -188,46 +189,24 @@ class MagazineController extends Controller
         $data = new Magazine();
 
         $request['slug'] = Str::slug($request['name']);
-
-        $file = $request->file('image-client');
-        //Creamos una instancia de la libreria instalada
-        $image = Image::make($request->file('image-client')->getRealPath());
-        //Ruta donde queremos guardar las imagenes
-        $originalPath = public_path().'/images/encyclopedia/magazine/';
-        //Ruta donde se guardaran los Thumbnails
-        $thumbnailPath = public_path().'/images/encyclopedia/magazine/thumbnails/';
-        // Guardar Original
-        $fileName = hash('sha256', $request['slug'].strval(time()));
-
-        $watermark = Image::make(public_path().'/images/logo_homepage.png');
-
-        $watermark->opacity(30);
-
-        $image->insert($watermark, 'bottom-right', 10, 10);
-
-        $image->save($originalPath.$fileName.'.jpg');
-
-        // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-        $image->resize(300, null, function ($constraint) {
-            $constraint->aspectRatio();
-        });
-
-        // Guardar
-        $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
-
         $request['user_id'] = Auth::user()->id;
 
         if (Magazine::where('slug', 'like', $request['slug'])->count() > 0) {
             $request['slug'] = Str::slug($request['name']).'-01';
         }
-        $request['images'] = $fileName.'.jpg';
 
+        // Remove images from data array - we'll handle it separately with Media Library
         $data = $request->all();
+        unset($data['images']);
+        unset($data['image-client']);
 
         if ($data = Magazine::create($data)) {
-            $image = $data->image ?: new MagazineImage();
-            $image->name = $request['images'];
-            $data->image()->save($image);
+            // Handle image upload via Media Library
+            if ($request->hasFile('image-client')) {
+                $data->addMediaFromRequest('image-client')
+                    ->usingName("Magazine {$data->id} - {$data->name}")
+                    ->toMediaCollection('cover');
+            }
 
             return response()->json([
                 'code' => 200,
@@ -342,46 +321,24 @@ class MagazineController extends Controller
 
         $data = Magazine::find($id);
 
-        if ($request->file('image-client')) {
-            $file = $request->file('image-client');
-            //Creamos una instancia de la libreria instalada
-            $image = Image::make($request->file('image-client')->getRealPath());
-            //Ruta donde queremos guardar las imagenes
-            $originalPath = public_path().'/images/encyclopedia/magazine/';
-            //Ruta donde se guardaran los Thumbnails
-            $thumbnailPath = public_path().'/images/encyclopedia/magazine/thumbnails/';
-            // Guardar Original
-            $fileName = hash('sha256', Str::slug($request['name']).strval(time()));
-
-            $watermark = Image::make(public_path().'/images/logo_homepage.png');
-
-            $watermark->opacity(30);
-
-            $image->insert($watermark, 'bottom-right', 10, 10);
-
-            $image->save($originalPath.$fileName.'.jpg');
-
-            // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-            $image->resize(300, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-            // Guardar
-            $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
-
-            $request['images'] = $fileName.'.jpg';
-        }
+        // Handle image separately for Media Library
+        $updateData = $request->all();
+        unset($updateData['images']);
+        unset($updateData['image-client']);
 
         $request['user_id'] = Auth::user()->id;
         $request['slug'] = Str::slug($request['name']);
-        /*if(Magazine::where('slug','like', $request['slug'])->count() > 0):
-            $request['slug'] = Str::slug($request['name']).'-01';
-        */
 
-        if ($data->update($request->all())) {
-            if ($request->file('image-client')) {
-                $image = $data->image ?: MagazineImage::where('magazine_id', $id);
-                $image->name = $request['images'];
-                $data->image()->save($image);
+        if ($data->update($updateData)) {
+            // Handle image upload via Media Library
+            if ($request->hasFile('image-client')) {
+                // Remove old image
+                $data->clearMediaCollection('cover');
+                
+                // Add new image
+                $data->addMediaFromRequest('image-client')
+                    ->usingName("Magazine {$data->id} - {$data->name}")
+                    ->toMediaCollection('cover');
             }
 
             return response()->json([

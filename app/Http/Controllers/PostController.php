@@ -660,8 +660,28 @@ class PostController extends Controller
             $data['postponed_to'] = Carbon::now()->format('Y-m-d H:i:s');
         }
 
+        // Remove image from data array - we'll handle it separately with Media Library
+        $imageUrl = $data['image'] ?? null;
+        unset($data['image']);
+
         try {
             if ($data = Post::create($data)) {
+                // Handle image upload via Media Library
+                if ($request->hasFile('image')) {
+                    $data->addMediaFromRequest('image')
+                        ->usingName("Post {$data->id} - {$data->title}")
+                        ->toMediaCollection('featured-image');
+                } elseif ($imageUrl) {
+                    // If image is a URL (from ImageController), add from URL
+                    try {
+                        $data->addMediaFromUrl($imageUrl)
+                            ->usingName("Post {$data->id} - {$data->title}")
+                            ->toMediaCollection('featured-image');
+                    } catch (\Exception $e) {
+                        \Log::warning("Could not add image from URL for post {$data->id}: " . $e->getMessage());
+                    }
+                }
+
                 if (! empty($request['title_id'])) {
                     $data->titles()->sync([$request['title_id']]);
                 }
@@ -1081,6 +1101,9 @@ class PostController extends Controller
             $currentUser = Auth::user()->id;
             $data = new Post();
             $data->user_id = $currentUser;
+            $data->category_id = 1;
+            $data->draft = PostDraft::DRAFT->value;
+            $data->postponed_to = Carbon::now()->format('Y-m-d H:i:s');
             $data->save();
             $id = $data->id;
         }
@@ -1135,6 +1158,38 @@ class PostController extends Controller
         //dd($data['postponed_to']);
 
         $data['draft'] = PostDraft::PUBLISHED->value;
+
+        // Handle image upload via Media Library
+        if ($request->hasFile('image')) {
+            // Remove old image from Media Library
+            $data->clearMediaCollection('featured-image');
+            
+            // Add new image
+            $data->addMediaFromRequest('image')
+                ->usingName("Post {$data->id} - {$request->title}")
+                ->toMediaCollection('featured-image');
+            
+            // Remove image from post array to avoid saving URL in old field
+            unset($post['image']);
+        } elseif ($request->has('image') && $request->image) {
+            // If image is a URL (from ImageController), check if it's already in Media Library
+            $existingMedia = $data->getFirstMedia('featured-image');
+            if (!$existingMedia || $existingMedia->getUrl() !== $request->image) {
+                // If URL is different, try to add from URL
+                // Note: This assumes the URL is accessible
+                try {
+                    $data->clearMediaCollection('featured-image');
+                    $data->addMediaFromUrl($request->image)
+                        ->usingName("Post {$data->id} - {$request->title}")
+                        ->toMediaCollection('featured-image');
+                } catch (\Exception $e) {
+                    // If URL is not accessible, keep the old behavior for backward compatibility
+                    \Log::warning("Could not add image from URL for post {$data->id}: " . $e->getMessage());
+                }
+            }
+            // Remove image from post array
+            unset($post['image']);
+        }
 
         if ($data->update($post)) {
             if (! empty($request['title_id'])) {

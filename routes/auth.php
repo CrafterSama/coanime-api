@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AnimeController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -168,5 +169,16 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('users', [UserController::class, 'index'])->name('users');
         Route::get('me', [UserController::class, 'me'])->name('me');
         Route::put('me', [UserController::class, 'updateMe'])->name('me.update');
+
+        // ** Auth Media Endpoints **
+        Route::get('media', [\App\Http\Controllers\MediaController::class, 'index'])->name('media');
+        Route::get('media/{id}', [\App\Http\Controllers\MediaController::class, 'show']);
+        Route::put('media/{id}', [\App\Http\Controllers\MediaController::class, 'update']);
+
+        // ** Activity Logs (dashboard) **
+        Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs');
+        Route::get('activity-logs/stats', [ActivityLogController::class, 'stats']);
+        Route::get('activity-logs/user/{userId}', [ActivityLogController::class, 'userLogs']);
+        Route::get('activity-logs/{id}', [ActivityLogController::class, 'show']);
     });
 });

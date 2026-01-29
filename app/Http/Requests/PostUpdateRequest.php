@@ -30,7 +30,22 @@ class PostUpdateRequest extends FormRequest
             'file' => ['nullable', 'image', 'mimes:jpg,jpeg,gif,bmp,png', 'max:2048'],
             'postponed_to' => ['nullable', 'date_format:Y-m-d H:i:s'],
             'tag_id' => ['nullable', 'array'],
-            'tag_id.*' => ['nullable', 'integer', 'exists:tags,id'],
+            'tag_id.*' => [
+                'nullable',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_numeric($value)) {
+                        if (! \App\Models\Tag::where('id', (int) $value)->exists()) {
+                            $fail('El tag seleccionado no es válido.');
+                        }
+                    } elseif (is_string($value)) {
+                        if (strlen($value) > 255) {
+                            $fail('El nombre del tag no puede exceder 255 caracteres.');
+                        }
+                    } else {
+                        $fail('Cada tag debe ser un ID numérico o un nombre.');
+                    }
+                },
+            ],
             'title_id' => ['nullable', 'integer', 'exists:titles,id'],
         ];
     }

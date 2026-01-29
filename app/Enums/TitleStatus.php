@@ -9,6 +9,7 @@ enum TitleStatus: string
     case ESTRENO = 'Estreno';
     case FINALIZADO = 'Finalizado';
     case EN_EMISION = 'En emisión';
+    case PUBLICANDOSE = 'Publicándose';
 
     /**
      * Get all values as array
@@ -31,6 +32,7 @@ enum TitleStatus: string
             self::ESTRENO => 'Estreno',
             self::FINALIZADO => 'Finalizado',
             self::EN_EMISION => 'En emisión',
+            self::PUBLICANDOSE => 'Publicándose',
         };
     }
 
@@ -94,13 +96,23 @@ enum TitleStatus: string
     }
 
     /**
-     * Check if title is currently active (En emisión or Estreno)
+     * Check if status is Publicándose
+     *
+     * @return bool
+     */
+    public function isPublicandose(): bool
+    {
+        return $this === self::PUBLICANDOSE;
+    }
+
+    /**
+     * Check if title is currently active (En emisión, Estreno or Publicándose)
      *
      * @return bool
      */
     public function isActive(): bool
     {
-        return $this === self::EN_EMISION || $this === self::ESTRENO;
+        return $this === self::EN_EMISION || $this === self::ESTRENO || $this === self::PUBLICANDOSE;
     }
 
     /**
@@ -114,6 +126,7 @@ enum TitleStatus: string
             self::ESTRENO => 'text-purple-600 bg-purple-50',
             self::FINALIZADO => 'text-gray-600 bg-gray-50',
             self::EN_EMISION => 'text-green-600 bg-green-50',
+            self::PUBLICANDOSE => 'text-green-600 bg-green-50',
         };
     }
 
@@ -128,6 +141,7 @@ enum TitleStatus: string
             self::ESTRENO => 'star',
             self::FINALIZADO => 'check-circle',
             self::EN_EMISION => 'play-circle',
+            self::PUBLICANDOSE => 'play-circle',
         };
     }
 }
