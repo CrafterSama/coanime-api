@@ -311,6 +311,7 @@ class MediaController extends Controller
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'file' => 'sometimes|file|image|max:10240', // 10MB max
+            'url' => 'sometimes|url',
         ]);
 
         // Update name if provided
@@ -318,13 +319,56 @@ class MediaController extends Controller
             $media->name = $request->name;
         }
 
-        // Replace file if provided
+        $model = $media->model;
+        $collectionName = $media->collection_name;
+        $mediaName = $request->name ?? $media->name;
+
+        // Replace file from URL if provided
+        $imageUrl = $request->input('url');
+        if ($imageUrl && !$request->hasFile('file')) {
+            if (!$model) {
+                return response()->json([
+                    'code' => 404,
+                    'message' => 'Model not found for this media',
+                ], 404);
+            }
+            try {
+                $media->delete();
+                $newMedia = $model->addMediaFromUrl($imageUrl)
+                    ->usingName($mediaName)
+                    ->toMediaCollection($collectionName);
+                if ($newMedia->getCustomProperty('is_placeholder', false)) {
+                    $customProperties = $newMedia->custom_properties ?? [];
+                    unset($customProperties['is_placeholder']);
+                    unset($customProperties['file_not_accessible']);
+                    $newMedia->custom_properties = $customProperties;
+                    $newMedia->save();
+                }
+                return response()->json([
+                    'code' => 200,
+                    'message' => 'Media updated successfully',
+                    'data' => [
+                        'id' => $newMedia->id,
+                        'name' => $newMedia->name,
+                        'file_name' => $newMedia->file_name,
+                        'url' => $newMedia->getUrl(),
+                    ],
+                ], 200);
+            } catch (\Throwable $e) {
+                \Log::warning('MediaController: could not add media from URL', [
+                    'media_id' => $id,
+                    'url' => $imageUrl,
+                    'error' => $e->getMessage(),
+                ]);
+                return response()->json([
+                    'code' => 422,
+                    'message' => 'Could not load image from URL. Check that the URL is public and points to an image.',
+                ], 422);
+            }
+        }
+
+        // Replace file from upload if provided
         if ($request->hasFile('file')) {
-            // Get the model before deleting
-            $model = $media->model;
-            $collectionName = $media->collection_name;
-            $mediaName = $request->name ?? $media->name;
-            
             if (!$model) {
                 return response()->json([
                     'code' => 404,
@@ -332,15 +376,12 @@ class MediaController extends Controller
                 ], 404);
             }
 
-            // Delete old file
             $media->delete();
 
-            // Add new file
             $newMedia = $model->addMediaFromRequest('file')
                 ->usingName($mediaName)
                 ->toMediaCollection($collectionName);
 
-            // If it was a placeholder, remove placeholder flag
             if ($newMedia->getCustomProperty('is_placeholder', false)) {
                 $customProperties = $newMedia->custom_properties ?? [];
                 unset($customProperties['is_placeholder']);
