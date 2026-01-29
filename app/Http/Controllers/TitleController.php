@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\TitleStatus;
 use App\Http\Requests\TitleStoreRequest;
 use App\Http\Requests\TitleUpdateRequest;
+use App\Jobs\EnrichTitleFromMalJob;
 use App\Models\Genre;
+use App\Services\JikanSeasonSyncService;
 use App\Models\Helper;
 use App\Models\HiddenSeeker;
 use App\Models\Post;
@@ -24,6 +27,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Image;
@@ -53,8 +57,8 @@ class TitleController extends Controller
         }
 
         if ($request->has('genre_id') && $request->genre_id) {
-            $query->whereHas('genres', function($q) use ($request) {
-                $q->where('genres.id', $request->genre_id);
+            $query->whereHas('genres', function ($q) use ($request) {
+                $q->where('genre.id', $request->genre_id);
             });
         }
 
@@ -249,12 +253,34 @@ class TitleController extends Controller
             }
 
             $data = $request->all();
+            
+            // Remove images from data array - we'll handle it separately with Media Library
+            $imageUrl = $data['images'] ?? null;
+            unset($data['images']);
 
             if ($data = Title::create($data)) {
-                $images = $data->images ?: new TitleImage();
-                $images->name = $request['images'];
-                $images->thumbnail = $request['images'];
-                $data->images()->save($images);
+                // Handle image upload via Media Library
+                if ($request->hasFile('images')) {
+                    $data->addMediaFromRequest('images')
+                        ->usingName("Title {$data->id} - {$data->name}")
+                        ->toMediaCollection('cover');
+                } elseif ($imageUrl) {
+                    // If image is a URL (from ImageController), add from URL
+                    try {
+                        $media = $data->addMediaFromUrl($imageUrl)
+                            ->usingName("Title {$data->id} - {$data->name}")
+                            ->toMediaCollection('cover');
+                        
+                        // Store thumbnail URL in custom properties if provided
+                        if ($request->has('thumbnail') && $request->thumbnail !== $imageUrl) {
+                            $media->setCustomProperty('original_thumbnail', $request->thumbnail);
+                            $media->save();
+                        }
+                    } catch (\Exception $e) {
+                        \Log::warning("Could not add image from URL for title {$data->id}: " . $e->getMessage());
+                    }
+                }
+                
                 $data->genres()->sync($request['genre_id']);
 
                 return response()->json([
@@ -289,6 +315,15 @@ class TitleController extends Controller
     public function show(Request $request, $id)
     {
         if ($title = Title::with('genres', 'type', 'images', 'users', 'rating')->find($id)) {
+            if ($title->hasMissingMalInfo()) {
+                try {
+                    EnrichTitleFromMalJob::dispatch($title->id);
+                    Log::info('TitleController::show: dispatched EnrichTitleFromMalJob', ['title_id' => $title->id, 'name' => $title->name]);
+                } catch (\Throwable $e) {
+                    Log::warning('TitleController::show: could not dispatch EnrichTitleFromMalJob', ['title_id' => $title->id, 'error' => $e->getMessage()]);
+                }
+            }
+
             $ratings = Ratings::all();
             $genres = Genre::all();
             $types = TitleType::all();
@@ -339,17 +374,40 @@ class TitleController extends Controller
             $request['edited_by'] = Auth::user()->id;
             $request['slug'] = Str::slug($request['name']);
 
-            if ($data->update($request->all())) {
-                if ($request->images) {
-                    $images = '';
-                    if (TitleImage::where('title_id', $id)->count() > 0) {
-                        $images = $data->images ?: TitleImage::where('title_id', $id);
-                    } else {
-                        $images = $data->images ?: new TitleImage();
+            // Handle image separately for Media Library
+            $imageUrl = $request->images ?? null;
+            $updateData = $request->all();
+            unset($updateData['images']);
+
+            if ($data->update($updateData)) {
+                // Handle image upload via Media Library
+                if ($request->hasFile('images')) {
+                    // Remove old image
+                    $data->clearMediaCollection('cover');
+                    
+                    // Add new image
+                    $data->addMediaFromRequest('images')
+                        ->usingName("Title {$data->id} - {$data->name}")
+                        ->toMediaCollection('cover');
+                } elseif ($imageUrl) {
+                    // Check if image URL has changed
+                    $existingMedia = $data->getFirstMedia('cover');
+                    if (!$existingMedia || $existingMedia->getUrl() !== $imageUrl) {
+                        try {
+                            $data->clearMediaCollection('cover');
+                            $media = $data->addMediaFromUrl($imageUrl)
+                                ->usingName("Title {$data->id} - {$data->name}")
+                                ->toMediaCollection('cover');
+                            
+                            // Store thumbnail URL in custom properties if provided
+                            if ($request->has('thumbnail') && $request->thumbnail !== $imageUrl) {
+                                $media->setCustomProperty('original_thumbnail', $request->thumbnail);
+                                $media->save();
+                            }
+                        } catch (\Exception $e) {
+                            \Log::warning("Could not add image from URL for title {$data->id}: " . $e->getMessage());
+                        }
                     }
-                    $images->name = $request['images'];
-                    $images->thumbnail = $request['images'];
-                    $data->images()->save($images);
                 }
 
                 $data->genres()->sync($request['genre_id']);
@@ -683,12 +741,16 @@ class TitleController extends Controller
         $types = TitleType::orderBy('name', 'asc')->get();
         $genres = Genre::orderBy('name', 'asc')->get();
 
+        $descripcion = 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros';
+        $keywords = 'TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros';
+
         return response()->json([
             'code' => 200,
             'message' => Helper::successMessage('Titulos encontrados'),
             'title' => 'Coanime.net - Titulos',
-            'descripcion' => 'Títulos de la Enciclopedia, estos estan compuestos por títulos de TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
-            'keywords' => 'TV, Mangas, Peliculas, Lives Actions, Doramas, Video Juegos, entre otros',
+            'descripcion' => $descripcion,
+            'description' => $descripcion,
+            'keywords' => $keywords,
             'result' => $titles,
             'types' => $types,
             'genres' => $genres,
@@ -723,7 +785,7 @@ class TitleController extends Controller
      */
     public function apiTitlesUpcoming(Request $request)
     {
-        if ($titles = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->where('broad_time', '>', Carbon::now())->where('status', 'Estreno')->orderBy('broad_time', 'asc')->paginate()) {
+        if ($titles = Title::with('images', 'rating', 'type', 'genres', 'users', 'posts')->where('broad_time', '>', Carbon::now())->where('status', \App\Enums\TitleStatus::ESTRENO->value)->orderBy('broad_time', 'asc')->paginate()) {
             return response()->json([
                 'code' => 200,
                 'message' => Helper::successMessage('Titulos encontrados'),
@@ -758,11 +820,14 @@ class TitleController extends Controller
             $title = Title::where('type_id', $type_id)->where('slug', '=', $slug)->first();
             $title = $title->load('images', 'rating', 'type', 'genres', 'users', 'posts');
 
-            /*try{
-                HiddenSeeker::updateSeriesByTitle($title, $type);
-            }catch(\Exception $e){
-                echo $e;
-            }*/
+            if ($title->hasMissingMalInfo()) {
+                try {
+                    EnrichTitleFromMalJob::dispatch($title->id);
+                    Log::info('TitleController::apiShowTitle: dispatched EnrichTitleFromMalJob', ['title_id' => $title->id, 'name' => $title->name]);
+                } catch (\Throwable $e) {
+                    Log::warning('TitleController::apiShowTitle: could not dispatch EnrichTitleFromMalJob', ['title_id' => $title->id, 'error' => $e->getMessage()]);
+                }
+            }
 
             $rates = Rate::all();
             $statistics = Statistics::all();
@@ -862,7 +927,7 @@ class TitleController extends Controller
                         'text' => 'Posts encontrados',
                     ],
                     'title' => 'Coanime.net - Posts - '.$slug,
-                    'descripcion' => 'Posts de la Enciclopedia en el aparatado de '.$slug,
+                    'description' => 'Posts de la Enciclopedia en el aparatado de '.$slug,
                     'quantity' => $postsCount,
                     'data' => $posts,
                 ], 200);
@@ -931,116 +996,39 @@ class TitleController extends Controller
 
     public function saveTitlesBySeason(Request $request)
     {
-        $jikan = Client::create();
-        $page = intval($request->get('page')) ?? 1;
-        $year = intval($request->get('year')) ?? 2024;
+        $page = (int) ($request->get('page') ?? 1) ?: 1;
+        $year = (int) ($request->get('year') ?? date('Y'));
         $season = $request->get('season') ?? 'winter';
-        try {
-            $results = $jikan->getSeason($year, $season, compact('page'));
-            $process = [];
-            //dd($results->getData());
-            $process[] = '<p>Pagina '.$page.'</p>';
-            foreach ($results->getData() as $key => $cloudTitle) {
-                $title = new Title();
-                $newGenres = [];
-                $title->name = $cloudTitle->getTitle();
 
-                $title->slug = Str::slug($cloudTitle->getTitle());
-                $title->user_id = 1;
-                $title->just_year = 'false';
-                if (Title::where('slug', $title->slug)->first()) {
-                    $process[] = '<p>'.$title->name.' Ya existe</p>';
-                } elseif ($cloudTitle->getType() === null || $cloudTitle->getType() === 'Unknown' || $cloudTitle->getType() === 'Music') {
-                    $process[] = '<p>'.$title->name.' No tiene determinado el Tipo</p>';
-                } else {
-                    $process[] = '<p>'.$title->name.' Procesando</p>';
+        $service = app(JikanSeasonSyncService::class);
+        $result = $service->sync(['year' => $year, 'season' => $season, 'page' => $page]);
 
-                    if ($cloudTitle?->getTitles() !== null) {
-                        $otherTitles = [];
-                        foreach ($cloudTitle->getTitles() as $value) {
-                            if (strtolower($value->getType()) === 'english') {
-                                $titleEnglish = $value->getTitle().' (Inglés)';
-                                if (!in_array($titleEnglish, $otherTitles)) {
-                                    $otherTitles[] = $titleEnglish;
-                                }
-                            }
-                            if (strtolower($value->getType()) === 'japanese') {
-                                $titleJapanese = $value->getTitle().' (Japonés)';
-                                if (!in_array($titleJapanese, $otherTitles)) {
-                                    $otherTitles[] = $titleJapanese;
-                                }
-                            }
-                            $title->other_titles = implode(', ', $otherTitles);
-                            //$title->save();
-                        }
-                    }
-
-
-                    if ((empty($title->sinopsis) || $title->sinopsis == 'Sinopsis no disponible' || $title->sinopsis == 'Pendiente de agregar sinopsis...' || $title->sinopsis == 'Sinopsis no disponible.' || $title->sinopsis == 'Sinopsis en Proceso') && $cloudTitle->getSynopsis() !== null) {
-                        $title->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
-                    }
-
-                    if ((empty($title->trailer_url) || $title->trailer_url === null || $title->trailer_url === '') && $cloudTitle->getTrailer()->getUrl() !== null) {
-                        $title->trailer_url = $cloudTitle->getTrailer()->getUrl();
-                    }
-
-                    if (empty($title->status) || HiddenSeeker::getStatus($cloudTitle->getStatus()) !== $title->status) {
-                        $title->status = HiddenSeeker::getStatus($cloudTitle->getStatus());
-                    }
-
-                    if (empty($title->type)) {
-                        $title->type_id = HiddenSeeker::getTypeById(strtolower($cloudTitle->getType()));
-                    }
-
-                    if (empty($title->rating_id) || $title->rating_id === 7) {
-                        $title->rating_id = is_null($cloudTitle->getRating()) ? $title->rating_id === 7 : HiddenSeeker::getRatingId(strtolower($cloudTitle->getRating()));
-                    }
-
-                    if ($title->episodies === 0 || $title->episodies === null || empty($title->episodies)) {
-                        $title->episodies = $cloudTitle->getEpisodes();
-                    }
-
-                    if ($title->broad_time === null || $title->broad_time === '0000-00-00 00:00:00') {
-                        $title->broad_time = Carbon::create($cloudTitle->getAired()->getFrom())->format('Y-m-d');
-                    }
-
-                    if ($title->broad_finish === null || $title->broad_finish === '0000-00-00 00:00:00') {
-                        $title->broad_finish = Carbon::create($cloudTitle->getAired()->getTo())->format('Y-m-d');
-                    }
-                    $title->save();
-
-                    if ($title->genres->count() === 0) {
-                        foreach ($cloudTitle->getGenres() as $key => $gen) {
-                            if ($gen !== '' || $gen !== null) {
-                                $newGenres[] = HiddenSeeker::getGenres(strtolower($gen->getName()));
-                            }
-                        }
-                        $title->genres()->sync($newGenres);
-                    }
-
-                    $title->save();
-                    $process[] = '<p>'.$title->name.' Guardado</p>';
-                }
+        $data = $result['lines'];
+        if ($result['errors'] !== []) {
+            foreach ($result['errors'] as $err) {
+                $data[] = $err;
             }
+        }
 
-            return response()->json([
-                'code' => 200,
-                'message' => [
-                    'type' => 'Success',
-                    'text' => 'Titulos de la pagina ' . $page . ' Guardados',
-                ],
-                'data' => $process,
-            ], 200);
-        } catch (\Exception $e) {
+        if ($result['errors'] !== []) {
             return response()->json([
                 'code' => 500,
                 'message' => [
                     'type' => 'Error',
                     'text' => 'Error al procesar la pagina ' . $page,
                 ],
-                'data' => $e->getMessage(),
+                'data' => $data,
             ], 500);
         }
+
+        return response()->json([
+            'code' => 200,
+            'message' => [
+                'type' => 'Success',
+                'text' => 'Titulos de la pagina ' . $page . ' Guardados (saved: ' . $result['saved'] . ', skipped: ' . $result['skipped'] . ', invalid_type: ' . $result['invalid_type'] . ')',
+            ],
+            'data' => $data,
+        ], 200);
     }
 
     public function saveTitlesByAlphabetic(Request $request)

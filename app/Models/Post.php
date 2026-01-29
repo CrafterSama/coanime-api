@@ -4,16 +4,23 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Category as CategoryEnum;
+use App\Enums\PostApproved;
+use App\Enums\PostDraft;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Post extends Model
+class Post extends Model implements HasMedia
 {
     use SoftDeletes;
     use LogsActivity;
+    use InteractsWithMedia;
 
     /**
      * The attributes that should be mutated to dates.
@@ -23,6 +30,16 @@ class Post extends Model
     protected $dates = ['deleted_at', 'created_at', 'updated_at', 'postponed_to'];
 
     protected $fillable = ['title', 'excerpt', 'content', 'category_id', 'user_id', 'slug', 'approved', 'draft', 'image', 'postponed_to', 'created_at'];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'approved' => PostApproved::class,
+        'draft' => PostDraft::class,
+    ];
 
     /**
      * The table associated with the model.
@@ -41,6 +58,79 @@ class Post extends Model
     public function scopeNotPagesCategories($query, $category)
     {
         return $query->whereNotIn('category_id', [$category]);
+    }
+
+    /**
+     * Scope to filter approved posts
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('approved', PostApproved::YES->value);
+    }
+
+    /**
+     * Scope to filter not approved posts
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeNotApproved($query)
+    {
+        return $query->where('approved', PostApproved::NO->value);
+    }
+
+    /**
+     * Scope to filter published posts (not drafts)
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('draft', PostDraft::PUBLISHED->value);
+    }
+
+    /**
+     * Scope to filter draft posts
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeDrafts($query)
+    {
+        return $query->where('draft', PostDraft::DRAFT->value);
+    }
+
+    /**
+     * Scope to filter published and approved posts
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePublishedAndApproved($query)
+    {
+        return $query->where('approved', PostApproved::YES->value)
+                     ->where('draft', PostDraft::PUBLISHED->value);
+    }
+
+    /**
+     * Scope to filter posts that are ready to be displayed
+     * (approved, published, and not postponed or postponed date has passed)
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeReadyToDisplay($query)
+    {
+        return $query->where('approved', PostApproved::YES->value)
+                     ->where('draft', PostDraft::PUBLISHED->value)
+                     ->where(function($q) {
+                         $q->where('postponed_to', '<=', now())
+                           ->orWhereNull('postponed_to');
+                     });
     }
 
     public function fullContent($id)
@@ -82,7 +172,7 @@ class Post extends Model
     public function getVideoLinksAttribute(): array
     {
         $videoLinks = [];
-        if ($this->category_id === 13) {
+        if ($this->category_id === CategoryEnum::CATEGORY_13->value) {
             $videoLinks = Helper::getVideoLink($this->content);
         }
 
@@ -107,6 +197,83 @@ class Post extends Model
                 'categories.name as category_name',
                 'categories.slug as category_slug'
             );
+    }
+
+    /**
+     * Register media collections for Post model
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('featured-image')
+            ->singleFile()
+            ->useDisk('s3')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    }
+
+    /**
+     * Register media conversions for Post model
+     */
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(300)
+            ->height(300)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured-image');
+
+        $this->addMediaConversion('medium')
+            ->width(800)
+            ->height(600)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured-image');
+
+        $this->addMediaConversion('large')
+            ->width(1920)
+            ->height(1080)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('featured-image');
+    }
+
+    /**
+     * Get image URL - compatible with old code
+     * Falls back to old 'image' field if media doesn't exist
+     * Returns original URL if media is a placeholder
+     */
+    public function getImageAttribute($value)
+    {
+        // Try to get from Media Library first
+        $media = $this->getFirstMedia('featured-image');
+        if ($media) {
+            // If it's a placeholder, return the original URL
+            if ($media->getCustomProperty('is_placeholder', false)) {
+                return $media->getCustomProperty('original_url', $value);
+            }
+            return $media->getUrl();
+        }
+
+        // Fallback to old field
+        return $value;
+    }
+
+    /**
+     * Get thumbnail URL
+     */
+    public function getThumbnailUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('featured-image');
+        return $media ? $media->getUrl('thumb') : null;
+    }
+
+    /**
+     * Get medium image URL
+     */
+    public function getMediumImageUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('featured-image');
+        return $media ? $media->getUrl('medium') : null;
     }
 
     /**

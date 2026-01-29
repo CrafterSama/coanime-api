@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\TitleStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class TitleStoreRequest extends FormRequest
 {
@@ -26,17 +28,17 @@ class TitleStoreRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'other_titles' => ['required', 'string'],
-            'type_id' => ['required', 'integer', 'exists:title_types,id'],
+            'type_id' => ['required', 'integer', 'exists:titles_type,id'],
             'sinopsis' => ['required', 'string'],
             'episodies' => ['nullable', 'integer', 'min:0'],
             'just_year' => ['required', 'string'],
             'broad_time' => ['required', 'date_format:Y-m-d'],
             'broad_finish' => ['nullable', 'date_format:Y-m-d'],
             'genre_id' => ['required', 'array'],
-            'genre_id.*' => ['integer', 'exists:genres,id'],
+            'genre_id.*' => ['integer', 'exists:genre,id'],
             'rating_id' => ['required', 'integer', 'exists:ratings,id'],
             'images' => ['required', 'string'],
-            'status' => ['nullable', 'string'],
+            'status' => ['nullable', Rule::enum(TitleStatus::class)],
             'score' => ['nullable', 'numeric', 'min:0', 'max:10'],
         ];
     }

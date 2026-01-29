@@ -4,16 +4,19 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PostApproved;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements JWTSubject
+class User extends Authenticatable implements JWTSubject, HasMedia
 {
     use HasFactory;
     use Notifiable;
@@ -71,7 +74,11 @@ class User extends Authenticatable implements JWTSubject
 
     public function posts()
     {
-        return $this->hasMany(Post::class)->where('approved', 'yes')->whereRaw('TIMESTAMP(postponed_to) <= NOW()')->orWhere('postponed_to', null)->orderBy('id', 'desc');
+        return $this->hasMany(Post::class)
+            ->publishedAndApproved()
+            ->whereRaw('TIMESTAMP(postponed_to) <= NOW()')
+            ->orWhere('postponed_to', null)
+            ->orderBy('id', 'desc');
     }
 
     public function titles()
@@ -122,5 +129,150 @@ class User extends Authenticatable implements JWTSubject
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => "Usuario {$eventName}");
+    }
+
+    /**
+     * Register media collections for User model
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('avatar')
+            ->singleFile()
+            ->useDisk('s3')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
+        $this->addMediaCollection('cover')
+            ->singleFile()
+            ->useDisk('s3')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    }
+
+    /**
+     * Register media conversions for User model
+     */
+    public function registerMediaConversions(Media $media = null): void
+    {
+        // Avatar conversions
+        $this->addMediaConversion('thumb')
+            ->width(150)
+            ->height(150)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('avatar');
+
+        $this->addMediaConversion('medium')
+            ->width(300)
+            ->height(300)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('avatar');
+
+        // Cover conversions
+        $this->addMediaConversion('cover-thumb')
+            ->width(800)
+            ->height(400)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('cover');
+
+        $this->addMediaConversion('cover-large')
+            ->width(1920)
+            ->height(600)
+            ->sharpen(10)
+            ->optimize()
+            ->performOnCollections('cover');
+    }
+
+    /**
+     * Get profile photo path - compatible with old code
+     * Falls back to old 'profile_photo_path' field if media doesn't exist
+     * Returns original URL if media is a placeholder
+     */
+    public function getProfilePhotoPathAttribute($value)
+    {
+        $media = $this->getFirstMedia('avatar');
+        if ($media) {
+            // If it's a placeholder, return the original URL
+            if ($media->getCustomProperty('is_placeholder', false)) {
+                return $media->getCustomProperty('original_url', $value);
+            }
+            return $media->getUrl();
+        }
+
+        return $value;
+    }
+
+    /**
+     * Get profile cover path - compatible with old code
+     * Falls back to old 'profile_cover_path' or 'cover_photo_path' field if media doesn't exist
+     * Returns original URL if media is a placeholder
+     */
+    public function getProfileCoverPathAttribute($value)
+    {
+        $media = $this->getFirstMedia('cover');
+        if ($media) {
+            // If it's a placeholder, return the original URL
+            if ($media->getCustomProperty('is_placeholder', false)) {
+                return $media->getCustomProperty('original_url', $value ?? $this->attributes['cover_photo_path'] ?? null);
+            }
+            return $media->getUrl();
+        }
+
+        // Fallback to cover_photo_path if profile_cover_path is empty
+        return $value ?? $this->attributes['cover_photo_path'] ?? null;
+    }
+
+    /**
+     * Get avatar thumbnail URL
+     */
+    public function getAvatarThumbnailUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia('avatar');
+        return $media ? $media->getUrl('thumb') : null;
+    }
+
+    /**
+     * Scope para filtrar usuarios con más de la mitad de su perfil completado.
+     * 
+     * Evalúa los siguientes campos del perfil:
+     * - name, email, bio, website
+     * - profile_photo_path, profile_cover_path
+     * - twitter, facebook, instagram, youtube, pinterest, tiktok
+     * - slug
+     * 
+     * Total: 13 campos. Más de la mitad = 7 o más campos completos.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWithCompleteProfile($query)
+    {
+        $profileFields = [
+            'name',
+            'email',
+            'bio',
+            'website',
+            'profile_photo_path',
+            'profile_cover_path',
+            'twitter',
+            'facebook',
+            'instagram',
+            'youtube',
+            'pinterest',
+            'tiktok',
+            'slug',
+        ];
+
+        $totalFields = count($profileFields);
+        $minimumFields = (int) ceil($totalFields / 2) + 1; // Más de la mitad
+
+        // Construir la expresión SQL de forma más mantenible
+        $caseExpressions = array_map(function ($field) {
+            return "(CASE WHEN {$field} IS NOT NULL AND {$field} != '' THEN 1 ELSE 0 END)";
+        }, $profileFields);
+
+        $sqlExpression = '(' . implode(' + ', $caseExpressions) . ') > ' . ($minimumFields - 1);
+
+        return $query->whereRaw($sqlExpression);
     }
 }

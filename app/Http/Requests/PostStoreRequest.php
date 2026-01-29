@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\PostApproved;
+use App\Enums\PostDraft;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class PostStoreRequest extends FormRequest
 {
@@ -33,7 +36,8 @@ class PostStoreRequest extends FormRequest
             'tag_id' => ['nullable', 'array'],
             'tag_id.*' => ['nullable', 'integer', 'exists:tags,id'],
             'title_id' => ['nullable', 'integer', 'exists:titles,id'],
-            'draft' => ['nullable', 'boolean'],
+            'draft' => ['nullable', Rule::enum(PostDraft::class)],
+            'approved' => ['nullable', Rule::enum(PostApproved::class)],
         ];
     }
 
