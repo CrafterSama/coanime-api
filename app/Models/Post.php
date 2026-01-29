@@ -94,6 +94,25 @@ class Post extends Model implements HasMedia
     }
 
     /**
+     * Scope to filter posts that have a displayable image (Spatie media or legacy column).
+     */
+    public function scopeWithImage($query)
+    {
+        $placeholder = 'https://api.coanime.net/storage/images/posts/';
+
+        return $query->where(function ($q) use ($placeholder) {
+            $q->whereHas('media', function ($m) {
+                $m->where('collection_name', 'featured-image');
+            })
+                ->orWhere(function ($q2) use ($placeholder) {
+                    $q2->whereNotNull('image')
+                        ->where('image', '!=', '')
+                        ->where('image', '!=', $placeholder);
+                });
+        });
+    }
+
+    /**
      * Scope to filter draft posts
      *
      * @param \Illuminate\Database\Eloquent\Builder $query

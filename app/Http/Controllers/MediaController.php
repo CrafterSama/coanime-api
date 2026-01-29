@@ -103,6 +103,7 @@ class MediaController extends Controller
             $modelId = $item->model_id;
             $modelTitle = null;
             $modelSlug = null;
+            $modelTitleType = null;
             $model = null;
 
             // Try to load model (handles both eager loaded and lazy loaded cases, including soft deletes)
@@ -137,6 +138,8 @@ class MediaController extends Controller
                         } elseif ($model instanceof \App\Models\Title) {
                             $modelTitle = $model->name ?? null;
                             $modelSlug = $model->slug ?? null;
+                            $model->loadMissing('type');
+                            $modelTitleType = $model->type?->name ?? null;
                         } elseif ($model instanceof \App\Models\User) {
                             $modelTitle = $model->name ?? null;
                             $modelSlug = $model->slug ?? null;
@@ -181,6 +184,7 @@ class MediaController extends Controller
                 'model_id' => $modelId,
                 'model_title' => $modelTitle,
                 'model_slug' => $modelSlug,
+                'model_title_type' => $modelTitleType,
                 'created_at' => $createdAt->toIso8601String(),
                 'updated_at' => ($item->updated_at ?? now())->toIso8601String(),
             ];
@@ -238,6 +242,7 @@ class MediaController extends Controller
         $modelId = null;
         $modelTitle = null;
         $modelSlug = null;
+        $modelTitleType = null;
 
         if ($model) {
             $modelName = class_basename($media->model_type);
@@ -249,6 +254,8 @@ class MediaController extends Controller
             } elseif ($model instanceof \App\Models\Title) {
                 $modelTitle = $model->name;
                 $modelSlug = $model->slug;
+                $model->loadMissing('type');
+                $modelTitleType = $model->type?->name ?? null;
             } elseif ($model instanceof \App\Models\User) {
                 $modelTitle = $model->name;
                 $modelSlug = $model->slug;
@@ -278,6 +285,7 @@ class MediaController extends Controller
             'model_id' => $modelId,
             'model_title' => $modelTitle,
             'model_slug' => $modelSlug,
+            'model_title_type' => $modelTitleType,
             'created_at' => $media->created_at?->toIso8601String(),
             'updated_at' => $media->updated_at?->toIso8601String(),
         ];

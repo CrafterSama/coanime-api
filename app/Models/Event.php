@@ -45,6 +45,21 @@ class Event extends Model
     }
 
     /**
+     * Get image URL - returns full URL for API/frontend (no legacy path building).
+     */
+    public function getImageAttribute($value)
+    {
+        if (empty($value)) {
+            return null;
+        }
+        if (str_starts_with($value, 'http')) {
+            return $value;
+        }
+
+        return rtrim(config('app.url'), '/').'/storage/images/events/'.ltrim($value, '/');
+    }
+
+    /**
      * Configuración de logs de actividad para el modelo Event.
      */
     public function getActivitylogOptions(): LogOptions
