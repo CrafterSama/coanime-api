@@ -53,8 +53,7 @@ class PostController extends Controller
                     $query->where('postponed_to', '<=', Carbon::now())
                           ->orWhereNull('postponed_to');
                 })
-                ->where('image', '!=', null)
-                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+                ->withImage()
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
                 ->get()
@@ -63,8 +62,7 @@ class PostController extends Controller
                 ->with('categories', 'tags', 'users')
                 ->whereIn('category_id', $categories)
                 ->whereBetween('postponed_to', [Carbon::now()->subMonth(24), Carbon::now()])
-                ->where('image', '!=', null)
-                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+                ->withImage()
                 ->where('approved', 'yes')
                 ->where('draft', '0')
                 ->where('view_counter', '>', 5)
@@ -76,8 +74,7 @@ class PostController extends Controller
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
                 ->whereIn('category_id', $categories)
-                ->where('image', '!=', null)
-                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+                ->withImage()
                 ->where(function($query) {
                     $query->where('postponed_to', '<=', Carbon::now())
                           ->orWhereNull('postponed_to');
@@ -143,8 +140,7 @@ class PostController extends Controller
                 ->with('categories', 'tags', 'users')
                 ->whereIn('category_id', $categories)
                 ->whereBetween('postponed_to', [Carbon::now()->subDays(3), Carbon::now()])
-                ->where('image', '!=', null)
-                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+                ->withImage()
                 ->publishedAndApproved()
                 ->where('view_counter', '>', 5)
                 ->orderBy('view_counter', 'desc')
@@ -157,8 +153,7 @@ class PostController extends Controller
                 })
                 ->with('users', 'categories', 'titles', 'tags')
                 ->whereIn('category_id', $categories)
-                ->where('image', '!=', null)
-                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+                ->withImage()
                 ->where(function($query) {
                     $query->where('postponed_to', '<=', Carbon::now())
                           ->orWhereNull('postponed_to');
@@ -219,8 +214,7 @@ class PostController extends Controller
                 $query->where('postponed_to', '<=', Carbon::now())
                       ->orWhereNull('postponed_to');
             })
-            ->where('image', '!=', null)
-            ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+            ->withImage()
             ->orderBy('postponed_to', 'desc')
             ->take(4)->get();
 
@@ -239,7 +233,7 @@ class PostController extends Controller
                 $query->where('postponed_to', '<=', Carbon::now())
                       ->orWhereNull('postponed_to');
             })
-            ->where('image', '!=', null)
+            ->withImage()
             ->orderBy('postponed_to', 'desc')
             ->paginate(15);
 
@@ -259,8 +253,7 @@ class PostController extends Controller
             })
             ->with('users', 'categories', 'titles', 'tags')
             ->whereIn('category_id', $categories)
-            ->where('image', '!=', null)
-            ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+            ->withImage()
             ->where(function($query) {
                 $query->where('postponed_to', '<=', Carbon::now())
                       ->orWhereNull('postponed_to');
@@ -288,7 +281,7 @@ class PostController extends Controller
                 $query->where('postponed_to', '<=', Carbon::now())
                       ->orWhereNull('postponed_to');
             })
-            ->where('image', '!=', null)
+            ->withImage()
             ->orderBy('postponed_to', 'desc')
             ->paginate(15);
 
@@ -301,7 +294,7 @@ class PostController extends Controller
             ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
             ->with('users', 'categories', 'titles', 'tags')
             ->where('approved', 'yes')
-            ->where('image', '!=', null)
+            ->withImage()
             ->where('draft', '0')
             ->whereNotIn('category_id', [CategoryEnum::CATEGORY_10->value])
             ->where(function($query) {
@@ -326,7 +319,7 @@ class PostController extends Controller
                 $query->where('postponed_to', '<=', Carbon::now())
                       ->orWhereNull('postponed_to');
             })
-            ->where('image', '!=', null)
+            ->withImage()
             ->orderBy('postponed_to', 'desc')
             ->paginate(8);
     }
@@ -483,7 +476,7 @@ class PostController extends Controller
         //dd($category);
         $posts = Post::search($request->name)
             ->with('users', 'categories', 'titles', 'tags')
-            ->where('image', '!=', null)
+            ->withImage()
             ->where(function($query) {
                 $query->where('postponed_to', '<=', Carbon::now())
                       ->orWhereNull('postponed_to');
@@ -512,7 +505,7 @@ class PostController extends Controller
                 ->where('view_counter', '>', 5)
                 ->whereBetween('postponed_to', [Carbon::now()->subMonths(36), Carbon::now()])
                 ->orWhere('postponed_to', null)
-                ->where('image', '!=', null)
+                ->withImage()
                 /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
@@ -528,7 +521,7 @@ class PostController extends Controller
                     $query->where('postponed_to', '<=', Carbon::now())
                           ->orWhereNull('postponed_to');
                 })
-                ->where('image', '!=', null)
+                ->withImage()
                 /*->orWhere('image', '!=', 'https://coanime.net/images/posts/')*/
                 ->orderBy('postponed_to', 'desc')
                 ->paginate(4);
@@ -787,14 +780,14 @@ class PostController extends Controller
                 ->where('category_id', $category_id)
                 ->whereBetween('postponed_to', [Carbon::now()->subMonths(12), Carbon::now()])
                 ->orWhere('postponed_to', null)
-                ->where('image', '!=', null)
+                ->withImage()
                 ->orderBy('view_counter', 'desc')
                 ->take(3)
                 ->get();
 
             $news = Post::select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('users', 'categories', 'titles', 'tags')
-                ->where('image', '!=', null)
+                ->withImage()
                 ->where('approved', PostApproved::YES->value)
                 ->where('draft', PostDraft::PUBLISHED->value)
                 ->whereNotIn('category_id', [CategoryEnum::CATEGORY_10->value])
@@ -1027,8 +1020,7 @@ class PostController extends Controller
             $otherArticles = Post::select('id', 'title', 'category_id', 'slug', 'image')->with('categories')
                 ->where('category_id', '=', $post->category_id)
                 ->where('view_counter', '>', '100')
-                ->where('image', '!=', null)
-                ->where('image', '!=', 'https://api.coanime.net/storage/images/posts/')
+                ->withImage()
                 ->whereNotIn('id', [$post->id])
                 ->orderBy('postponed_to', 'desc')
                 ->get();
@@ -1068,6 +1060,7 @@ class PostController extends Controller
             } else {
                 $videoLinks = [];
             }
+            $post->content = Helper::bbcodeToHtmlSafe($post->content ?? '');
 
             return response()->json([
                 'code' => 200,
@@ -1111,6 +1104,7 @@ class PostController extends Controller
         $categories = Category::pluck('name', 'id');
         $tags = Tag::pluck('name', 'id');
         $selected = $post->tags()->pluck('tag_id')->toArray();
+        $post->content = Helper::bbcodeToHtmlSafe($post->content ?? '');
 
         return response()->json([
             'code' => 200,

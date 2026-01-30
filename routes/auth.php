@@ -143,6 +143,9 @@ Route::middleware(['auth:api'])->group(function () {
 
         // ** Auth People Endpoints **
         Route::get('people', [PeopleController::class, 'index'])->name('people');
+        Route::get('people/form-filters', [PeopleController::class, 'formFilters']);
+        Route::get('people/countries-search', [PeopleController::class, 'countriesSearch']);
+        Route::get('people/cities-search', [PeopleController::class, 'citiesSearch']);
         Route::get('people/{id}', [PeopleController::class, 'show']);
         Route::put('people/{id}', [PeopleController::class, 'update']);
         Route::post('people', [PeopleController::class, 'store']);
