@@ -389,6 +389,7 @@ class PeopleController extends Controller
     {
         $arr = $person->toArray();
         $arr['image'] = $person->image;
+        $arr['about'] = Helper::bbcodeToHtmlSafe($arr['about'] ?? '');
         $arr['media'] = $person->getMedia('default')->map(fn ($m) => [
             'id' => $m->id,
             'url' => $m->getUrl(),
@@ -444,7 +445,7 @@ class PeopleController extends Controller
     {
         if (People::where('slug', '=', $slug)->count() > 0) {
             $people = People::with('city', 'country')->whereSlug($slug)->firstOrFail();
-            $people->about = Helper::bbcodeToHtml($people->about);
+            $people->about = Helper::bbcodeToHtmlSafe($people->about);
 
             //dd($people);
 

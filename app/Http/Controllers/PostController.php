@@ -1060,6 +1060,7 @@ class PostController extends Controller
             } else {
                 $videoLinks = [];
             }
+            $post->content = Helper::bbcodeToHtmlSafe($post->content ?? '');
 
             return response()->json([
                 'code' => 200,
@@ -1103,6 +1104,7 @@ class PostController extends Controller
         $categories = Category::pluck('name', 'id');
         $tags = Tag::pluck('name', 'id');
         $selected = $post->tags()->pluck('tag_id')->toArray();
+        $post->content = Helper::bbcodeToHtmlSafe($post->content ?? '');
 
         return response()->json([
             'code' => 200,
