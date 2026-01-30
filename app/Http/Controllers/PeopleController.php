@@ -380,37 +380,58 @@ class PeopleController extends Controller
     }
 
     /**
+     * Build person payload for API (include image + media).
+     *
+     * @param  \App\Models\People  $person
+     * @return array<string, mixed>
+     */
+    private function personResult(People $person): array
+    {
+        $arr = $person->toArray();
+        $arr['image'] = $person->image;
+        $arr['media'] = $person->getMedia('default')->map(fn ($m) => [
+            'id' => $m->id,
+            'url' => $m->getUrl(),
+            'file_name' => $m->file_name,
+        ])->values()->all();
+
+        return $arr;
+    }
+
+    /**
      * Display the specified resource.
      *
-     * @param  int  $id
+     * @param  int|string  $idOrSlug
      * @return \Illuminate\Http\JsonResponse
      */
-    public function show($slug)
+    public function show($idOrSlug)
     {
-        if (People::where('slug', '=', $slug)->count() > 0) {
-            $people = People::with('city', 'country')->whereSlug($slug)->firstOrFail();
-            //dd($people);
+        $person = \is_numeric($idOrSlug)
+            ? People::with('city', 'country')->find($idOrSlug)
+            : People::with('city', 'country')->where('slug', $idOrSlug)->first();
+
+        if (! $person) {
             return response()->json([
-                'code' => 200,
-                'message' => [
-                    'type' => 'success',
-                    'text' => 'Persona encontrada',
-                ],
-                'title' => 'Coanime.net - Persona',
-                'description' => 'Ver la información de una persona',
-                'result' => $people,
-            ], 200);
-        } else {
-            return response()->json([
-                'code' => 400,
+                'code' => 404,
                 'message' => [
                     'type' => 'error',
                     'text' => 'Persona no encontrada',
                 ],
                 'title' => 'Coanime.net - Persona',
                 'description' => 'Ver la información de una persona',
-            ], 400);
+            ], 404);
         }
+
+        return response()->json([
+            'code' => 200,
+            'message' => [
+                'type' => 'success',
+                'text' => 'Persona encontrada',
+            ],
+            'title' => 'Coanime.net - Persona',
+            'description' => 'Ver la información de una persona',
+            'result' => $this->personResult($person),
+        ], 200);
     }
 
     /**
@@ -458,7 +479,7 @@ class PeopleController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $data = People::find($id);
+        $data = People::findOrFail($id);
 
         $this->validate($request, [
             'name' => 'required|max:255',
@@ -486,17 +507,25 @@ class PeopleController extends Controller
         $updatePayload['about'] = $request->input('bio') ?? $request->input('about');
 
         if ($data->update($updatePayload)) {
-            if ($request->filled('image') && \is_string($request->image)) {
-                $data->clearMediaCollection('default');
-                try {
-                    $data->addMediaFromUrl($request->image)->toMediaCollection('default');
-                } catch (\Exception $e) {
-                    \Log::warning('People addMediaFromUrl failed: '.$e->getMessage());
-                }
-            } elseif ($request->file('image-client')) {
+            $currentUrl = $data->getFirstMedia('default')?->getUrl();
+
+            if ($request->file('image-client')) {
                 $data->clearMediaCollection('default');
                 $data->addMediaFromRequest('image-client')->toMediaCollection('default');
+            } elseif ($request->filled('image') && \is_string($request->image)) {
+                $newUrl = trim($request->image);
+                if ($newUrl !== $currentUrl) {
+                    $data->clearMediaCollection('default');
+                    try {
+                        $data->addMediaFromUrl($newUrl)->toMediaCollection('default');
+                    } catch (\Exception $e) {
+                        \Log::warning('People addMediaFromUrl failed: '.$e->getMessage());
+                    }
+                }
             }
+
+            $data->load(['city', 'country']);
+
             return response()->json([
                 'code' => 200,
                 'message' => [
@@ -505,6 +534,7 @@ class PeopleController extends Controller
                 ],
                 'title' => 'Coanime.net - Editar Persona',
                 'description' => 'Editar una persona',
+                'result' => $this->personResult($data),
             ], 200);
         } else {
             return response()->json([
