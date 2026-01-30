@@ -33,6 +33,7 @@ class PeopleStoreRequest extends FormRequest
             'country_code' => ['required', 'string', 'size:3'],
             'falldown' => ['required', 'string'],
             'falldown_date' => ['nullable', 'date_format:Y-m-d H:i:s'],
+            'image' => ['nullable', 'string', 'max:500'],
             'image-client' => ['nullable', 'image', 'mimes:jpeg,gif,bmp,png', 'max:2048'],
         ];
     }

@@ -187,6 +187,7 @@ class PeopleController extends Controller
 
     /**
      * Return countries and cities for the people create/edit form.
+     * Prefer using countries-search and cities-search for async search (debounce, min 3 chars).
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -203,6 +204,90 @@ class PeopleController extends Controller
             ],
             'countries' => $countries,
             'cities' => $cities,
+        ], 200);
+    }
+
+    /**
+     * Search countries by name. For people form async select.
+     * Query param: q (min 3 chars), limit (optional, default 20).
+     * Returns [{ value: iso3, label: name }].
+     */
+    public function countriesSearch(Request $request)
+    {
+        $q = $request->input('q', '');
+        $q = \is_string($q) ? trim($q) : '';
+
+        if (\strlen($q) < 3) {
+            return response()->json([
+                'code' => 200,
+                'result' => [],
+                'message' => ['type' => 'success', 'text' => 'Escribe al menos 3 caracteres'],
+            ], 200);
+        }
+
+        $limit = min(max((int) $request->input('limit', 20), 1), 50);
+        $countries = Country::where('name', 'like', '%' . $q . '%')
+            ->orderBy('name', 'asc')
+            ->limit($limit)
+            ->get(['iso3', 'name'])
+            ->map(fn ($c) => ['value' => $c->iso3, 'label' => $c->name]);
+
+        return response()->json([
+            'code' => 200,
+            'result' => $countries,
+            'message' => ['type' => 'success', 'text' => 'OK'],
+        ], 200);
+    }
+
+    /**
+     * Search cities by name, filtered by country. For people form async select.
+     * Query params: q (min 3 chars), country_code (required, iso3), limit (optional, default 20).
+     * Returns [{ value: id, label: name }].
+     */
+    public function citiesSearch(Request $request)
+    {
+        $q = $request->input('q', '');
+        $q = \is_string($q) ? trim($q) : '';
+        $countryCode = $request->input('country_code', '');
+        $countryCode = \is_string($countryCode) ? trim($countryCode) : '';
+
+        if (!$countryCode) {
+            return response()->json([
+                'code' => 400,
+                'result' => [],
+                'message' => ['type' => 'error', 'text' => 'country_code is required'],
+            ], 400);
+        }
+
+        if (\strlen($q) < 3) {
+            return response()->json([
+                'code' => 200,
+                'result' => [],
+                'message' => ['type' => 'success', 'text' => 'Escribe al menos 3 caracteres'],
+            ], 200);
+        }
+
+        $country = Country::where('iso3', $countryCode)->first();
+        if (!$country) {
+            return response()->json([
+                'code' => 200,
+                'result' => [],
+                'message' => ['type' => 'success', 'text' => 'País no encontrado'],
+            ], 200);
+        }
+
+        $limit = min(max((int) $request->input('limit', 20), 1), 50);
+        $cities = City::where('country_id', $country->id)
+            ->where('name', 'like', '%' . $q . '%')
+            ->orderBy('name', 'asc')
+            ->limit($limit)
+            ->get(['id', 'name'])
+            ->map(fn ($c) => ['value' => (int) $c->id, 'label' => $c->name]);
+
+        return response()->json([
+            'code' => 200,
+            'result' => $cities,
+            'message' => ['type' => 'success', 'text' => 'OK'],
         ], 200);
     }
 
@@ -257,10 +342,17 @@ class PeopleController extends Controller
             $request['slug'] = Str::slug($request['name']).'1';
         }
 
-        $request['image'] = null;
+        $payload = $request->except(['image', 'image-client']);
 
-        if ($data = People::create($request->all())) {
-            if ($request->file('image-client')) {
+        if ($data = People::create($payload)) {
+            if ($request->filled('image') && \is_string($request->image)) {
+                $data->clearMediaCollection('default');
+                try {
+                    $data->addMediaFromUrl($request->image)->toMediaCollection('default');
+                } catch (\Exception $e) {
+                    \Log::warning('People addMediaFromUrl failed: '.$e->getMessage());
+                }
+            } elseif ($request->file('image-client')) {
                 $data->clearMediaCollection('default');
                 $data->addMediaFromRequest('image-client')->toMediaCollection('default');
             }
@@ -377,6 +469,7 @@ class PeopleController extends Controller
             'country_code' => 'required',
             'falldown' => 'required',
             'falldown_date' => 'date_format:"Y-m-d H:i:s"',
+            'image' => 'nullable|string|max:500',
             'image-client' => 'max:2048|mimes:jpeg,gif,bmp,png',
         ]);
 
@@ -387,8 +480,15 @@ class PeopleController extends Controller
         $request['user_id'] = Auth::user()->id;
         $request['slug'] = Str::slug($request['name']);
 
-        if ($data->update($request->all())) {
-            if ($request->file('image-client')) {
+        if ($data->update($request->except(['image', 'image-client']))) {
+            if ($request->filled('image') && \is_string($request->image)) {
+                $data->clearMediaCollection('default');
+                try {
+                    $data->addMediaFromUrl($request->image)->toMediaCollection('default');
+                } catch (\Exception $e) {
+                    \Log::warning('People addMediaFromUrl failed: '.$e->getMessage());
+                }
+            } elseif ($request->file('image-client')) {
                 $data->clearMediaCollection('default');
                 $data->addMediaFromRequest('image-client')->toMediaCollection('default');
             }
