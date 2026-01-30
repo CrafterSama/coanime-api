@@ -342,7 +342,8 @@ class PeopleController extends Controller
             $request['slug'] = Str::slug($request['name']).'1';
         }
 
-        $payload = $request->except(['image', 'image-client']);
+        $payload = $request->except(['image', 'image-client', 'bio']);
+        $payload['about'] = $request->input('bio') ?? $request->input('about');
 
         if ($data = People::create($payload)) {
             if ($request->filled('image') && \is_string($request->image)) {
@@ -463,14 +464,15 @@ class PeopleController extends Controller
             'name' => 'required|max:255',
             'japanese_name' => 'required',
             'areas_skills_hobbies' => 'required',
-            'bio' => 'required',
+            'bio' => 'required_without:about|nullable|string',
+            'about' => 'required_without:bio|nullable|string',
             'city_id' => 'required',
-            'birthday' => 'date_format:"Y-m-d H:i:s"',
+            'birthday' => 'nullable|date_format:Y-m-d H:i:s',
             'country_code' => 'required',
             'falldown' => 'required',
-            'falldown_date' => 'date_format:"Y-m-d H:i:s"',
+            'falldown_date' => 'nullable|date_format:Y-m-d H:i:s',
             'image' => 'nullable|string|max:500',
-            'image-client' => 'max:2048|mimes:jpeg,gif,bmp,png',
+            'image-client' => 'nullable|max:2048|mimes:jpeg,gif,bmp,png',
         ]);
 
         if (empty($request['falldown_date'])) {
@@ -480,7 +482,10 @@ class PeopleController extends Controller
         $request['user_id'] = Auth::user()->id;
         $request['slug'] = Str::slug($request['name']);
 
-        if ($data->update($request->except(['image', 'image-client']))) {
+        $updatePayload = $request->except(['image', 'image-client', 'bio']);
+        $updatePayload['about'] = $request->input('bio') ?? $request->input('about');
+
+        if ($data->update($updatePayload)) {
             if ($request->filled('image') && \is_string($request->image)) {
                 $data->clearMediaCollection('default');
                 try {

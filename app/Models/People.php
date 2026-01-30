@@ -26,7 +26,7 @@ class People extends Model implements HasMedia
     protected $table = 'people';
 
     protected $dates = ['deleted_at', 'birthday', 'falldown_date', 'created_at', 'updated_at'];
-    protected $fillable = ['name', 'japanese_name', 'areas_skills_hobbies', 'bio', 'city_id', 'country_code', 'slug', 'birthday', 'falldown', 'falldown_date', 'approved', 'image', 'user_id'];
+    protected $fillable = ['name', 'japanese_name', 'areas_skills_hobbies', 'about', 'city_id', 'country_code', 'slug', 'birthday', 'falldown', 'falldown_date', 'approved', 'image', 'user_id'];
 
     /**
      * Register media collections for People model (single cover/avatar).
@@ -84,6 +84,14 @@ class People extends Model implements HasMedia
     }
 
     /**
+     * Alias for API/frontend: bio is stored in DB column "about".
+     */
+    public function getBioAttribute()
+    {
+        return $this->attributes['about'] ?? null;
+    }
+
+    /**
      * Get image URL - from Spatie Media first, then legacy column for backward compatibility.
      */
     public function getImageAttribute($value)
@@ -108,7 +116,7 @@ class People extends Model implements HasMedia
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'japanese_name', 'slug', 'user_id', 'bio', 'areas_skills_hobbies', 'city_id', 'country_code', 'birthday', 'falldown', 'falldown_date', 'approved', 'image'])
+            ->logOnly(['name', 'japanese_name', 'slug', 'user_id', 'about', 'areas_skills_hobbies', 'city_id', 'country_code', 'birthday', 'falldown', 'falldown_date', 'approved', 'image'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(function (string $eventName) {
