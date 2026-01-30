@@ -45,7 +45,6 @@ class Event extends Model implements HasMedia
     {
         $this->addMediaConversion('thumb')
             ->width(300)
-            ->keepOriginalAspectRatio()
             ->sharpen(10)
             ->performOnCollections('default');
     }
