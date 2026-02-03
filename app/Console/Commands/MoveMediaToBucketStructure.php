@@ -71,7 +71,8 @@ class MoveMediaToBucketStructure extends Command
         $mediaItems = $query->get();
         $total = $mediaItems->count();
         $moved = 0;
-        $skipped = 0;
+        $skippedSamePath = 0;
+        $skippedOldPathMissing = 0;
         $errors = 0;
 
         $this->info("Processing {$total} media item(s)...");
@@ -81,15 +82,17 @@ class MoveMediaToBucketStructure extends Command
             $newBase = rtrim($this->newPathGenerator->getPath($media), '/');
 
             if ($oldBase === $newBase) {
-                $skipped++;
+                $skippedSamePath++;
                 continue;
             }
 
             $disk = Storage::disk($media->disk ?? 's3');
 
             if (!$disk->exists($oldBase)) {
-                $this->line("  [skip] Media #{$media->id}: old path does not exist: {$oldBase}");
-                $skipped++;
+                $skippedOldPathMissing++;
+                if ($skippedOldPathMissing <= 20) {
+                    $this->line("  [skip] Media #{$media->id}: old path does not exist: {$oldBase}");
+                }
                 continue;
             }
 
@@ -110,7 +113,18 @@ class MoveMediaToBucketStructure extends Command
         }
 
         $this->newLine();
-        $this->info("Done. Moved: {$moved}, Skipped: {$skipped}, Errors: {$errors}");
+        $this->info('Done. Moved: ' . $moved . ', Errors: ' . $errors);
+        $this->table(
+            ['Reason', 'Count'],
+            [
+                ['Skipped (same path, nothing to move)', $skippedSamePath],
+                ['Skipped (old path does not exist on S3)', $skippedOldPathMissing],
+            ]
+        );
+        $skippedTotal = $skippedSamePath + $skippedOldPathMissing;
+        if ($skippedTotal > 0) {
+            $this->line("Total skipped: {$skippedTotal}");
+        }
 
         return $errors > 0 ? self::FAILURE : self::SUCCESS;
     }
