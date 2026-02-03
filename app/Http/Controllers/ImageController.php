@@ -44,6 +44,7 @@ class ImageController extends Controller
             ], Response::HTTP_BAD_REQUEST);
         }
 
+        // Same bucket folders as BucketPathGenerator; temp files by model + Y/m (posts: creation date pattern; events: same)
         $folder = sprintf('uploads/%s/%s', $modelName, now()->format('Y/m'));
         $filename = sprintf('%s.%s', Str::uuid()->toString(), $file->getClientOriginalExtension());
         $filePath = Storage::disk('s3')->putFileAs($folder, $file, $filename, 'public');
