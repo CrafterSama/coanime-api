@@ -8,11 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Company extends Model
+class Company extends Model implements HasMedia
 {
     use SoftDeletes;
     use LogsActivity;
+    use InteractsWithMedia;
 
     /**
      * The table associated with the model.
@@ -23,6 +27,45 @@ class Company extends Model
 
     protected $dates = ['deleted_at', 'foundation_date', 'created_at', 'updated_at'];
     protected $fillable = ['name', 'user_id', 'about', 'foundation_date', 'slug', 'country_code', 'website'];
+
+    protected $appends = ['image'];
+
+    /**
+     * Register media collections for Company model (single logo/cover).
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('default')
+            ->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp']);
+    }
+
+    /**
+     * Register media conversions for Company model.
+     */
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(300)
+            ->sharpen(10)
+            ->performOnCollections('default');
+    }
+
+    /**
+     * Get image URL from Spatie Media (for API/frontend).
+     *
+     * @param  mixed  $value  Legacy DB value (unused; Company has no image column).
+     * @return string|null
+     */
+    public function getImageAttribute($value = null)
+    {
+        $media = $this->getFirstMedia('default');
+        if ($media) {
+            return $media->getUrl();
+        }
+
+        return null;
+    }
 
     public function scopeSearch($query, $name)
     {

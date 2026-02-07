@@ -44,6 +44,29 @@ class Helper extends Model
         return $bbcode->render($string);
     }
 
+    /**
+     * Convert BBCode to HTML only when the string contains BBCode tags.
+     * Use when serving content that may be legacy BBCode or already HTML (e.g. WYSIWYG).
+     *
+     * @param  string|null  $string
+     * @return string
+     */
+    public static function bbcodeToHtmlSafe($string)
+    {
+        if ($string === null || $string === '') {
+            return '';
+        }
+        $str = (string) $string;
+        if (! preg_match('/\[\s*\/?\s*(b|i|u|s|url|img|quote|code|list|size|color|center|left|right)\b/i', $str)) {
+            return $str;
+        }
+        try {
+            return self::bbcodeToHtml($str);
+        } catch (\Throwable $e) {
+            return $str;
+        }
+    }
+
     private static function ConSoSinS($val, $sentence)
     {
         if ($val > 1) {

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\Event;
 use App\Models\Magazine;
+use App\Models\People;
 use App\Models\Post;
 use App\Models\Title;
 use App\Models\User;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
@@ -17,7 +19,7 @@ class MigrateToMediaLibrary extends Command
 {
     protected $signature = 'media:migrate 
                             {--dry-run : Run without actually migrating data}
-                            {--model= : Migrate specific model (posts, users, titles, magazines)}
+                            {--model= : Migrate specific model (posts, users, titles, magazines, people, events)}
                             {--force : Force migration even if media already exists}';
 
     protected $description = 'Migrate existing images from database fields to Spatie Media Library';
@@ -37,7 +39,7 @@ class MigrateToMediaLibrary extends Command
 
         $models = $specificModel 
             ? [$specificModel] 
-            : ['posts', 'users', 'titles', 'magazines'];
+            : ['posts', 'users', 'titles', 'magazines', 'people', 'events'];
 
         $totalMigrated = 0;
 
@@ -50,6 +52,8 @@ class MigrateToMediaLibrary extends Command
                     'users' => $this->migrateUsers($dryRun, $force),
                     'titles' => $this->migrateTitles($dryRun, $force),
                     'magazines' => $this->migrateMagazines($dryRun, $force),
+                    'people' => $this->migratePeople($dryRun, $force),
+                    'events' => $this->migrateEvents($dryRun, $force),
                     default => 0,
                 };
 
@@ -367,6 +371,190 @@ class MigrateToMediaLibrary extends Command
                 ]);
                 $this->warn("  ⚠ Created placeholder for magazine #{$magazine->id}: " . substr($e->getMessage(), 0, 60));
                 $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    private function migratePeople(bool $dryRun, bool $force): int
+    {
+        $people = People::whereNotNull('image')
+            ->where('image', '!=', '')
+            ->get();
+
+        $count = 0;
+        $baseDirs = [
+            storage_path('app/public/images/encyclopedia/people'),
+            public_path('images/encyclopedia/people'),
+            public_path('storage/images/encyclopedia/people'),
+        ];
+
+        foreach ($people as $person) {
+            if (! $force && $person->getFirstMedia('default')) {
+                continue;
+            }
+
+            $raw = $person->getRawOriginal('image');
+            $raw = ltrim((string) $raw, '/');
+            if (empty($raw)) {
+                continue;
+            }
+
+            if ($this->isValidUrl($raw)) {
+                if ($dryRun) {
+                    $this->line("  [DRY RUN] Would migrate people #{$person->id} (from URL)");
+                    $count++;
+                    continue;
+                }
+                try {
+                    $person->addMediaFromUrl($raw)
+                        ->usingName("People {$person->id} - {$person->name}")
+                        ->usingFileName($this->getFileNameFromUrl($raw))
+                        ->toMediaCollection('default');
+                    $this->line("  ✓ Migrated people #{$person->id}");
+                    $count++;
+                } catch (\Exception $e) {
+                    $this->warn("  ⚠ Skip people #{$person->id}: {$e->getMessage()}");
+                }
+                continue;
+            }
+
+            $path = null;
+            foreach ($baseDirs as $dir) {
+                $candidate = $dir.\DIRECTORY_SEPARATOR.$raw;
+                if (File::exists($candidate)) {
+                    $path = $candidate;
+                    break;
+                }
+            }
+
+            if (! $path) {
+                $urlFallback = rtrim(config('app.url'), '/').'/storage/images/encyclopedia/people/'.ltrim($raw, '/');
+                if (! $dryRun && $this->isValidUrl($urlFallback)) {
+                    try {
+                        $person->addMediaFromUrl($urlFallback)
+                            ->usingName("People {$person->id} - {$person->name}")
+                            ->usingFileName(basename($raw))
+                            ->toMediaCollection('default');
+                        $this->line("  ✓ Migrated people #{$person->id} (from URL fallback)");
+                        $count++;
+                    } catch (\Exception $e) {
+                        $this->warn("  ⚠ Skip people #{$person->id}: file not found, URL fallback failed - {$e->getMessage()}");
+                    }
+                } else {
+                    $this->warn("  ⚠ Skip people #{$person->id}: file not found ({$raw})");
+                }
+                continue;
+            }
+
+            if ($dryRun) {
+                $this->line("  [DRY RUN] Would migrate people #{$person->id}");
+                $count++;
+                continue;
+            }
+
+            try {
+                $person->addMedia($path)
+                    ->usingName("People {$person->id} - {$person->name}")
+                    ->usingFileName(basename($raw))
+                    ->toMediaCollection('default');
+                $this->line("  ✓ Migrated people #{$person->id}");
+                $count++;
+            } catch (\Exception $e) {
+                $this->warn("  ⚠ Skip people #{$person->id}: {$e->getMessage()}");
+            }
+        }
+
+        return $count;
+    }
+
+    private function migrateEvents(bool $dryRun, bool $force): int
+    {
+        $events = Event::whereNotNull('image')
+            ->where('image', '!=', '')
+            ->get();
+
+        $count = 0;
+        $baseDirs = [
+            storage_path('app/public/images/events'),
+            public_path('images/events'),
+            public_path('storage/images/events'),
+        ];
+
+        foreach ($events as $event) {
+            if (! $force && $event->getFirstMedia('default')) {
+                continue;
+            }
+
+            $raw = $event->getRawOriginal('image');
+            $raw = ltrim((string) $raw, '/');
+            if (empty($raw)) {
+                continue;
+            }
+
+            if ($this->isValidUrl($raw)) {
+                if ($dryRun) {
+                    $this->line("  [DRY RUN] Would migrate event #{$event->id} (from URL)");
+                    $count++;
+                    continue;
+                }
+                try {
+                    $event->addMediaFromUrl($raw)
+                        ->usingName("Event {$event->id} - {$event->name}")
+                        ->usingFileName($this->getFileNameFromUrl($raw))
+                        ->toMediaCollection('default');
+                    $this->line("  ✓ Migrated event #{$event->id}");
+                    $count++;
+                } catch (\Exception $e) {
+                    $this->warn("  ⚠ Skip event #{$event->id}: {$e->getMessage()}");
+                }
+                continue;
+            }
+
+            $path = null;
+            foreach ($baseDirs as $dir) {
+                $candidate = $dir.\DIRECTORY_SEPARATOR.$raw;
+                if (File::exists($candidate)) {
+                    $path = $candidate;
+                    break;
+                }
+            }
+
+            if (! $path) {
+                $urlFallback = rtrim(config('app.url'), '/').'/storage/images/events/'.ltrim($raw, '/');
+                if (! $dryRun && $this->isValidUrl($urlFallback)) {
+                    try {
+                        $event->addMediaFromUrl($urlFallback)
+                            ->usingName("Event {$event->id} - {$event->name}")
+                            ->usingFileName(basename($raw))
+                            ->toMediaCollection('default');
+                        $this->line("  ✓ Migrated event #{$event->id} (from URL fallback)");
+                        $count++;
+                    } catch (\Exception $e) {
+                        $this->warn("  ⚠ Skip event #{$event->id}: file not found, URL fallback failed - {$e->getMessage()}");
+                    }
+                } else {
+                    $this->warn("  ⚠ Skip event #{$event->id}: file not found ({$raw})");
+                }
+                continue;
+            }
+
+            if ($dryRun) {
+                $this->line("  [DRY RUN] Would migrate event #{$event->id}");
+                $count++;
+                continue;
+            }
+
+            try {
+                $event->addMedia($path)
+                    ->usingName("Event {$event->id} - {$event->name}")
+                    ->usingFileName(basename($raw))
+                    ->toMediaCollection('default');
+                $this->line("  ✓ Migrated event #{$event->id}");
+                $count++;
+            } catch (\Exception $e) {
+                $this->warn("  ⚠ Skip event #{$event->id}: {$e->getMessage()}");
             }
         }
 
