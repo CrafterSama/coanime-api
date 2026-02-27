@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('post_tag', function (Blueprint $table) {
-            $table->integer('id', true);
-            $table->integer('post_id');
-            $table->integer('tag_id');
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (! Schema::hasTable('post_tag')) {
+            Schema::create('post_tag', function (Blueprint $table) {
+                $table->integer('id', true);
+                $table->integer('post_id');
+                $table->integer('tag_id');
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**

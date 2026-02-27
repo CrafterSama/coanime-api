@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('titles_statictis', function (Blueprint $table) {
-            $table->integer('id', true);
-            $table->integer('serie_id');
-            $table->integer('statistic_id');
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (! Schema::hasTable('titles_statictis')) {
+            Schema::create('titles_statictis', function (Blueprint $table) {
+                $table->integer('id', true);
+                $table->integer('serie_id');
+                $table->integer('statistic_id');
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**

@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('relateds', function (Blueprint $table) {
-            $table->integer('id', true);
-            $table->integer('title_id');
-            $table->integer('related_id');
-            $table->set('relation', ['Precuela', 'Secuela', 'Origen', 'Adaptación', 'Spin-Off', 'Version Aternativa', 'Otro']);
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (! Schema::hasTable('relateds')) {
+            Schema::create('relateds', function (Blueprint $table) {
+                $table->integer('id', true);
+                $table->integer('title_id');
+                $table->integer('related_id');
+                $table->set('relation', ['Precuela', 'Secuela', 'Origen', 'Adaptación', 'Spin-Off', 'Version Aternativa', 'Otro']);
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**

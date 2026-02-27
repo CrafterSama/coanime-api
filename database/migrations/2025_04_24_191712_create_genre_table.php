@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('genre', function (Blueprint $table) {
-            $table->integer('id', true);
-            $table->string('name');
-            $table->string('slug')->unique('slug');
-            $table->integer('game_type')->default(0);
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (! Schema::hasTable('genre')) {
+            Schema::create('genre', function (Blueprint $table) {
+                $table->integer('id', true);
+                $table->string('name');
+                $table->string('slug')->unique('slug');
+                $table->integer('game_type')->default(0);
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**

@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('tags', function (Blueprint $table) {
-            $table->integer('id', true);
-            $table->string('name')->nullable();
-            $table->string('slug')->nullable()->unique('slug');
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (! Schema::hasTable('tags')) {
+            Schema::create('tags', function (Blueprint $table) {
+                $table->integer('id', true);
+                $table->string('name')->nullable();
+                $table->string('slug')->nullable()->unique('slug');
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**

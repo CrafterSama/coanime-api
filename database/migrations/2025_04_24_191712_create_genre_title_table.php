@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('genre_title', function (Blueprint $table) {
-            $table->integer('id', true);
-            $table->integer('title_id');
-            $table->integer('genre_id');
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (! Schema::hasTable('genre_title')) {
+            Schema::create('genre_title', function (Blueprint $table) {
+                $table->integer('id', true);
+                $table->integer('title_id');
+                $table->integer('genre_id');
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**
