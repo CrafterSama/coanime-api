@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
@@ -11,6 +12,14 @@ return new class extends Migration {
     {
         if (! Schema::hasTable('posts')) {
             return;
+        }
+
+        if (Schema::hasColumn('posts', 'postponed_to')) {
+            try {
+                DB::statement('ALTER TABLE `posts` MODIFY `postponed_to` TIMESTAMP NULL DEFAULT NULL');
+            } catch (\Throwable $e) {
+                // Column may already be valid
+            }
         }
 
         Schema::table('posts', function (Blueprint $table): void {
