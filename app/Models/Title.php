@@ -60,9 +60,54 @@ class Title extends Model implements HasMedia
 
     public function scopeSearch($query, $name)
     {
+        if ($name === null || $name === '') {
+            return $query;
+        }
+
         return $query->where('name', 'like', '%'.$name.'%')
             ->orWhere('other_titles', 'like', '%'.$name.'%')
             ->orWhere('sinopsis', 'like', '%'.$name.'%');
+    }
+
+    /**
+     * Scope to filter titles by type slug (e.g. filter[type]=manga).
+     * Uses type_id subquery so the filter is applied correctly regardless of request parsing.
+     */
+    public function scopeOfTypeSlug($query, $slug)
+    {
+        $slug = \is_array($slug) ? ($slug[0] ?? null) : $slug;
+        if ($slug === null || $slug === '') {
+            return $query;
+        }
+
+        return $query->whereIn(
+            'type_id',
+            TitleType::query()->where('slug', $slug)->select('id')
+        );
+    }
+
+    /**
+     * Scope to filter titles by genre slug (e.g. filter[genre]=shonen).
+     */
+    public function scopeOfGenreSlug($query, string $slug)
+    {
+        return $query->whereHas('genres', fn ($q) => $q->where('slug', $slug));
+    }
+
+    /**
+     * Scope to filter titles by user (author) slug (e.g. filter[user]=user-slug).
+     */
+    public function scopeOfUserSlug($query, string $slug)
+    {
+        return $query->whereHas('users', fn ($q) => $q->where('slug', $slug));
+    }
+
+    /**
+     * Scope to filter titles by genre id (legacy: filter[genre_id]=1).
+     */
+    public function scopeOfGenreId($query, $genreId)
+    {
+        return $query->whereHas('genres', fn ($q) => $q->where('genre.id', $genreId));
     }
 
     public static function scopeTitles($query, $name)
@@ -206,7 +251,7 @@ class Title extends Model implements HasMedia
 
     public function type(): BelongsTo
     {
-        return $this->belongsTo(TitleType::class);
+        return $this->belongsTo(TitleType::class, 'type_id', 'id');
     }
 
     public function genres(): BelongsToMany

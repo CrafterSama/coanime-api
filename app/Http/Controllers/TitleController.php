@@ -33,66 +33,47 @@ use Illuminate\Support\Str;
 use Image;
 use Jikan\JikanPHP\Client;
 use PHPUnit\Util\Json;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 use Stichoza\GoogleTranslate\GoogleTranslate;
 
 class TitleController extends Controller
 {
     /**
      * Display a listing of titles serie.
+     * Uses only Spatie Query Builder: filter[name], filter[type], filter[genre], filter[user], filter[rating_id], sort, include, page, per_page.
      *
      * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
-        $query = Title::search($request->name)
-            ->with('images', 'rating', 'type', 'genres', 'users');
-
-        // Filters
-        if ($request->has('type_id') && $request->type_id) {
-            $query->where('title_type_id', $request->type_id);
+        if (! $request->filled('include')) {
+            $request->merge(['include' => 'images,rating,type,genres,users']);
         }
 
-        if ($request->has('rating_id') && $request->rating_id) {
-            $query->where('rating_id', $request->rating_id);
-        }
+        $this->normalizeFilterParams($request);
 
-        if ($request->has('genre_id') && $request->genre_id) {
-            $query->whereHas('genres', function ($q) use ($request) {
-                $q->where('genre.id', $request->genre_id);
-            });
-        }
+        $perPage = min(max((int) $request->get('per_page', 15), 1), 100);
 
-        if ($request->has('user_id') && $request->user_id) {
-            $query->where('user_id', $request->user_id);
-        }
+        $titles = QueryBuilder::for(Title::class)
+            ->allowedFilters([
+                AllowedFilter::scope('name', 'search'),
+                AllowedFilter::scope('type', 'ofTypeSlug'),
+                AllowedFilter::scope('genre', 'ofGenreSlug'),
+                AllowedFilter::scope('user', 'ofUserSlug'),
+                AllowedFilter::exact('rating_id'),
+            ])
+            ->allowedSorts(['id', 'name', 'created_at', 'updated_at'])
+            ->defaultSort('-created_at')
+            ->allowedIncludes(['images', 'rating', 'type', 'genres', 'users'])
+            ->paginate($perPage)
+            ->appends($request->query());
 
-        // Sorting
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortDirection = $request->get('sort_direction', 'desc');
-        
-        // Validate sort direction
-        $sortDirection = in_array(strtolower($sortDirection), ['asc', 'desc']) ? strtolower($sortDirection) : 'desc';
-        
-        // Allowed sort columns
-        $allowedSortColumns = ['created_at', 'updated_at', 'name', 'id'];
-        if (in_array($sortBy, $allowedSortColumns)) {
-            $query->orderBy($sortBy, $sortDirection);
-        } else {
-            $query->orderBy('created_at', 'desc');
-        }
-
-        // Pagination
-        $perPage = $request->get('per_page', 15);
-        $perPage = min(max((int) $perPage, 1), 100); // Between 1 and 100
-
-        $titles = $query->paginate($perPage);
-
-        // Get filter options (solo si se solicita con ?include_filters=1)
         if ($request->get('include_filters')) {
-            $types = TitleType::orderBy('name', 'asc')->get();
-            $genres = Genre::orderBy('name', 'asc')->get();
-            $ratings = \App\Models\Ratings::orderBy('name', 'asc')->get();
-            $users = \App\Models\User::whereHas('titles')->orderBy('name', 'asc')->get(['id', 'name']);
+            $types = TitleType::orderBy('name', 'asc')->get(['id', 'name', 'slug']);
+            $genres = Genre::orderBy('name', 'asc')->get(['id', 'name', 'slug']);
+            $ratings = Ratings::orderBy('name', 'asc')->get(['id', 'name']);
+            $users = User::whereHas('titles')->orderBy('name', 'asc')->get(['id', 'name', 'slug']);
 
             return response()->json([
                 'code' => 200,
@@ -113,8 +94,8 @@ class TitleController extends Controller
         }
 
         if ($titles->count() > 0) {
-            $types = TitleType::orderBy('name', 'asc')->get();
-            $genres = Genre::orderBy('name', 'asc')->get();
+            $types = TitleType::orderBy('name', 'asc')->get(['id', 'name', 'slug']);
+            $genres = Genre::orderBy('name', 'asc')->get(['id', 'name', 'slug']);
 
             return response()->json([
                 'code' => 200,
@@ -138,6 +119,28 @@ class TitleController extends Controller
                 'title' => 'Coanime.net - Lista de Títulos - Títulos No encontrados',
                 'description' => 'Lista de títulos en la enciclopedia de Coanime.net',
             ], 404);
+        }
+    }
+
+    /**
+     * Normalize filter params so Spatie Query Builder receives them.
+     * Some servers/proxies send filter_type instead of filter[type]; merge flat keys into filter[].
+     */
+    private function normalizeFilterParams(Request $request): void
+    {
+        $filter = $request->input('filter', []);
+        if (! \is_array($filter)) {
+            $filter = [];
+        }
+        $flatKeys = ['type', 'genre', 'user', 'rating_id', 'name'];
+        foreach ($flatKeys as $key) {
+            $flatKey = 'filter_'.$key;
+            if ($request->filled($flatKey) && ! \array_key_exists($key, $filter)) {
+                $filter[$key] = $request->input($flatKey);
+            }
+        }
+        if ($filter !== $request->input('filter', [])) {
+            $request->merge(['filter' => $filter]);
         }
     }
 
