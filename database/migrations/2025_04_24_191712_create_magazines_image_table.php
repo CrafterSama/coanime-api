@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('magazines_image')) {
         Schema::create('magazines_image', function (Blueprint $table) {
             $table->integer('id', true);
             $table->string('magazine_id', 16);
@@ -18,6 +19,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+        }
     }
 
     /**

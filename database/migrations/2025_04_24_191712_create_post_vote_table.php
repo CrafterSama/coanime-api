@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('post_vote')) {
         Schema::create('post_vote', function (Blueprint $table) {
             $table->integer('id', true);
             $table->integer('post_id');
@@ -19,6 +20,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+        }
     }
 
     /**

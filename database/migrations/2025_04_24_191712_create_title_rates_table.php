@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('title_rates', function (Blueprint $table) {
-            $table->integer('id', true);
-            $table->integer('title_id');
-            $table->integer('rate_id');
-            $table->integer('user_id')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (! Schema::hasTable('title_rates')) {
+            Schema::create('title_rates', function (Blueprint $table) {
+                $table->integer('id', true);
+                $table->integer('title_id');
+                $table->integer('rate_id');
+                $table->integer('user_id')->nullable();
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**

@@ -11,11 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('settings', function (Blueprint $table) {
-            $table->integer('id', true);
-            $table->string('setting_key')->nullable();
-            $table->string('setting_value')->nullable();
-        });
+        if (! Schema::hasTable('settings')) {
+            Schema::create('settings', function (Blueprint $table) {
+                $table->integer('id', true);
+                $table->string('setting_key')->nullable();
+                $table->string('setting_value')->nullable();
+            });
+        }
     }
 
     /**

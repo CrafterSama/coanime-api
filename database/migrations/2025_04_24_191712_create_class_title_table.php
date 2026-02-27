@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('class_title')) {
         Schema::create('class_title', function (Blueprint $table) {
-            $table->integer('id', true)->unique('class_id');
-            $table->string('name');
-        });
+                $table->integer('id', true)->unique('class_id');
+                $table->string('name');
+            });
+        }
     }
 
     /**

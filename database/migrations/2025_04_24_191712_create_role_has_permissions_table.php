@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('role_has_permissions', function (Blueprint $table) {
-            $table->unsignedBigInteger('permission_id');
-            $table->unsignedBigInteger('role_id')->index('role_has_permissions_role_id_foreign');
+        if (! Schema::hasTable('role_has_permissions')) {
+            Schema::create('role_has_permissions', function (Blueprint $table) {
+                $table->unsignedBigInteger('permission_id');
+                $table->unsignedBigInteger('role_id')->index('role_has_permissions_role_id_foreign');
 
-            $table->primary(['permission_id', 'role_id']);
-        });
+                $table->primary(['permission_id', 'role_id']);
+            });
+        }
     }
 
     /**

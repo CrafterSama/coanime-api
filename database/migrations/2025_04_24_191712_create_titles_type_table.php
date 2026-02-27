@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('titles_type', function (Blueprint $table) {
-            $table->integer('id', true)->unique('id');
-            $table->string('name');
-            $table->string('slug')->unique('slug');
-            $table->timestamps();
-            $table->softDeletes();
-            $table->index(['id'], 'type_id');
-        });
+        if (! Schema::hasTable('titles_type')) {
+            Schema::create('titles_type', function (Blueprint $table) {
+                $table->integer('id', true)->unique('id');
+                $table->string('name');
+                $table->string('slug')->unique('slug');
+                $table->timestamps();
+                $table->softDeletes();
+                $table->index(['id'], 'type_id');
+            });
+        }
     }
 
     /**

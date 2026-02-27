@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('team_user', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->unsignedBigInteger('team_id');
-            $table->unsignedBigInteger('user_id');
-            $table->string('role')->nullable();
-            $table->timestamps();
-            $table->unique(['team_id', 'user_id']);
-        });
+        if (! Schema::hasTable('team_user')) {
+            Schema::create('team_user', function (Blueprint $table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('team_id');
+                $table->unsignedBigInteger('user_id');
+                $table->string('role')->nullable();
+                $table->timestamps();
+                $table->unique(['team_id', 'user_id']);
+            });
+        }
     }
 
     /**

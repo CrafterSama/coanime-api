@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('people')) {
         Schema::create('people', function (Blueprint $table) {
             $table->tinyInteger('id', true);
             $table->string('name');
@@ -32,6 +33,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+        }
     }
 
     /**

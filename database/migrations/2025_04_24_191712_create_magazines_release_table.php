@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('magazines_release')) {
         Schema::create('magazines_release', function (Blueprint $table) {
             $table->integer('id', true)->index('frecuencia_id');
             $table->string('name', 100);
@@ -19,6 +20,7 @@ return new class extends Migration
 
             $table->unique(['id'], 'frecuencia_id_2');
         });
+        }
     }
 
     /**

@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('companies')) {
         Schema::create('companies', function (Blueprint $table) {
             $table->integer('id', true);
             $table->string('name')->unique('estudio_name');
@@ -24,6 +25,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+        }
     }
 
     /**

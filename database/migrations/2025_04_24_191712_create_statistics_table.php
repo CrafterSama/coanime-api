@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('statistics', function (Blueprint $table) {
-            $table->integer('id', true);
-            $table->string('name', 60);
-            $table->string('second_name', 60);
-            $table->string('slug', 60);
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (! Schema::hasTable('statistics')) {
+            Schema::create('statistics', function (Blueprint $table) {
+                $table->integer('id', true);
+                $table->string('name', 60);
+                $table->string('second_name', 60);
+                $table->string('slug', 60);
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**

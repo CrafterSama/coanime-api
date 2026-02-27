@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('post_gallery')) {
         Schema::create('post_gallery', function (Blueprint $table) {
             $table->integer('id', true);
             $table->integer('image_url');
@@ -18,6 +19,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+        }
     }
 
     /**

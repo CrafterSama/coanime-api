@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ratings', function (Blueprint $table) {
-            $table->integer('id', true);
-            $table->string('name');
-            $table->mediumText('description');
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (! Schema::hasTable('ratings')) {
+            Schema::create('ratings', function (Blueprint $table) {
+                $table->integer('id', true);
+                $table->string('name');
+                $table->mediumText('description');
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**

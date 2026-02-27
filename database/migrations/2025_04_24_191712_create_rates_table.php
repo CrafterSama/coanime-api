@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('rates')) {
         Schema::create('rates', function (Blueprint $table) {
             $table->integer('id', true);
             $table->string('rate_name');
@@ -18,6 +19,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+        }
     }
 
     /**
