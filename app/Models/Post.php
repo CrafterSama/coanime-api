@@ -30,7 +30,26 @@ class Post extends Model implements HasMedia
      */
     protected $dates = ['deleted_at', 'created_at', 'updated_at', 'postponed_to'];
 
-    protected $fillable = ['title', 'excerpt', 'content', 'category_id', 'user_id', 'slug', 'approved', 'draft', 'image', 'postponed_to', 'created_at'];
+    protected $fillable = [
+        'title',
+        'excerpt',
+        'content',
+        'category_id',
+        'user_id',
+        'slug',
+        'approved',
+        'draft',
+        'image',
+        'postponed_to',
+        'created_at',
+        // Campos para integrar noticias de scrapper
+        'source',
+        'source_article_id',
+        'source_url',
+        'source_published_at',
+        'auto_generated',
+        'needs_review',
+    ];
 
     /**
      * The attributes that should be cast.
