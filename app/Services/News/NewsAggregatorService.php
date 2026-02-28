@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\Log;
 
 class NewsAggregatorService
 {
+    private const LOG_CHANNEL = 'news_scraper';
+
+    private function log(): \Illuminate\Log\LogManager
+    {
+        return Log::channel(self::LOG_CHANNEL);
+    }
     public function __construct(
         private readonly NewsScraperRegistry $registry,
         private readonly NewsNormalizer $normalizer,
@@ -36,15 +42,26 @@ class NewsAggregatorService
 
         /** @var array<string, NewsScraperInterface> $scrapers */
         $scrapers = $this->registry->all();
+        $limit = $limitPorFuente ?? 10;
+
+        $this->log()->info('News scraper run started', [
+            'sources' => array_keys($scrapers),
+            'per_source_limit' => $limit,
+        ]);
 
         foreach ($scrapers as $sourceKey => $scraper) {
             try {
-                $articles = $scraper->fetchLatest($limitPorFuente ?? 10);
+                $articles = $scraper->fetchLatest($limit);
+                $count = $articles->count();
+                $this->log()->info('Source fetched', ['source' => $sourceKey, 'articles' => $count]);
             } catch (\Throwable $e) {
                 $errors++;
-                Log::warning('NewsAggregatorService: scraper failed', [
+                $this->log()->error('Scraper failed', [
                     'source' => $sourceKey,
-                    'error' => $e->getMessage(),
+                    'message' => $e->getMessage(),
+                    'exception' => get_debug_type($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ]);
                 continue;
             }
@@ -53,7 +70,20 @@ class NewsAggregatorService
             $saved += $result['saved'];
             $skipped += $result['skipped'];
             $errors += $result['errors'];
+
+            $this->log()->info('Source processed', [
+                'source' => $sourceKey,
+                'saved' => $result['saved'],
+                'skipped' => $result['skipped'],
+                'errors' => $result['errors'],
+            ]);
         }
+
+        $this->log()->info('News scraper run finished', [
+            'saved' => $saved,
+            'skipped' => $skipped,
+            'errors' => $errors,
+        ]);
 
         return [
             'saved' => $saved,
@@ -128,10 +158,14 @@ class NewsAggregatorService
             } catch (\Throwable $e) {
                 DB::rollBack();
                 $errors++;
-                Log::warning('NewsAggregatorService: error processing article', [
+                $this->log()->error('Error processing article', [
                     'source' => $article->source,
                     'source_article_id' => $article->sourceArticleId,
-                    'error' => $e->getMessage(),
+                    'url' => $article->originalUrl,
+                    'message' => $e->getMessage(),
+                    'exception' => get_debug_type($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ]);
             }
         }

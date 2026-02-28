@@ -36,9 +36,12 @@ class NewsMediaService
                 ->usingName("Post {$post->id} - {$post->title}")
                 ->toMediaCollection('featured-image');
         } catch (\Throwable $e) {
-            Log::warning('NewsMediaService: could not attach featured image', [
+            Log::channel('news_scraper')->warning('NewsMediaService: could not attach featured image', [
                 'post_id' => $post->id,
-                'error' => $e->getMessage(),
+                'title' => $post->title,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
         }
     }

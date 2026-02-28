@@ -116,6 +116,13 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        'news_scraper' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/news-scraper.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],

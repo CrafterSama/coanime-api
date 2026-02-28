@@ -31,9 +31,10 @@ class BigJpgClient
             ])->post($endpoint, $payload);
 
             if (! $response->successful()) {
-                Log::warning('BigJpgClient: request failed', [
+                Log::channel('news_scraper')->warning('BigJpgClient: request failed', [
                     'status' => $response->status(),
                     'body' => $response->body(),
+                    'image_url' => $imageUrl,
                 ]);
 
                 return null;
@@ -54,8 +55,11 @@ class BigJpgClient
 
             return null;
         } catch (\Throwable $e) {
-            Log::warning('BigJpgClient: error calling API', [
+            Log::channel('news_scraper')->warning('BigJpgClient: error calling API', [
                 'message' => $e->getMessage(),
+                'image_url' => $imageUrl,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
             return null;
