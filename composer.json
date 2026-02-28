@@ -10,6 +10,7 @@
     "require": {
         "php": "^8.2.0",
         "chriskonnertz/bbcode": "^1.1",
+        "doctrine/dbal": "^4.4",
         "guzzlehttp/guzzle": "^7.5.0",
         "intervention/image": "^2.7.2",
         "jikan/jikan-php": "^5.0",

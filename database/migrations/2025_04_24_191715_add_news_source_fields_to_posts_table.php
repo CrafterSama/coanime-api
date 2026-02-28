@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
@@ -13,7 +14,17 @@ return new class extends Migration {
             return;
         }
 
-        Schema::table('posts', function (Blueprint $table): void {
+        $driver = Schema::getConnection()->getDriverName();
+        $previousMode = null;
+        if ($driver === 'mysql') {
+            $previousMode = DB::selectOne('SELECT @@SESSION.sql_mode as mode')->mode ?? '';
+            $relaxed = str_replace(['NO_ZERO_DATE', 'NO_ZERO_IN_DATE'], '', $previousMode);
+            $relaxed = trim(preg_replace('/,,+/', ',', $relaxed), ',');
+            DB::statement('SET SESSION sql_mode = ?', [$relaxed]);
+        }
+
+        try {
+            Schema::table('posts', function (Blueprint $table): void {
             if (! Schema::hasColumn('posts', 'source')) {
                 $table->string('source', 50)->nullable()->index();
             }
@@ -34,15 +45,20 @@ return new class extends Migration {
             }
         });
 
-        if (Schema::hasColumn('posts', 'source') && Schema::hasColumn('posts', 'source_article_id')) {
-            try {
-                Schema::table('posts', function (Blueprint $table): void {
-                    $table->unique(['source', 'source_article_id']);
-                });
-            } catch (\Throwable $e) {
-                if (strpos($e->getMessage(), 'Duplicate') === false) {
-                    throw $e;
+            if (Schema::hasColumn('posts', 'source') && Schema::hasColumn('posts', 'source_article_id')) {
+                try {
+                    Schema::table('posts', function (Blueprint $table): void {
+                        $table->unique(['source', 'source_article_id']);
+                    });
+                } catch (\Throwable $e) {
+                    if (strpos($e->getMessage(), 'Duplicate') === false) {
+                        throw $e;
+                    }
                 }
+            }
+        } finally {
+            if ($driver === 'mysql' && $previousMode !== null) {
+                DB::statement('SET SESSION sql_mode = ?', [$previousMode]);
             }
         }
     }
