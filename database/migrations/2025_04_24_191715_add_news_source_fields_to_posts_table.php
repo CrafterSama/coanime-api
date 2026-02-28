@@ -13,12 +13,6 @@ return new class extends Migration {
             return;
         }
 
-        if (Schema::hasColumn('posts', 'postponed_to')) {
-            Schema::table('posts', function (Blueprint $table): void {
-                $table->timestamp('postponed_to')->nullable()->default(null)->change();
-            });
-        }
-
         Schema::table('posts', function (Blueprint $table): void {
             if (! Schema::hasColumn('posts', 'source')) {
                 $table->string('source', 50)->nullable()->index();
