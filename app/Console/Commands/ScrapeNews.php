@@ -51,17 +51,40 @@ class ScrapeNews extends Command
             ]);
             activity()
                 ->useLog('news_scraper')
-                ->withProperties([
-                    'controller_name' => 'ScraperNoticias',
-                    'error' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                ])
+                ->withProperties(array_merge(
+                    [
+                        'controller_name' => 'ScraperNoticias',
+                        'error' => $e->getMessage(),
+                    ],
+                    self::exceptionDetails($e)
+                ))
                 ->log('Scraper de noticias falló: ' . $e->getMessage());
             $this->error('Error: ' . $e->getMessage());
 
             return self::FAILURE;
         }
+    }
+
+    /**
+     * @return array{exception: string, file: string, line: int, trace: string}
+     */
+    private static function exceptionDetails(\Throwable $e): array
+    {
+        $details = [
+            'exception' => get_debug_type($e),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+        ];
+        if ($e->getPrevious() !== null) {
+            $details['previous_exception'] = get_debug_type($e->getPrevious());
+            $details['previous_message'] = $e->getPrevious()->getMessage();
+            $details['previous_file'] = $e->getPrevious()->getFile();
+            $details['previous_line'] = $e->getPrevious()->getLine();
+            $details['previous_trace'] = $e->getPrevious()->getTraceAsString();
+        }
+
+        return $details;
     }
 }
 

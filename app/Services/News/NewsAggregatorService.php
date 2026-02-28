@@ -38,6 +38,28 @@ class NewsAggregatorService
         }
     }
 
+    /**
+     * @return array{exception: string, file: string, line: int, trace: string}
+     */
+    private function exceptionDetails(\Throwable $e): array
+    {
+        $details = [
+            'exception' => get_debug_type($e),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+        ];
+        if ($e->getPrevious() !== null) {
+            $details['previous_exception'] = get_debug_type($e->getPrevious());
+            $details['previous_message'] = $e->getPrevious()->getMessage();
+            $details['previous_file'] = $e->getPrevious()->getFile();
+            $details['previous_line'] = $e->getPrevious()->getLine();
+            $details['previous_trace'] = $e->getPrevious()->getTraceAsString();
+        }
+
+        return $details;
+    }
+
     public function __construct(
         private readonly NewsScraperRegistry $registry,
         private readonly NewsNormalizer $normalizer,
@@ -87,11 +109,14 @@ class NewsAggregatorService
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                 ]);
-                $this->logActivity("Error en fuente de noticias: {$sourceKey}", [
-                    'controller_name' => 'ScraperNoticias',
-                    'source' => $sourceKey,
-                    'error' => $e->getMessage(),
-                ]);
+                $this->logActivity("Error en fuente de noticias: {$sourceKey}", array_merge(
+                    [
+                        'controller_name' => 'ScraperNoticias',
+                        'source' => $sourceKey,
+                        'error' => $e->getMessage(),
+                    ],
+                    $this->exceptionDetails($e)
+                ));
                 continue;
             }
 
@@ -203,6 +228,16 @@ class NewsAggregatorService
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                 ]);
+                $this->logActivity('Error procesando noticia: ' . ($article->titleOriginal ?? $article->sourceArticleId ?? 'sin título'), array_merge(
+                    [
+                        'controller_name' => 'ScraperNoticias',
+                        'source' => $article->source,
+                        'source_article_id' => $article->sourceArticleId,
+                        'url' => $article->originalUrl,
+                        'error' => $e->getMessage(),
+                    ],
+                    $this->exceptionDetails($e)
+                ));
             }
         }
 
