@@ -20,6 +20,24 @@ class NewsAggregatorService
     {
         return Log::channel(self::LOG_CHANNEL);
     }
+
+    private const ACTIVITY_LOG_NAME = 'news_scraper';
+
+    private function logActivity(string $description, array $properties = []): void
+    {
+        try {
+            activity()
+                ->useLog(self::ACTIVITY_LOG_NAME)
+                ->withProperties($properties)
+                ->log($description);
+        } catch (\Throwable $e) {
+            $this->log()->warning('Failed to write activity log', [
+                'description' => $description,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     public function __construct(
         private readonly NewsScraperRegistry $registry,
         private readonly NewsNormalizer $normalizer,
@@ -49,6 +67,12 @@ class NewsAggregatorService
             'per_source_limit' => $limit,
         ]);
 
+        $this->logActivity('Scraper de noticias iniciado', [
+            'controller_name' => 'ScraperNoticias',
+            'per_source' => $limit,
+            'sources' => array_keys($scrapers),
+        ]);
+
         foreach ($scrapers as $sourceKey => $scraper) {
             try {
                 $articles = $scraper->fetchLatest($limit);
@@ -63,6 +87,11 @@ class NewsAggregatorService
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                 ]);
+                $this->logActivity("Error en fuente de noticias: {$sourceKey}", [
+                    'controller_name' => 'ScraperNoticias',
+                    'source' => $sourceKey,
+                    'error' => $e->getMessage(),
+                ]);
                 continue;
             }
 
@@ -72,6 +101,13 @@ class NewsAggregatorService
             $errors += $result['errors'];
 
             $this->log()->info('Source processed', [
+                'source' => $sourceKey,
+                'saved' => $result['saved'],
+                'skipped' => $result['skipped'],
+                'errors' => $result['errors'],
+            ]);
+            $this->logActivity("Fuente {$sourceKey} procesada: {$result['saved']} guardadas, {$result['skipped']} omitidas, {$result['errors']} errores", [
+                'controller_name' => 'ScraperNoticias',
                 'source' => $sourceKey,
                 'saved' => $result['saved'],
                 'skipped' => $result['skipped'],

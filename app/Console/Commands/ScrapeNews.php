@@ -29,6 +29,16 @@ class ScrapeNews extends Command
                 'errors' => $result['errors'],
             ]);
 
+            activity()
+                ->useLog('news_scraper')
+                ->withProperties([
+                    'controller_name' => 'ScraperNoticias',
+                    'saved' => $result['saved'],
+                    'skipped' => $result['skipped'],
+                    'errors' => $result['errors'],
+                ])
+                ->log("Scraper de noticias finalizado: {$result['saved']} guardadas, {$result['skipped']} omitidas, {$result['errors']} errores.");
+
             $this->info("Noticias procesadas. Guardadas: {$result['saved']}, Saltadas: {$result['skipped']}, Errores: {$result['errors']}.");
 
             return self::SUCCESS;
@@ -39,6 +49,15 @@ class ScrapeNews extends Command
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ]);
+            activity()
+                ->useLog('news_scraper')
+                ->withProperties([
+                    'controller_name' => 'ScraperNoticias',
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ])
+                ->log('Scraper de noticias falló: ' . $e->getMessage());
             $this->error('Error: ' . $e->getMessage());
 
             return self::FAILURE;

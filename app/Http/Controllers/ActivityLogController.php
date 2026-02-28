@@ -20,10 +20,13 @@ class ActivityLogController extends Controller
         try {
             $query = Activity::query();
 
-            // Filtrar por usuario autenticado o específico
+            // Filtrar por usuario autenticado o específico (si no se filtra por log_name)
             if ($request->has('user_id')) {
                 $query->where('causer_id', $request->user_id)
                     ->where('causer_type', 'App\Models\User');
+            } elseif ($request->has('log_name')) {
+                // Al filtrar por log_name (ej. scraper) se muestran todas las entradas de ese log, incl. sistema (sin usuario)
+                // No aplicar filtro por causer
             } elseif (Auth::check() && ! $request->has('all')) {
                 // Por defecto, solo mostrar logs del usuario autenticado a menos que se pida 'all'
                 $query->where('causer_id', Auth::id())
