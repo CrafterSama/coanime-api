@@ -16,7 +16,7 @@ class NewsAggregatorService
 {
     private const LOG_CHANNEL = 'news_scraper';
 
-    private function log(): \Illuminate\Log\LogManager
+    private function log(): \Psr\Log\LoggerInterface
     {
         return Log::channel(self::LOG_CHANNEL);
     }
