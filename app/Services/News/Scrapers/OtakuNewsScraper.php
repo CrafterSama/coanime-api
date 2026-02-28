@@ -24,18 +24,19 @@ class OtakuNewsScraper extends BaseHtmlScraper
     {
         $config = $this->getSourceConfig();
         $list = $config['list'] ?? [];
+        $titleSelector = $list['title'] ?? 'h2 a, h3 a, .entry-title a';
 
-        $titleNode = $node->filter($list['title'] ?? 'h2 a, h3 a, .entry-title a');
-        $title = trim((string) ($titleNode->text(null, false) ?? ''));
-        $link = $titleNode->attr('href') ?? null;
+        $title = $this->safeText($node, $titleSelector);
+        $link = $this->safeAttr($node, $titleSelector, 'href');
 
-        if ($title === '' || $link === null) {
+        if ($title === null || $title === '' || $link === null) {
             return null;
         }
 
         $excerpt = '';
-        if (! empty($list['excerpt']) && $node->filter($list['excerpt'])->count()) {
-            $excerpt = trim((string) $node->filter($list['excerpt'])->text(null, false));
+        if (! empty($list['excerpt'])) {
+            $excerptText = $this->safeText($node, $list['excerpt']);
+            $excerpt = $excerptText !== null ? $excerptText : '';
         }
 
         $date = null;
@@ -46,10 +47,13 @@ class OtakuNewsScraper extends BaseHtmlScraper
             $date = CarbonImmutable::now();
         }
 
-        $imageNode = ! empty($list['image']) ? $node->filter($list['image']) : null;
         $image = null;
-        if ($imageNode !== null && $imageNode->count()) {
-            $image = $imageNode->attr('src') ?: $imageNode->attr('data-src') ?: '';
+        if (! empty($list['image'])) {
+            $image = $this->safeAttr($node, $list['image'], 'src');
+            if ($image === null) {
+                $image = $this->safeAttr($node, $list['image'], 'data-src');
+            }
+            $image = $image ?? '';
         }
         if ($image !== null && str_starts_with($image, '//')) {
             $image = 'https:'.$image;

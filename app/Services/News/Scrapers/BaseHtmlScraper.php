@@ -142,7 +142,11 @@ abstract class BaseHtmlScraper implements NewsScraperInterface
 
     protected function parseDateFromAttr(Crawler $node, string $selector, string $attrName): ?CarbonImmutable
     {
-        $value = $node->filter($selector)->attr($attrName) ?? null;
+        $found = $node->filter($selector);
+        if ($found->count() === 0) {
+            return null;
+        }
+        $value = $found->attr($attrName) ?? null;
         if ($value === null || $value === '') {
             return null;
         }
@@ -156,13 +160,53 @@ abstract class BaseHtmlScraper implements NewsScraperInterface
 
     protected function parseDateFromText(Crawler $node, string $selector): ?CarbonImmutable
     {
-        $text = trim((string) ($node->filter($selector)->text(null, false) ?? ''));
+        $found = $node->filter($selector);
+        if ($found->count() === 0) {
+            return null;
+        }
+        $text = trim((string) ($found->text(null, false) ?? ''));
         if ($text === '') {
             return null;
         }
 
         try {
             return CarbonImmutable::parse($text);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Texto del primer nodo que coincida con el selector, o null si no hay nodos.
+     */
+    protected function safeText(Crawler $node, string $selector): ?string
+    {
+        $found = $node->filter($selector);
+        if ($found->count() === 0) {
+            return null;
+        }
+
+        try {
+            $text = $found->text(null, false);
+            return $text === null ? null : trim((string) $text);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Atributo del primer nodo que coincida con el selector, o null si no hay nodos.
+     */
+    protected function safeAttr(Crawler $node, string $selector, string $attrName): ?string
+    {
+        $found = $node->filter($selector);
+        if ($found->count() === 0) {
+            return null;
+        }
+
+        try {
+            $value = $found->attr($attrName);
+            return $value === null || $value === '' ? null : $value;
         } catch (\Throwable) {
             return null;
         }

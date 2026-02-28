@@ -56,6 +56,7 @@ return [
             ],
         ],
 
+        // Ejemplo de noticia: https://myanimelist.net/news/73917655
         'myanimelist' => [
             'name' => 'MyAnimeList',
             'base_url' => 'https://myanimelist.net',
@@ -69,11 +70,11 @@ return [
                 'date_text' => '.info',
                 'image' => '.image img',
                 'link' => '.title a',
+                // Fallback si MAL cambia el HTML: enlaces directos a /news/ID
+                'item_fallback_link' => 'a[href*="/news/"]',
             ],
             'detail' => [
-                // En MAL el listado ya incluye bastante información;
-                // se puede ajustar este selector si se necesita el cuerpo completo.
-                'content' => '.news-container, .content-left',
+                'content' => '.news-container, .content-left, .content .news-container, [class*="news-container"], [class*="news-content"]',
             ],
         ],
     ],

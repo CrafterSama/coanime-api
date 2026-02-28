@@ -36,6 +36,7 @@ class ScrapeNews extends Command
                     'saved' => $result['saved'],
                     'skipped' => $result['skipped'],
                     'errors' => $result['errors'],
+                    'errors_detail' => $result['errors_detail'] ?? [],
                 ])
                 ->log("Scraper de noticias finalizado: {$result['saved']} guardadas, {$result['skipped']} omitidas, {$result['errors']} errores.");
 

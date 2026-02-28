@@ -72,13 +72,14 @@ class NewsAggregatorService
      * Ejecuta todos los scrappers registrados y procesa las noticias resultantes.
      *
      * @param  int|null  $limitPorFuente
-     * @return array{saved:int,skipped:int,errors:int}
+     * @return array{saved:int,skipped:int,errors:int,errors_detail:array<int,array{type:string,source?:string,message:string,url?:string,title?:string,exception?:string,file?:string,line?:string}>}
      */
     public function run(?int $limitPorFuente = null): array
     {
         $saved = 0;
         $skipped = 0;
         $errors = 0;
+        $errorsDetail = [];
 
         /** @var array<string, NewsScraperInterface> $scrapers */
         $scrapers = $this->registry->all();
@@ -102,6 +103,14 @@ class NewsAggregatorService
                 $this->log()->info('Source fetched', ['source' => $sourceKey, 'articles' => $count]);
             } catch (\Throwable $e) {
                 $errors++;
+                $errorsDetail[] = [
+                    'type' => 'fuente',
+                    'source' => $sourceKey,
+                    'message' => $e->getMessage(),
+                    'exception' => get_debug_type($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ];
                 $this->log()->error('Scraper failed', [
                     'source' => $sourceKey,
                     'message' => $e->getMessage(),
@@ -124,6 +133,9 @@ class NewsAggregatorService
             $saved += $result['saved'];
             $skipped += $result['skipped'];
             $errors += $result['errors'];
+            foreach ($result['errors_detail'] as $err) {
+                $errorsDetail[] = $err;
+            }
 
             $this->log()->info('Source processed', [
                 'source' => $sourceKey,
@@ -150,6 +162,7 @@ class NewsAggregatorService
             'saved' => $saved,
             'skipped' => $skipped,
             'errors' => $errors,
+            'errors_detail' => $errorsDetail,
         ];
     }
 
@@ -165,13 +178,14 @@ class NewsAggregatorService
 
     /**
      * @param  Collection<int, NewsArticleData>  $articles
-     * @return array{saved:int,skipped:int,errors:int}
+     * @return array{saved:int,skipped:int,errors:int,errors_detail:array<int,array{type:string,source?:string,message:string,url?:string,title?:string,exception?:string,file?:string,line?:string}>}
      */
     protected function processArticles(Collection $articles): array
     {
         $saved = 0;
         $skipped = 0;
         $errors = 0;
+        $errorsDetail = [];
 
         foreach ($articles as $article) {
             try {
@@ -219,6 +233,16 @@ class NewsAggregatorService
             } catch (\Throwable $e) {
                 DB::rollBack();
                 $errors++;
+                $errorsDetail[] = [
+                    'type' => 'artículo',
+                    'source' => $article->source,
+                    'url' => $article->originalUrl,
+                    'title' => $article->titleOriginal ?? $article->sourceArticleId ?? null,
+                    'message' => $e->getMessage(),
+                    'exception' => get_debug_type($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ];
                 $this->log()->error('Error processing article', [
                     'source' => $article->source,
                     'source_article_id' => $article->sourceArticleId,
@@ -245,6 +269,7 @@ class NewsAggregatorService
             'saved' => $saved,
             'skipped' => $skipped,
             'errors' => $errors,
+            'errors_detail' => $errorsDetail,
         ];
     }
 }

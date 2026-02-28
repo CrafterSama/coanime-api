@@ -6,6 +6,9 @@ namespace App\Services\News\Scrapers;
 
 use App\DataTransferObjects\NewsArticleData;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Symfony\Component\DomCrawler\Crawler;
 
 class MalNewsScraper extends BaseHtmlScraper
@@ -20,31 +23,140 @@ class MalNewsScraper extends BaseHtmlScraper
         return $this->getSourceConfig()['list']['item'] ?? '.news-unit';
     }
 
+    /**
+     * Si el listado con .news-unit no devuelve ítems (MAL puede haber cambiado el HTML),
+     * intenta obtener noticias desde enlaces a /news/ID.
+     */
+    public function fetchLatest(int $limit = 10): Collection
+    {
+        $items = parent::fetchLatest($limit);
+
+        if ($items->isNotEmpty()) {
+            return $items;
+        }
+
+        $fallbackSelector = $this->getSourceConfig()['list']['item_fallback_link'] ?? null;
+        if ($fallbackSelector === null || $fallbackSelector === '') {
+            return $items;
+        }
+
+        return $this->fetchLatestByNewsLinks($limit, $fallbackSelector);
+    }
+
+    /**
+     * Obtiene noticias desde enlaces a /news/{id} en la página de listado.
+     */
+    protected function fetchLatestByNewsLinks(int $limit, string $linkSelector): Collection
+    {
+        $config = $this->getSourceConfig();
+        $perSourceLimit = (int) Config::get('news.limits.per_source', 10);
+        $limit = min($limit, $perSourceLimit);
+
+        try {
+            $response = Http::withHeaders($this->defaultHeaders())
+                ->timeout($config['timeout'] ?? 10)
+                ->get($config['list_url']);
+
+            if (! $response->successful()) {
+                return collect();
+            }
+        } catch (\Throwable) {
+            return collect();
+        }
+
+        $crawler = new Crawler($response->body(), $this->getBaseUrl());
+        $items = collect();
+        $seenUrls = [];
+
+        $crawler->filter($linkSelector)->each(function (Crawler $node) use (&$items, $limit, &$seenUrls): void {
+            if ($items->count() >= $limit) {
+                return;
+            }
+
+            try {
+                $href = $node->attr('href');
+            } catch (\Throwable) {
+                return;
+            }
+            if ($href === null || $href === '') {
+                return;
+            }
+
+            $absoluteUrl = $this->absolutizeUrl($href);
+            if ($absoluteUrl === null) {
+                return;
+            }
+            // Solo enlaces a noticia individual: /news/73917655
+            if (! preg_match('#/news/(\d+)(?:/|$)#', $absoluteUrl)) {
+                return;
+            }
+            if (isset($seenUrls[$absoluteUrl])) {
+                return;
+            }
+            $seenUrls[$absoluteUrl] = true;
+
+            $title = null;
+            try {
+                $title = trim((string) $node->text(null, false));
+            } catch (\Throwable) {
+                return;
+            }
+            if ($title === '') {
+                return;
+            }
+
+            $sourceArticleId = NewsArticleData::makeIdFromUrl($this->getSourceKey(), $absoluteUrl);
+            $dto = new NewsArticleData(
+                source: $this->getSourceKey(),
+                sourceArticleId: $sourceArticleId,
+                originalUrl: $absoluteUrl,
+                titleOriginal: $title,
+                titleEs: null,
+                excerptEs: null,
+                contentHtmlOriginal: null,
+                contentHtmlEs: null,
+                publishedAt: CarbonImmutable::now(),
+                tags: [],
+                sourceCategory: null,
+                mainImageUrl: null,
+                contentImagesUrls: [],
+                contentVideosUrls: [],
+            );
+
+            $items->push($this->enrichWithDetail($dto));
+        });
+
+        return $items;
+    }
+
     protected function mapListItem(Crawler $node): ?NewsArticleData
     {
         $config = $this->getSourceConfig();
         $list = $config['list'] ?? [];
+        $titleSelector = $list['title'] ?? '.title a';
 
-        $titleNode = $node->filter($list['title'] ?? '.title a');
-        $title = trim((string) ($titleNode->text(null, false) ?? ''));
-        $link = $titleNode->attr('href') ?? null;
+        $title = $this->safeText($node, $titleSelector);
+        $link = $this->safeAttr($node, $titleSelector, 'href');
 
-        if ($title === '' || $link === null) {
+        if ($title === null || $title === '' || $link === null) {
             return null;
         }
 
         $excerpt = '';
-        if (! empty($list['excerpt']) && $node->filter($list['excerpt'])->count()) {
-            $excerpt = trim((string) $node->filter($list['excerpt'])->text(null, false));
+        if (! empty($list['excerpt'])) {
+            $excerptText = $this->safeText($node, $list['excerpt']);
+            $excerpt = $excerptText !== null ? $excerptText : '';
         }
 
         // MAL no da fecha en formato estándar, usamos fecha actual como aproximación
         $date = CarbonImmutable::now();
 
-        $imageNode = ! empty($list['image']) ? $node->filter($list['image']) : null;
         $image = null;
-        if ($imageNode !== null && $imageNode->count()) {
-            $image = $imageNode->attr('src') ?: '';
+        if (! empty($list['image'])) {
+            $image = $this->safeAttr($node, $list['image'], 'src');
+            if ($image === null) {
+                $image = $this->safeAttr($node, $list['image'], 'data-src');
+            }
         }
         if ($image !== null && str_starts_with($image, '//')) {
             $image = 'https:'.$image;
