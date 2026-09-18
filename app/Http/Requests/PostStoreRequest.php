@@ -6,11 +6,16 @@ namespace App\Http\Requests;
 
 use App\Enums\PostApproved;
 use App\Enums\PostDraft;
+use App\Http\Requests\Concerns\MergesParamsPayload;
+use App\Models\Tag;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class PostStoreRequest extends FormRequest
 {
+    use MergesParamsPayload;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -22,7 +27,7 @@ class PostStoreRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -34,7 +39,22 @@ class PostStoreRequest extends FormRequest
             'image' => ['required', 'string', 'max:255'],
             'postponed_to' => ['nullable', 'date_format:Y-m-d H:i:s'],
             'tag_id' => ['nullable', 'array'],
-            'tag_id.*' => ['nullable', 'integer', 'exists:tags,id'],
+            'tag_id.*' => [
+                'nullable',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_numeric($value)) {
+                        if (! Tag::where('id', (int) $value)->exists()) {
+                            $fail('El tag seleccionado no es válido.');
+                        }
+                    } elseif (is_string($value)) {
+                        if (strlen($value) > 255) {
+                            $fail('El nombre del tag no puede exceder 255 caracteres.');
+                        }
+                    } else {
+                        $fail('Cada tag debe ser un ID numérico o un nombre.');
+                    }
+                },
+            ],
             'title_id' => ['nullable', 'integer', 'exists:titles,id'],
             'draft' => ['nullable', Rule::enum(PostDraft::class)],
             'approved' => ['nullable', Rule::enum(PostApproved::class)],
