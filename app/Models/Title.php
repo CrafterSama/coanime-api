@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\HasMedia;
@@ -293,19 +294,18 @@ class Title extends Model implements HasMedia
      * Get cover image URL - compatible with old code
      * Falls back to old 'images' relationship if media doesn't exist
      * Returns original URL if media is a placeholder
+     * If file is still at old path (e.g. move failed), returns old path URL so image still shows
      */
     public function getCoverImageUrlAttribute(): ?string
     {
         $media = $this->getFirstMedia('cover');
         if ($media) {
-            // If it's a placeholder, return the original URL
             if ($media->getCustomProperty('is_placeholder', false)) {
                 return $media->getCustomProperty('original_url', $this->images?->name);
             }
-            return $media->getUrl();
+            return $this->mediaUrlWithLegacyFallback($media) ?? $this->images?->name;
         }
 
-        // Fallback to old relationship
         return $this->images?->name;
     }
 
@@ -319,9 +319,40 @@ class Title extends Model implements HasMedia
             return $media->getUrl('thumb');
         }
 
-        // Fallback to old relationship
         return $this->images?->thumbnail ?? $this->images?->name;
     }
+
+    /**
+     * Return media URL; if file is not at new bucket path (e.g. move failed), use old path URL.
+     * Only for main file. Caches per request to avoid repeated S3 exists() checks.
+     */
+    protected function mediaUrlWithLegacyFallback(Media $media): ?string
+    {
+        $cacheKey = 'media_url_title_' . $media->id;
+        if (array_key_exists($cacheKey, self::$mediaUrlCache)) {
+            return self::$mediaUrlCache[$cacheKey];
+        }
+        $disk = Storage::disk($media->disk ?? 's3');
+        $relativePath = $media->getPathRelativeToRoot();
+        if ($disk->exists($relativePath)) {
+            $url = $media->getUrl();
+            self::$mediaUrlCache[$cacheKey] = $url;
+            return $url;
+        }
+        $prefix = config('media-library.prefix', '');
+        $oldBase = $prefix !== '' ? $prefix . '/' . $media->getKey() : (string) $media->getKey();
+        $oldPath = $oldBase . '/' . $media->file_name;
+        if ($disk->exists($oldPath)) {
+            $url = $disk->url($oldPath);
+            self::$mediaUrlCache[$cacheKey] = $url;
+            return $url;
+        }
+        self::$mediaUrlCache[$cacheKey] = $media->getUrl();
+        return self::$mediaUrlCache[$cacheKey];
+    }
+
+    /** @var array<string, string> */
+    private static array $mediaUrlCache = [];
 
     /**
      * Configuración de logs de actividad para el modelo Title.

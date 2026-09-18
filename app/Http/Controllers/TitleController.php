@@ -327,6 +327,7 @@ class TitleController extends Controller
             $ratings = Ratings::all();
             $genres = Genre::all();
             $types = TitleType::all();
+            $title->sinopsis = Helper::bbcodeToHtmlSafe($title->sinopsis ?? '');
 
             return response()->json([
                 'code' => 200,
@@ -832,6 +833,7 @@ class TitleController extends Controller
             $rates = Rate::all();
             $statistics = Statistics::all();
             $name = $title->name;
+            $title->sinopsis = Helper::bbcodeToHtmlSafe($title->sinopsis ?? '');
             $description = is_null($title->sinopsis) ? 'Sin descripción' : $title->sinopsis;
 
             $meta = [

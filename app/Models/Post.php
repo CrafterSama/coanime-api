@@ -10,6 +10,7 @@ use App\Enums\PostDraft;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\MediaLibrary\HasMedia;
@@ -91,6 +92,25 @@ class Post extends Model implements HasMedia
     public function scopePublished($query)
     {
         return $query->where('draft', PostDraft::PUBLISHED->value);
+    }
+
+    /**
+     * Scope to filter posts that have a displayable image (Spatie media or legacy column).
+     */
+    public function scopeWithImage($query)
+    {
+        $placeholder = 'https://api.coanime.net/storage/images/posts/';
+
+        return $query->where(function ($q) use ($placeholder) {
+            $q->whereHas('media', function ($m) {
+                $m->where('collection_name', 'featured-image');
+            })
+                ->orWhere(function ($q2) use ($placeholder) {
+                    $q2->whereNotNull('image')
+                        ->where('image', '!=', '')
+                        ->where('image', '!=', $placeholder);
+                });
+        });
     }
 
     /**
@@ -241,20 +261,18 @@ class Post extends Model implements HasMedia
      * Get image URL - compatible with old code
      * Falls back to old 'image' field if media doesn't exist
      * Returns original URL if media is a placeholder
+     * If file is still at old path (e.g. move failed), returns old path URL so image still shows
      */
     public function getImageAttribute($value)
     {
-        // Try to get from Media Library first
         $media = $this->getFirstMedia('featured-image');
         if ($media) {
-            // If it's a placeholder, return the original URL
             if ($media->getCustomProperty('is_placeholder', false)) {
                 return $media->getCustomProperty('original_url', $value);
             }
-            return $media->getUrl();
+            return $this->mediaUrlWithLegacyFallback($media) ?? $value;
         }
 
-        // Fallback to old field
         return $value;
     }
 
@@ -275,6 +293,38 @@ class Post extends Model implements HasMedia
         $media = $this->getFirstMedia('featured-image');
         return $media ? $media->getUrl('medium') : null;
     }
+
+    /**
+     * Return media URL; if file is not at new bucket path (e.g. move failed), use old path URL.
+     * Only for main file (no conversions). Caches per request to avoid repeated S3 exists() checks.
+     */
+    protected function mediaUrlWithLegacyFallback(Media $media): ?string
+    {
+        $cacheKey = 'media_url_' . $media->id;
+        if (array_key_exists($cacheKey, self::$mediaUrlCache)) {
+            return self::$mediaUrlCache[$cacheKey];
+        }
+        $disk = Storage::disk($media->disk ?? 's3');
+        $relativePath = $media->getPathRelativeToRoot();
+        if ($disk->exists($relativePath)) {
+            $url = $media->getUrl();
+            self::$mediaUrlCache[$cacheKey] = $url;
+            return $url;
+        }
+        $prefix = config('media-library.prefix', '');
+        $oldBase = $prefix !== '' ? $prefix . '/' . $media->getKey() : (string) $media->getKey();
+        $oldPath = $oldBase . '/' . $media->file_name;
+        if ($disk->exists($oldPath)) {
+            $url = $disk->url($oldPath);
+            self::$mediaUrlCache[$cacheKey] = $url;
+            return $url;
+        }
+        self::$mediaUrlCache[$cacheKey] = $media->getUrl();
+        return self::$mediaUrlCache[$cacheKey];
+    }
+
+    /** @var array<string, string> */
+    private static array $mediaUrlCache = [];
 
     /**
      * Configuración de logs de actividad para el modelo Post.

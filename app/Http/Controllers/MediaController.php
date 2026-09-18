@@ -103,6 +103,7 @@ class MediaController extends Controller
             $modelId = $item->model_id;
             $modelTitle = null;
             $modelSlug = null;
+            $modelTitleType = null;
             $model = null;
 
             // Try to load model (handles both eager loaded and lazy loaded cases, including soft deletes)
@@ -137,10 +138,21 @@ class MediaController extends Controller
                         } elseif ($model instanceof \App\Models\Title) {
                             $modelTitle = $model->name ?? null;
                             $modelSlug = $model->slug ?? null;
+                            $model->loadMissing('type');
+                            $modelTitleType = $model->type?->name ?? null;
                         } elseif ($model instanceof \App\Models\User) {
                             $modelTitle = $model->name ?? null;
                             $modelSlug = $model->slug ?? null;
                         } elseif ($model instanceof \App\Models\Magazine) {
+                            $modelTitle = $model->name ?? null;
+                            $modelSlug = $model->slug ?? null;
+                        } elseif ($model instanceof \App\Models\People) {
+                            $modelTitle = $model->name ?? null;
+                            $modelSlug = $model->slug ?? null;
+                        } elseif ($model instanceof \App\Models\Company) {
+                            $modelTitle = $model->name ?? null;
+                            $modelSlug = $model->slug ?? null;
+                        } elseif ($model instanceof \App\Models\Event) {
                             $modelTitle = $model->name ?? null;
                             $modelSlug = $model->slug ?? null;
                         }
@@ -181,6 +193,7 @@ class MediaController extends Controller
                 'model_id' => $modelId,
                 'model_title' => $modelTitle,
                 'model_slug' => $modelSlug,
+                'model_title_type' => $modelTitleType,
                 'created_at' => $createdAt->toIso8601String(),
                 'updated_at' => ($item->updated_at ?? now())->toIso8601String(),
             ];
@@ -238,6 +251,7 @@ class MediaController extends Controller
         $modelId = null;
         $modelTitle = null;
         $modelSlug = null;
+        $modelTitleType = null;
 
         if ($model) {
             $modelName = class_basename($media->model_type);
@@ -249,10 +263,21 @@ class MediaController extends Controller
             } elseif ($model instanceof \App\Models\Title) {
                 $modelTitle = $model->name;
                 $modelSlug = $model->slug;
+                $model->loadMissing('type');
+                $modelTitleType = $model->type?->name ?? null;
             } elseif ($model instanceof \App\Models\User) {
                 $modelTitle = $model->name;
                 $modelSlug = $model->slug;
             } elseif ($model instanceof \App\Models\Magazine) {
+                $modelTitle = $model->name;
+                $modelSlug = $model->slug;
+            } elseif ($model instanceof \App\Models\People) {
+                $modelTitle = $model->name;
+                $modelSlug = $model->slug;
+            } elseif ($model instanceof \App\Models\Company) {
+                $modelTitle = $model->name;
+                $modelSlug = $model->slug;
+            } elseif ($model instanceof \App\Models\Event) {
                 $modelTitle = $model->name;
                 $modelSlug = $model->slug;
             }
@@ -278,6 +303,7 @@ class MediaController extends Controller
             'model_id' => $modelId,
             'model_title' => $modelTitle,
             'model_slug' => $modelSlug,
+            'model_title_type' => $modelTitleType,
             'created_at' => $media->created_at?->toIso8601String(),
             'updated_at' => $media->updated_at?->toIso8601String(),
         ];
@@ -303,6 +329,7 @@ class MediaController extends Controller
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'file' => 'sometimes|file|image|max:10240', // 10MB max
+            'url' => 'sometimes|url',
         ]);
 
         // Update name if provided
@@ -310,13 +337,56 @@ class MediaController extends Controller
             $media->name = $request->name;
         }
 
-        // Replace file if provided
+        $model = $media->model;
+        $collectionName = $media->collection_name;
+        $mediaName = $request->name ?? $media->name;
+
+        // Replace file from URL if provided
+        $imageUrl = $request->input('url');
+        if ($imageUrl && !$request->hasFile('file')) {
+            if (!$model) {
+                return response()->json([
+                    'code' => 404,
+                    'message' => 'Model not found for this media',
+                ], 404);
+            }
+            try {
+                $media->delete();
+                $newMedia = $model->addMediaFromUrl($imageUrl)
+                    ->usingName($mediaName)
+                    ->toMediaCollection($collectionName);
+                if ($newMedia->getCustomProperty('is_placeholder', false)) {
+                    $customProperties = $newMedia->custom_properties ?? [];
+                    unset($customProperties['is_placeholder']);
+                    unset($customProperties['file_not_accessible']);
+                    $newMedia->custom_properties = $customProperties;
+                    $newMedia->save();
+                }
+                return response()->json([
+                    'code' => 200,
+                    'message' => 'Media updated successfully',
+                    'data' => [
+                        'id' => $newMedia->id,
+                        'name' => $newMedia->name,
+                        'file_name' => $newMedia->file_name,
+                        'url' => $newMedia->getUrl(),
+                    ],
+                ], 200);
+            } catch (\Throwable $e) {
+                \Log::warning('MediaController: could not add media from URL', [
+                    'media_id' => $id,
+                    'url' => $imageUrl,
+                    'error' => $e->getMessage(),
+                ]);
+                return response()->json([
+                    'code' => 422,
+                    'message' => 'Could not load image from URL. Check that the URL is public and points to an image.',
+                ], 422);
+            }
+        }
+
+        // Replace file from upload if provided
         if ($request->hasFile('file')) {
-            // Get the model before deleting
-            $model = $media->model;
-            $collectionName = $media->collection_name;
-            $mediaName = $request->name ?? $media->name;
-            
             if (!$model) {
                 return response()->json([
                     'code' => 404,
@@ -324,15 +394,12 @@ class MediaController extends Controller
                 ], 404);
             }
 
-            // Delete old file
             $media->delete();
 
-            // Add new file
             $newMedia = $model->addMediaFromRequest('file')
                 ->usingName($mediaName)
                 ->toMediaCollection($collectionName);
 
-            // If it was a placeholder, remove placeholder flag
             if ($newMedia->getCustomProperty('is_placeholder', false)) {
                 $customProperties = $newMedia->custom_properties ?? [];
                 unset($customProperties['is_placeholder']);

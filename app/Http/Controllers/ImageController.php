@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\Company;
+use App\Models\Event;
 use App\Models\Helper;
 use App\Models\Magazine;
+use App\Models\People;
 use App\Models\Post;
 use App\Models\Title;
 use App\Models\User;
@@ -41,6 +44,7 @@ class ImageController extends Controller
             ], Response::HTTP_BAD_REQUEST);
         }
 
+        // Same bucket folders as BucketPathGenerator; temp files by model + Y/m (posts: creation date pattern; events: same)
         $folder = sprintf('uploads/%s/%s', $modelName, now()->format('Y/m'));
         $filename = sprintf('%s.%s', Str::uuid()->toString(), $file->getClientOriginalExtension());
         $filePath = Storage::disk('s3')->putFileAs($folder, $file, $filename, 'public');
@@ -69,20 +73,31 @@ class ImageController extends Controller
             'collection' => 'sometimes|string',
         ]);
 
-        $modelName = $request->model;
+        $modelName = \is_string($request->model)
+            ? strtolower(trim($request->model))
+            : '';
         $modelId = $request->model_id;
         $collection = $request->collection ?? $this->getDefaultCollection($modelName);
 
         try {
-            // Map model names to classes
+            // Map model names to classes (keys lowercase)
             $modelClasses = [
                 'posts' => Post::class,
                 'titles' => Title::class,
                 'magazines' => Magazine::class,
                 'users' => User::class,
+                'people' => People::class,
+                'companies' => Company::class,
+                'events' => Event::class,
             ];
 
-            if (!isset($modelClasses[$modelName])) {
+            if ($modelName === '' || ! isset($modelClasses[$modelName])) {
+                \Log::warning('ImageController: invalid model type', [
+                    'request_model' => $request->model,
+                    'normalized' => $modelName,
+                    'allowed' => array_keys($modelClasses),
+                ]);
+
                 return response()->json([
                     'code' => 400,
                     'message' => 'Invalid model type',
@@ -94,8 +109,8 @@ class ImageController extends Controller
             if ($modelId) {
                 $model = $modelClass::findOrFail($modelId);
 
-                // Replace previous media when single-file collections (cover, avatar, featured-image)
-                if (in_array($collection, ['cover', 'avatar', 'featured-image'], true)) {
+                // Replace previous media when single-file collections
+                if (in_array($collection, ['cover', 'avatar', 'featured-image', 'default'], true)) {
                     $model->clearMediaCollection($collection);
                 }
 
@@ -111,7 +126,7 @@ class ImageController extends Controller
                 ], Response::HTTP_OK);
             }
 
-            if (in_array($modelName, ['posts', 'titles', 'magazines', 'users'], true)) {
+            if (in_array($modelName, ['posts', 'titles', 'magazines', 'users', 'people', 'companies', 'events'], true)) {
                 return $this->storeTemporaryImage($request, $modelName);
             }
 
@@ -137,6 +152,9 @@ class ImageController extends Controller
             'titles' => 'cover',
             'magazines' => 'cover',
             'users' => 'avatar',
+            'people' => 'default',
+            'companies' => 'default',
+            'events' => 'default',
         ];
 
         return $collections[$modelName] ?? 'default';

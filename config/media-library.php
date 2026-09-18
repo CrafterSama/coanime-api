@@ -58,8 +58,9 @@ return [
 
     /*
      * The class that contains the strategy for determining a media file's path.
+     * BucketPathGenerator uses existing S3 folders: posts/, titles/, magazine/, people/, companies/, events/, users/
      */
-    'path_generator' => Spatie\MediaLibrary\Support\PathGenerator\DefaultPathGenerator::class,
+    'path_generator' => App\Support\MediaLibrary\BucketPathGenerator::class,
 
     /*
      * Here you can specify which path generator should be used for the given class.
