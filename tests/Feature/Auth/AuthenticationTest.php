@@ -22,7 +22,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertNoContent();
+        $response->assertOk()->assertJsonStructure(['access_token', 'token_type', 'expires_in', 'user']);
     }
 
     public function test_users_can_not_authenticate_with_invalid_password()

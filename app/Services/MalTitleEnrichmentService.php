@@ -6,9 +6,9 @@ namespace App\Services;
 
 use App\Models\HiddenSeeker;
 use App\Models\Title;
+use App\Support\MalJikan;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
-use Jikan\JikanPHP\Client;
 use Stichoza\GoogleTranslate\GoogleTranslate;
 use Throwable;
 
@@ -45,11 +45,7 @@ class MalTitleEnrichmentService
         ], true);
 
         try {
-            $jikan = Client::create();
-            $results = $isManga
-                ? $jikan->getMangaSearch(['q' => $title->name, 'type' => $malType])
-                : $jikan->getAnimeSearch(['q' => $title->name, 'type' => $malType]);
-            $data = $results->getData();
+            $data = MalJikan::search($title->name, $malType, 1, null, $isManga);
         } catch (Throwable $e) {
             Log::warning('MalTitleEnrichmentService: Jikan search failed', [
                 'title_id' => $title->id,
@@ -82,20 +78,9 @@ class MalTitleEnrichmentService
             }
         }
 
-        if (($title->trailer_url === null || $title->trailer_url === '') && ! $isManga) {
-            $trailer = $cloud->getTrailer();
-            if ($trailer !== null && method_exists($trailer, 'getUrl')) {
-                $url = $trailer->getUrl();
-                if ($url !== null && $url !== '') {
-                    $title->trailer_url = $url;
-                    $updated = true;
-                }
-            }
-        }
-
         if ($title->rating_id === null || (int) $title->rating_id === 7) {
-            $r = $cloud->getRating();
-            $rid = $r === null ? 7 : (HiddenSeeker::getRatingId(strtolower((string) $r)) ?? 7);
+            $r = MalJikan::rating($cloud);
+            $rid = $r === null ? 7 : (HiddenSeeker::getRatingId(strtolower($r)) ?? 7);
             if ($rid !== null && (int) $rid !== 7) {
                 $title->rating_id = $rid;
                 $updated = true;
@@ -103,7 +88,7 @@ class MalTitleEnrichmentService
         }
 
         if ($title->episodies === null || (int) $title->episodies === 0) {
-            $eps = $isManga ? $cloud->getChapters() : $cloud->getEpisodes();
+            $eps = MalJikan::episodes($cloud, $isManga);
             if ($eps !== null) {
                 $title->episodies = $eps;
                 $updated = true;
@@ -112,21 +97,21 @@ class MalTitleEnrichmentService
 
         $zero = '0000-00-00 00:00:00';
         if ($title->broad_time === null || $title->broad_time === $zero) {
-            $from = $isManga ? $this->publishedFrom($cloud) : $this->airedFrom($cloud);
+            $from = MalJikan::dateFrom($cloud);
             if ($from !== null) {
                 $title->broad_time = Carbon::parse($from)->format('Y-m-d');
                 $updated = true;
             }
         }
         if ($title->broad_finish === null || $title->broad_finish === $zero) {
-            $to = $isManga ? $this->publishedTo($cloud) : $this->airedTo($cloud);
+            $to = MalJikan::dateTo($cloud);
             if ($to !== null) {
                 $title->broad_finish = Carbon::parse($to)->format('Y-m-d');
                 $updated = true;
             }
         }
 
-        $st = HiddenSeeker::getStatus($cloud->getStatus());
+        $st = HiddenSeeker::getStatus(MalJikan::status($cloud));
         if ($st !== null) {
             $title->status = $st;
             $updated = true;
@@ -189,44 +174,11 @@ class MalTitleEnrichmentService
         return in_array($s, self::SYNOPSIS_PLACEHOLDERS, true);
     }
 
-    private function airedFrom(mixed $cloud): ?string
-    {
-        $a = $cloud->getAired();
-        if ($a === null) {
-            return null;
-        }
-        return method_exists($a, 'getFrom') ? $a->getFrom() : null;
-    }
-
-    private function airedTo(mixed $cloud): ?string
-    {
-        $a = $cloud->getAired();
-        if ($a === null) {
-            return null;
-        }
-        return method_exists($a, 'getTo') ? $a->getTo() : null;
-    }
-
-    private function publishedFrom(mixed $cloud): ?string
-    {
-        $p = $cloud->getPublished();
-        if ($p === null) {
-            return null;
-        }
-        return method_exists($p, 'getFrom') ? $p->getFrom() : null;
-    }
-
-    private function publishedTo(mixed $cloud): ?string
-    {
-        $p = $cloud->getPublished();
-        if ($p === null) {
-            return null;
-        }
-        return method_exists($p, 'getTo') ? $p->getTo() : null;
-    }
-
     private function collectOtherTitles(mixed $cloud): string
     {
+        if (! method_exists($cloud, 'getTitles')) {
+            return '';
+        }
         $list = $cloud->getTitles();
         if ($list === null || ! is_iterable($list)) {
             return '';
@@ -253,6 +205,9 @@ class MalTitleEnrichmentService
 
     private function mapGenres(mixed $cloud): array
     {
+        if (! method_exists($cloud, 'getGenres')) {
+            return [];
+        }
         $genres = $cloud->getGenres();
         if (! is_iterable($genres)) {
             return [];
@@ -273,15 +228,7 @@ class MalTitleEnrichmentService
 
     private function getCoverUrl(mixed $cloud): ?string
     {
-        $images = $cloud->getImages();
-        if ($images === null) {
-            return null;
-        }
-        $webp = method_exists($images, 'getWebp') ? $images->getWebp() : null;
-        if ($webp === null) {
-            return null;
-        }
-        $url = method_exists($webp, 'getLargeImageUrl') ? $webp->getLargeImageUrl() : null;
+        $url = MalJikan::coverUrl($cloud);
         if ($url === null || $url === '' || $url === self::MAL_PLACEHOLDER_IMAGE) {
             return null;
         }

@@ -6,10 +6,10 @@ namespace App\Services;
 
 use App\Models\HiddenSeeker;
 use App\Models\Title;
+use App\Support\MalJikan;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
-use Jikan\JikanPHP\Client;
 use Stichoza\GoogleTranslate\GoogleTranslate;
 use Throwable;
 
@@ -42,21 +42,19 @@ class JikanSeasonSyncService
         ];
 
         try {
-            $jikan = Client::create();
-            $results = $jikan->getSeason($year, $season, compact('page'));
-            $data = $results->getData();
+            $data = MalJikan::season($year, $season);
         } catch (Throwable $e) {
             $out['errors'][] = 'Jikan API error: ' . $e->getMessage();
 
             return $out;
         }
 
-        $out['lines'][] = "<p>Pagina {$page}</p>";
+        $out['lines'][] = "<p>Temporada {$season} {$year}</p>";
 
         foreach ($data as $cloudTitle) {
             $name = $cloudTitle->getTitle();
             $slug = Str::slug($name);
-            $out['processed'][] = "Page {$page}: {$name}";
+            $out['processed'][] = "{$season} {$year}: {$name}";
 
             if (Title::where('slug', $slug)->exists()) {
                 $out['skipped']++;
@@ -133,10 +131,9 @@ class JikanSeasonSyncService
         $title->user_id = self::DEFAULT_USER_ID;
         $title->just_year = 'false';
 
-        $titles = $cloudTitle->getTitles();
-        if ($titles !== null) {
+        if (method_exists($cloudTitle, 'getTitles') && $cloudTitle->getTitles() !== null) {
             $other = [];
-            foreach ($titles as $t) {
+            foreach ($cloudTitle->getTitles() as $t) {
                 $type = strtolower((string) $t->getType());
                 $name = $t->getTitle();
                 if ($type === 'english' && $name !== '') {
@@ -167,36 +164,24 @@ class JikanSeasonSyncService
             }
         }
 
-        $trailer = $cloudTitle->getTrailer();
-        if ($trailer !== null && method_exists($trailer, 'getUrl')) {
-            $url = $trailer->getUrl();
-            if ($url !== null && $url !== '') {
-                $title->trailer_url = $url;
-            }
-        }
-
-        $status = HiddenSeeker::getStatus($cloudTitle->getStatus());
+        $status = HiddenSeeker::getStatus(MalJikan::status($cloudTitle));
         $title->status = $status ?? 'Finalizado';
 
         $typeId = HiddenSeeker::getTypeById(strtolower((string) $cloudTitle->getType()));
         $title->type_id = $typeId;
 
-        $rating = $cloudTitle->getRating();
-        $title->rating_id = $rating === null ? 7 : (HiddenSeeker::getRatingId(strtolower((string) $rating)) ?? 7);
+        $rating = MalJikan::rating($cloudTitle);
+        $title->rating_id = $rating === null ? 7 : (HiddenSeeker::getRatingId(strtolower($rating)) ?? 7);
 
-        $episodes = $cloudTitle->getEpisodes();
-        $title->episodies = $episodes ?? 0;
+        $title->episodies = MalJikan::episodes($cloudTitle, false) ?? 0;
 
-        $aired = $cloudTitle->getAired();
-        if ($aired !== null) {
-            $from = method_exists($aired, 'getFrom') ? $aired->getFrom() : null;
-            if ($from !== null && $from !== '') {
-                $title->broad_time = Carbon::parse($from)->format('Y-m-d');
-            }
-            $to = method_exists($aired, 'getTo') ? $aired->getTo() : null;
-            if ($to !== null && $to !== '') {
-                $title->broad_finish = Carbon::parse($to)->format('Y-m-d');
-            }
+        $from = MalJikan::dateFrom($cloudTitle);
+        if ($from !== null) {
+            $title->broad_time = Carbon::parse($from)->format('Y-m-d');
+        }
+        $to = MalJikan::dateTo($cloudTitle);
+        if ($to !== null) {
+            $title->broad_finish = Carbon::parse($to)->format('Y-m-d');
         }
 
         $title->save();
@@ -252,15 +237,7 @@ class JikanSeasonSyncService
 
     protected function getCoverImageUrlFromCloud(mixed $cloudTitle): ?string
     {
-        $images = $cloudTitle->getImages();
-        if ($images === null) {
-            return null;
-        }
-        $webp = method_exists($images, 'getWebp') ? $images->getWebp() : null;
-        if ($webp === null) {
-            return null;
-        }
-        $url = method_exists($webp, 'getLargeImageUrl') ? $webp->getLargeImageUrl() : null;
+        $url = MalJikan::coverUrl($cloudTitle);
         if ($url === null || $url === '' || $url === self::MAL_PLACEHOLDER_IMAGE) {
             return null;
         }
