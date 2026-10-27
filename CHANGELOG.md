@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-10-27
 
+### fix: ALTER posts con postponed_to cero-fecha
+
+- **Fecha:** 2026-10-27
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- Comando `posts:fix-mysql-schema`: repara default `0000-00-00` de `postponed_to` y corre las migraciones 2026 (excerpt + mal_news_id)
+- Esas migraciones son idempotentes y llaman al mismo arreglo para no fallar con MySQL 1067
+
 ### feat: persistir News de Tenrai en posts
 
 - **Fecha:** 2026-10-27
