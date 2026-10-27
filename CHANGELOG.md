@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-10-27
 
+### chore: alias artisan news:ingest
+
+- **Fecha:** 2026-10-27
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- `php artisan news:ingest` equivale a `news:ingest-tenrai` (mismo cron y servicio)
+
 ### fix: ALTER posts con postponed_to cero-fecha
 
 - **Fecha:** 2026-10-27

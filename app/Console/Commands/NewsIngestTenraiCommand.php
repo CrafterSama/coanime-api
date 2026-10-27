@@ -11,6 +11,10 @@ use RuntimeException;
 class NewsIngestTenraiCommand extends Command
 {
     protected $signature = 'news:ingest-tenrai {--limit=10 : Max news items (1-25)}';
+
+    /** @var list<string> */
+    protected $aliases = ['news:ingest'];
+
     protected $description = 'Ingest Tenrai news as Spanish posts (user_id=1). Skip English and human-edited rows.';
 
     public function handle(CatalogNewsIngest $ingest): int
