@@ -38,4 +38,10 @@ return [
         'key' => env('CATALOG_KEY'),
     ],
 
+    'editorial' => [
+        'url' => env('EDITORIAL_LLM_URL', 'https://api.openai.com/v1/chat/completions'),
+        'key' => env('EDITORIAL_LLM_KEY'),
+        'model' => env('EDITORIAL_LLM_MODEL', 'gpt-4o-mini'),
+    ],
+
 ];

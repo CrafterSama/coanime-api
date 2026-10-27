@@ -8,7 +8,6 @@ use App\Enums\Category as CategoryEnum;
 use App\Models\Category;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
-use Stichoza\GoogleTranslate\GoogleTranslate;
 use Throwable;
 
 final class CatalogNews
@@ -64,15 +63,20 @@ final class CatalogNews
 
         return Cache::remember('catalog.news.relevants.'.$limit, self::TTL, function () use ($limit) {
             $category = self::category();
-            $mapped = [];
+            $raw = [];
             foreach (TitleCatalog::news($limit) as $item) {
                 if (! is_array($item) || ! isset($item['mal_id'])) {
                     continue;
                 }
-                $mapped[] = self::asRelevant($item, $category);
-                if (count($mapped) >= $limit) {
+                $raw[] = $item;
+                if (count($raw) >= $limit) {
                     break;
                 }
+            }
+            $copy = CatalogNewsEditorial::cards($raw);
+            $mapped = [];
+            foreach ($raw as $item) {
+                $mapped[] = self::asRelevant($item, $category, $copy[(int) $item['mal_id']] ?? null);
             }
 
             return $mapped;
@@ -97,22 +101,23 @@ final class CatalogNews
     /**
      * @param  array<string, mixed>  $item
      * @param  array{id: int, name: string, slug: string}  $category
+     * @param  array{title: string, excerpt: string}|null  $copy
      * @return array<string, mixed>
      */
-    public static function asRelevant(array $item, array $category): array
+    public static function asRelevant(array $item, array $category, ?array $copy = null): array
     {
         $malId = (int) ($item['mal_id'] ?? 0);
         $date = is_string($item['date'] ?? null) ? $item['date'] : null;
-        $author = is_string($item['author_username'] ?? null) && $item['author_username'] !== ''
-            ? $item['author_username']
-            : 'MAL News';
-        $title = self::trans($malId.'.title', (string) ($item['title'] ?? ''));
-        $excerpt = self::trans($malId.'.excerpt', (string) ($item['excerpt'] ?? ''));
+        $copy ??= CatalogNewsEditorial::card(
+            $malId,
+            (string) ($item['title'] ?? ''),
+            (string) ($item['excerpt'] ?? '')
+        );
 
         return [
             'id' => $malId,
-            'title' => $title,
-            'excerpt' => $excerpt,
+            'title' => $copy['title'],
+            'excerpt' => $copy['excerpt'],
             'slug' => self::slug($malId),
             'category_id' => $category['id'],
             'image' => self::imageUrl($item),
@@ -127,8 +132,8 @@ final class CatalogNews
             'categories' => $category,
             'tags' => [],
             'users' => [
-                'name' => $author,
-                'slug' => Str::slug($author) ?: 'mal-news',
+                'name' => CatalogNewsEditorial::AUTHOR,
+                'slug' => Str::slug(CatalogNewsEditorial::AUTHOR),
             ],
             'source' => 'tenrai',
         ];
@@ -141,18 +146,24 @@ final class CatalogNews
      */
     public static function asArticle(array $item, array $category): array
     {
-        $post = self::asRelevant($item, $category);
         $malId = (int) ($item['mal_id'] ?? 0);
         $html = '';
         $content = $item['content'] ?? null;
         if (is_array($content) && is_string($content['html'] ?? null)) {
             $html = $content['html'];
         }
-        $html = self::trans($malId.'.content', $html);
-        if (! str_contains($html, 'Fuente: MyAnimeList')) {
-            $html = rtrim($html).self::ATTRIBUTION;
+        $copy = CatalogNewsEditorial::article(
+            $malId,
+            (string) ($item['title'] ?? ''),
+            (string) ($item['excerpt'] ?? ''),
+            $html
+        );
+        $post = self::asRelevant($item, $category, $copy);
+        $body = $copy['content'];
+        if (! str_contains($body, 'Fuente: MyAnimeList')) {
+            $body = rtrim($body).self::ATTRIBUTION;
         }
-        $post['content'] = $html;
+        $post['content'] = $body;
         $post['titles'] = [];
 
         return $post;
@@ -187,24 +198,5 @@ final class CatalogNews
         $url = $item['images']['jpg']['image_url'] ?? null;
 
         return is_string($url) && $url !== '' ? $url : null;
-    }
-
-    private static function trans(string $key, string $text): string
-    {
-        $text = trim($text);
-        if ($text === '') {
-            return $text;
-        }
-
-        return Cache::remember('catalog.news.i18n.'.$key, self::TTL, function () use ($text) {
-            if (app()->environment('testing')) {
-                return $text;
-            }
-            try {
-                return (new GoogleTranslate)->trans($text, 'es');
-            } catch (Throwable) {
-                return $text;
-            }
-        });
     }
 }

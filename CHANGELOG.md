@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-10-27
 
+### feat: editorial Coanime para News de Tenrai
+
+- **Fecha:** 2026-10-27
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- Reescribe título, bajada y cuerpo al tono Coanime 2024 vía LLM OpenAI-compatible (`EDITORIAL_LLM_*`)
+- Byline Redacción Coanime; fallback a Google Translate si no hay key o el LLM falla; cache 24 h
+
 ### feat: relevants de home con News de Tenrai
 
 - **Fecha:** 2026-10-27

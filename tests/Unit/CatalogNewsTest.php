@@ -38,7 +38,7 @@ class CatalogNewsTest extends TestCase
         $this->assertSame('yes', $mapped['approved']);
         $this->assertSame('0', $mapped['draft']);
         $this->assertSame('tenrai', $mapped['source']);
-        $this->assertSame('Syureria', $mapped['users']['name']);
+        $this->assertSame('Redacción Coanime', $mapped['users']['name']);
         $this->assertSame([], $mapped['tags']);
         $this->assertSame($this->category(), $mapped['categories']);
         $this->assertSame(0, $mapped['view_counter']);
@@ -111,6 +111,80 @@ class CatalogNewsTest extends TestCase
         Http::fake(fn () => Http::response(['status' => 404], 404));
 
         $this->assertNull(CatalogNews::article(1));
+    }
+
+    public function test_as_relevant_uses_llm_editorial_json(): void
+    {
+        config([
+            'services.editorial.key' => 'sk-test',
+            'services.editorial.url' => 'https://api.openai.com/v1/chat/completions',
+        ]);
+        Http::fake([
+            'https://api.openai.com/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'items' => [[
+                                'mal_id' => 74870618,
+                                'title' => '¡Phantom Busters revela su elenco principal!',
+                                'excerpt' => 'El anime ya tiene caras y staff confirmados.',
+                            ]],
+                        ], JSON_UNESCAPED_UNICODE),
+                    ],
+                ]],
+            ], 200),
+        ]);
+
+        $mapped = CatalogNews::asRelevant($this->listItem(), $this->category());
+
+        $this->assertSame('¡Phantom Busters revela su elenco principal!', $mapped['title']);
+        $this->assertSame('El anime ya tiene caras y staff confirmados.', $mapped['excerpt']);
+        $this->assertSame('Redacción Coanime', $mapped['users']['name']);
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'chat/completions'));
+    }
+
+    public function test_as_article_uses_llm_html(): void
+    {
+        config([
+            'services.editorial.key' => 'sk-test',
+            'services.editorial.url' => 'https://api.openai.com/v1/chat/completions',
+        ]);
+        Http::fake([
+            'https://api.openai.com/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'content' => json_encode([
+                            'title' => '¡Phantom Busters ya tiene elenco!',
+                            'excerpt' => 'Se confirman voces y staff.',
+                            'content' => '<p>Los fans de Phantom Busters ya pueden ponerle cara al anime.</p><h4>Elenco</h4><p>Nobuhiko Okamoto encabeza el reparto.</p>',
+                        ], JSON_UNESCAPED_UNICODE),
+                    ],
+                ]],
+            ], 200),
+        ]);
+
+        $mapped = CatalogNews::asArticle($this->detailItem(), $this->category());
+
+        $this->assertSame('¡Phantom Busters ya tiene elenco!', $mapped['title']);
+        $this->assertStringContainsString('Los fans de Phantom Busters', $mapped['content']);
+        $this->assertStringContainsString('<h4>Elenco</h4>', $mapped['content']);
+        $this->assertStringContainsString('Fuente: MyAnimeList (Tenrai)', $mapped['content']);
+    }
+
+    public function test_llm_error_falls_back_to_source_text(): void
+    {
+        config([
+            'services.editorial.key' => 'sk-test',
+            'services.editorial.url' => 'https://api.openai.com/v1/chat/completions',
+        ]);
+        Http::fake([
+            'https://api.openai.com/v1/chat/completions' => Http::response(['error' => 'nope'], 500),
+        ]);
+
+        $mapped = CatalogNews::asRelevant($this->listItem(), $this->category());
+
+        $this->assertSame("'Phantom Busters' Announces Main Cast, Staff", $mapped['title']);
+        $this->assertSame('Redacción Coanime', $mapped['users']['name']);
     }
 
     /**
