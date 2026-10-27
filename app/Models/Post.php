@@ -30,7 +30,7 @@ class Post extends Model implements HasMedia
      */
     protected $dates = ['deleted_at', 'created_at', 'updated_at', 'postponed_to'];
 
-    protected $fillable = ['title', 'excerpt', 'content', 'category_id', 'user_id', 'slug', 'approved', 'draft', 'image', 'postponed_to', 'created_at'];
+    protected $fillable = ['title', 'excerpt', 'content', 'category_id', 'user_id', 'slug', 'approved', 'draft', 'image', 'postponed_to', 'created_at', 'post_created_at', 'mal_news_id'];
 
     /**
      * The attributes that should be cast.

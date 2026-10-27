@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-10-27
 
+### feat: persistir News de Tenrai en posts
+
+- **Fecha:** 2026-10-27
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- Guarda News de Tenrai como `posts` (user_id=1, `mal_news_id` unique); **solo español**, no sobrescribe si `edited_by` es humano
+- Cron horario `news:ingest-tenrai`; POST `/internal/news/ingest` y GET `/internal/news/editorial` (JWT, solo user 1, throttle)
+
 ### feat: editorial Coanime para News de Tenrai
 
 - **Fecha:** 2026-10-27

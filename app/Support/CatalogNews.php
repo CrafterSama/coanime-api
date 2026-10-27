@@ -14,7 +14,7 @@ final class CatalogNews
 {
     public const SLUG_PREFIX = 'mal-news-';
     private const TTL = 1800;
-    private const ATTRIBUTION = '<p>Fuente: MyAnimeList (Tenrai)</p>';
+    public const ATTRIBUTION = '<p>Fuente: MyAnimeList (Tenrai)</p>';
 
     public static function slug(int $malId): string
     {

@@ -10,11 +10,13 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\CatalogNewsIngestController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\EncyclopediaController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\ImageController;
 use App\Http\Controllers\MagazineController;
+use App\Http\Controllers\MediaController;
 use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostVoteController;
@@ -131,6 +133,11 @@ Route::middleware(['auth:api'])->group(function () {
         Route::put('posts/{id}/delete', [PostController::class, 'destroy']);
         Route::post('posts', [PostController::class, 'store']);
 
+        Route::middleware('throttle:6,1')->group(function () {
+            Route::post('news/ingest', [CatalogNewsIngestController::class, 'store']);
+            Route::get('news/editorial', [CatalogNewsIngestController::class, 'status']);
+        });
+
         // ** Auth Upload Image Endpoints **
         Route::post('upload-images', [ImageController::class, 'store']);
 
@@ -174,9 +181,9 @@ Route::middleware(['auth:api'])->group(function () {
         Route::put('me', [UserController::class, 'updateMe'])->name('me.update');
 
         // ** Auth Media Endpoints **
-        Route::get('media', [\App\Http\Controllers\MediaController::class, 'index'])->name('media');
-        Route::get('media/{id}', [\App\Http\Controllers\MediaController::class, 'show']);
-        Route::put('media/{id}', [\App\Http\Controllers\MediaController::class, 'update']);
+        Route::get('media', [MediaController::class, 'index'])->name('media');
+        Route::get('media/{id}', [MediaController::class, 'show']);
+        Route::put('media/{id}', [MediaController::class, 'update']);
 
         // ** Activity Logs (dashboard) **
         Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs');
