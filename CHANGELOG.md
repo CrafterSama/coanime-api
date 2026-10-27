@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-10-27
 
+### feat: probe LLM vs Google Translate para News
+
+- **Fecha:** 2026-10-27
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- `php artisan news:probe {id}` (o `--limit`) muestra EN / LLM / GT por título, bajada y cuerpo
+- No guarda posts ni escribe cache editorial de artículo
+
 ### fix: priorizar News persistidas en relevants
 
 - **Fecha:** 2026-10-27

@@ -156,6 +156,55 @@ PROMPT;
     }
 
     /**
+     * LLM + Google Translate side by side. Does not write article cache or posts.
+     *
+     * @return array{
+     *   en: array{title: string, excerpt: string, content: string},
+     *   llm: array{title: string, excerpt: string, content: string}|null,
+     *   llm_error: string|null,
+     *   gt: array{title: string, excerpt: string, content: string}
+     * }
+     */
+    public static function probeArticle(int $malId, string $title, string $excerpt, string $html): array
+    {
+        $en = ['title' => $title, 'excerpt' => $excerpt, 'content' => $html];
+        $llm = self::llmArticle($malId, $title, $excerpt, $html);
+        $llmError = null;
+        if ($llm === null) {
+            $llmError = self::configured()
+                ? (is_string(self::status()['last_error'] ?? null) ? (string) self::status()['last_error'] : 'empty')
+                : 'not configured';
+        }
+
+        return [
+            'en' => $en,
+            'llm' => $llm,
+            'llm_error' => $llmError,
+            'gt' => [
+                'title' => self::translateEs($title),
+                'excerpt' => self::translateEs($excerpt),
+                'content' => self::translateEs($html),
+            ],
+        ];
+    }
+
+    public static function translateEs(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return $text;
+        }
+        if (app()->environment('testing')) {
+            return $text;
+        }
+        try {
+            return (new GoogleTranslate)->trans($text, 'es');
+        } catch (Throwable) {
+            return $text;
+        }
+    }
+
+    /**
      * @param  list<array<string, mixed>>  $items
      * @return array<int, array{title: string, excerpt: string}>|null
      */
@@ -311,16 +360,7 @@ PROMPT;
             return $text;
         }
 
-        return Cache::remember('catalog.news.i18n.'.$key, 1800, function () use ($text) {
-            if (app()->environment('testing')) {
-                return $text;
-            }
-            try {
-                return (new GoogleTranslate)->trans($text, 'es');
-            } catch (Throwable) {
-                return $text;
-            }
-        });
+        return Cache::remember('catalog.news.i18n.'.$key, 1800, fn () => self::translateEs($text));
     }
 
     private static function recordStatus(bool $ok, ?string $error): void
