@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-10-27
 
+### fix: priorizar News persistidas en relevants
+
+- **Fecha:** 2026-10-27
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- `/external/home` relevants pone primero los posts con `mal_news_id` (español en BD), luego locales, y Tenrai virtual solo si faltan
+- Evita que el cache en inglés tape las noticias ya ingestadas
+
 ### chore: alias artisan news:ingest
 
 - **Fecha:** 2026-10-27

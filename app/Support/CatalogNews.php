@@ -6,6 +6,7 @@ namespace App\Support;
 
 use App\Enums\Category as CategoryEnum;
 use App\Models\Category;
+use App\Models\Post;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Throwable;
@@ -37,21 +38,72 @@ final class CatalogNews
     public static function fill(iterable $local, int $limit = 3): array
     {
         $items = [];
-        foreach ($local as $row) {
-            $items[] = $row;
+        $seen = [];
+        foreach (self::savedRelevants($limit) as $row) {
+            self::pushUnique($items, $seen, $row, is_object($row) ? (string) $row->slug : '');
             if (count($items) >= $limit) {
                 return $items;
             }
         }
-
-        $need = $limit - count($items);
+        foreach ($local as $row) {
+            $slug = is_object($row) ? (string) ($row->slug ?? '') : (string) ($row['slug'] ?? '');
+            self::pushUnique($items, $seen, $row, $slug);
+            if (count($items) >= $limit) {
+                return $items;
+            }
+        }
         try {
-            $extra = self::relevants($need);
+            $extra = self::relevants($limit);
         } catch (Throwable) {
             $extra = [];
         }
+        foreach ($extra as $row) {
+            self::pushUnique($items, $seen, $row, (string) ($row['slug'] ?? ''));
+            if (count($items) >= $limit) {
+                break;
+            }
+        }
 
-        return array_values(array_slice(array_merge($items, $extra), 0, $limit));
+        return array_values(array_slice($items, 0, $limit));
+    }
+
+    /**
+     * @return list<Post>
+     */
+    private static function savedRelevants(int $limit): array
+    {
+        try {
+            return Post::query()
+                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at', 'mal_news_id')
+                ->with('categories', 'tags', 'users')
+                ->whereNotNull('mal_news_id')
+                ->publishedAndApproved()
+                ->where(function ($q) {
+                    $q->where('postponed_to', '<=', now())->orWhereNull('postponed_to');
+                })
+                ->orderByDesc('postponed_to')
+                ->orderByDesc('id')
+                ->take($limit)
+                ->get()
+                ->all();
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @param  list<mixed>  $items
+     * @param  array<string, true>  $seen
+     */
+    private static function pushUnique(array &$items, array &$seen, mixed $row, string $slug): void
+    {
+        if ($slug !== '' && isset($seen[$slug])) {
+            return;
+        }
+        if ($slug !== '') {
+            $seen[$slug] = true;
+        }
+        $items[] = $row;
     }
 
     /**
