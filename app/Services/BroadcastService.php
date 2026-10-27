@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Support\MalJikan;
+use App\Support\TitleCatalog;
 use Exception;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -13,13 +14,7 @@ class BroadcastService
 {
     public function getTodaySchedule(?string $day = null): array
     {
-        $broadcast = $this->fetchSchedule($day ?? date('l'));
-
-        foreach ($broadcast as $key => $value) {
-            $broadcast[$key]['url'] = self::coanimeUrl((string) ($value['type'] ?? ''), (string) ($value['title'] ?? ''));
-        }
-
-        return $broadcast;
+        return $this->fetchSchedule($day ?? date('l'));
     }
 
     public function getScheduleByDay(?string $day = null): array
@@ -35,26 +30,22 @@ class BroadcastService
     private function fetchSchedule(string $day): array
     {
         try {
-            $cards = MalJikan::schedule($day);
+            // ponytail: cache global 1h; bajar TTL si hay que invalidar al instante
+            $cards = Cache::remember('catalog.schedule.'.strtolower($day), 3600, function () use ($day) {
+                return TitleCatalog::schedule($day);
+            });
 
-            return array_map(static function ($card): array {
-                $images = method_exists($card, 'getImages') ? $card->getImages() : null;
-                $webp = $images && method_exists($images, 'getWebp') ? $images->getWebp() : null;
+            if ($cards === []) {
+                Log::warning('Empty catalog schedule', ['day' => $day]);
+            }
 
-                return [
-                    'mal_id' => method_exists($card, 'getMalId') ? $card->getMalId() : null,
-                    'title' => method_exists($card, 'getTitle') ? $card->getTitle() : '',
-                    'type' => method_exists($card, 'getType') ? ($card->getType() ?? '') : '',
-                    'score' => method_exists($card, 'getScore') ? $card->getScore() : null,
-                    'images' => [
-                        'webp' => [
-                            'large_image_url' => $webp?->getLargeImageUrl(),
-                        ],
-                    ],
-                ];
+            return array_map(static function (array $card): array {
+                $card['url'] = self::coanimeUrl((string) ($card['type'] ?? ''), (string) ($card['title'] ?? ''));
+
+                return $card;
             }, $cards);
         } catch (Exception $e) {
-            Log::error('Error fetching broadcast schedule from MAL', [
+            Log::warning('Error fetching catalog schedule', [
                 'day' => $day,
                 'error' => $e->getMessage(),
             ]);

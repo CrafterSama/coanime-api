@@ -12,7 +12,6 @@
         "chriskonnertz/bbcode": "^1.1",
         "guzzlehttp/guzzle": "^7.5.0",
         "intervention/image": "^2.7.2",
-        "jikan-me/jikan": "^5.0",
         "kitloong/laravel-migrations-generator": "^7.1",
         "laravel-json-api/laravel": "^5.3",
         "laravel/framework": "^13.0",
@@ -24,7 +23,6 @@
         "spatie/laravel-medialibrary": "^11.17",
         "spatie/laravel-permission": "^6.0",
         "stichoza/google-translate-php": "^4.1.7",
-        "symfony/browser-kit": "^8.0",
         "tymon/jwt-auth": "^2.2"
     },
     "require-dev": {

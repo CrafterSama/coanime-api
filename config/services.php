@@ -33,4 +33,9 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'catalog' => [
+        'url' => env('CATALOG_URL', 'https://api.tenrai.org/v1'),
+        'key' => env('CATALOG_KEY'),
+    ],
+
 ];

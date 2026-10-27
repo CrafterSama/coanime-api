@@ -16,7 +16,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('jikan:sync-season')->dailyAt('03:00');
+        $schedule->command('titles:sync-season')->dailyAt('03:00');
     }
 
     /**

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
-use App\Support\MalJikan;
+use App\Support\TitleCatalog;
 use Stichoza\GoogleTranslate\GoogleTranslate;
 use Intervention\Image\Facades\Image;
 use App\Models\Title;
@@ -230,16 +230,16 @@ class HiddenSeeker extends Model
 
         if ($title?->id && self::getType($type)) {
             $localTitle = Title::find($title->id);
-            $cloudTitlesTemp = collect(MalJikan::search($title->name, self::getType($type), 1, null, $isManga));
+            $cloudTitlesTemp = collect(TitleCatalog::search($title->name, self::getType($type), 1, null, $isManga));
             if (is_null($cloudTitlesTemp)) {
                 return;
             }
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($type) {
-                return strtolower($value->getType()) === self::getType($type);
+                return strtolower((string) ($value['type'] ?? '')) === self::getType($type);
             });
 
             $cloudTitlesTemp = $cloudTitlesTemp->filter(function ($value) use ($title) {
-                return strtolower($value->getTitle()) === strtolower($title->name);
+                return strtolower((string) ($value['title'] ?? '')) === strtolower($title->name);
             });
 
             $cloudTitle = $cloudTitlesTemp?->first() ?: null;
@@ -248,17 +248,19 @@ class HiddenSeeker extends Model
                 return;
             }
 
-            if (method_exists($cloudTitle, 'getTitles') && $cloudTitle->getTitles() !== null) {
+            if (isset($cloudTitle['titles']) && is_iterable($cloudTitle['titles'])) {
                 $otherTitles = [];
-                foreach ($cloudTitle->getTitles() as $value) {
-                    if (strtolower($value->getType()) === 'english') {
-                        $titleEnglish = $value->getTitle().' (Inglés)';
+                foreach ($cloudTitle['titles'] as $value) {
+                    $altType = strtolower((string) ($value['type'] ?? ''));
+                    $altTitle = (string) ($value['title'] ?? '');
+                    if ($altType === 'english' && $altTitle !== '') {
+                        $titleEnglish = $altTitle.' (Inglés)';
                         if (!in_array($titleEnglish, $otherTitles)) {
                             $otherTitles[] = $titleEnglish;
                         }
                     }
-                    if (strtolower($value->getType()) === 'japanese') {
-                        $titleJapanese = $value->getTitle().' (Japonés)';
+                    if ($altType === 'japanese' && $altTitle !== '') {
+                        $titleJapanese = $altTitle.' (Japonés)';
                         if (!in_array($titleJapanese, $otherTitles)) {
                             $otherTitles[] = $titleJapanese;
                         }
@@ -268,31 +270,32 @@ class HiddenSeeker extends Model
                 }
             }
 
-            if ((empty($title->sinopsis) || $localTitle->sinopsis == 'Sinopsis no disponible' || $localTitle->sinopsis == 'Pendiente de agregar sinopsis...' || $localTitle->sinopsis == 'Sinopsis no disponible.' || $localTitle->sinopsis == 'Sinopsis en Proceso') && $cloudTitle->getSynopsis()) {
-                $localTitle->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $cloudTitle->getSynopsis()), 'es');
+            $synopsis = $cloudTitle['synopsis'] ?? null;
+            if ((empty($title->sinopsis) || $localTitle->sinopsis == 'Sinopsis no disponible' || $localTitle->sinopsis == 'Pendiente de agregar sinopsis...' || $localTitle->sinopsis == 'Sinopsis no disponible.' || $localTitle->sinopsis == 'Sinopsis en Proceso') && is_string($synopsis) && $synopsis !== '') {
+                $localTitle->sinopsis = GoogleTranslate::trans(str_replace('[Written by MAL Rewrite]', '', $synopsis), 'es');
                 $localTitle->save();
             }
 
 
             if (!$isManga) {
                 if (! $localTitle->rating_id || $localTitle->rating_id === 7) {
-                    $rated = MalJikan::rating($cloudTitle);
+                    $rated = TitleCatalog::rating($cloudTitle);
                     $localTitle->rating_id = $rated === null ? 7 : self::getRatingId(strtolower($rated));
                     $localTitle->save();
                 }
 
                 if ($localTitle->episodies === 0 || $localTitle->episodies === null || empty($localTitle->episodies)) {
-                    $localTitle->episodies = MalJikan::episodes($cloudTitle, false);
+                    $localTitle->episodies = TitleCatalog::episodes($cloudTitle, false);
                     $localTitle->save();
                 }
 
-                $from = MalJikan::dateFrom($cloudTitle);
+                $from = TitleCatalog::dateFrom($cloudTitle);
                 if ($from !== null && ($localTitle->broad_time === null || $localTitle->broad_time === '0000-00-00 00:00:00')) {
                     $localTitle->broad_time = $from;
                     $localTitle->save();
                 }
 
-                $to = MalJikan::dateTo($cloudTitle);
+                $to = TitleCatalog::dateTo($cloudTitle);
                 if ($to !== null && ($localTitle->broad_finish === null || $localTitle->broad_finish === '0000-00-00 00:00:00')) {
                     $localTitle->broad_finish = $to;
                     $localTitle->save();
@@ -300,32 +303,32 @@ class HiddenSeeker extends Model
             }
 
             if ($isManga) {
-                $from = MalJikan::dateFrom($cloudTitle);
+                $from = TitleCatalog::dateFrom($cloudTitle);
                 if ($from !== null && ($localTitle->broad_time === null || $localTitle->broad_time === '0000-00-00 00:00:00')) {
                     $localTitle->broad_time = $from;
                     $localTitle->save();
                 }
 
-                $to = MalJikan::dateTo($cloudTitle);
+                $to = TitleCatalog::dateTo($cloudTitle);
                 if ($to !== null && ($localTitle->broad_finish === null || $localTitle->broad_finish === '0000-00-00 00:00:00')) {
                     $localTitle->broad_finish = $to;
                     $localTitle->save();
                 }
 
                 if ($localTitle->episodies === 0 || $localTitle->episodies === null || empty($localTitle->episodies)) {
-                    $localTitle->episodies = MalJikan::episodes($cloudTitle, true);
+                    $localTitle->episodies = TitleCatalog::episodes($cloudTitle, true);
                     $localTitle->save();
                 }
             }
 
-            $parsedStatus = self::getStatus(MalJikan::status($cloudTitle));
+            $parsedStatus = self::getStatus(TitleCatalog::status($cloudTitle));
             if (!$localTitle->status || $parsedStatus !== $localTitle->status) {
                 $localTitle->status = $parsedStatus;
                 $localTitle->save();
             }
 
             if (!$title?->images || $title?->images?->name === null || $title?->images?->name === '') {
-                $cover = MalJikan::coverUrl($cloudTitle);
+                $cover = TitleCatalog::coverUrl($cloudTitle);
                 $imageUrl = $cover === 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-256.png' ? null : $cover;
                 if ($imageUrl) {
                     try {
@@ -361,10 +364,10 @@ class HiddenSeeker extends Model
                 }
             }
 
-            if ($title->genres->count() === 0 && method_exists($cloudTitle, 'getGenres')) {
+            if ($title->genres->count() === 0 && isset($cloudTitle['genres'])) {
                 $newGenres = [];
-                foreach ($cloudTitle->getGenres() as $gen) {
-                    $name = method_exists($gen, 'getName') ? $gen->getName() : (string) $gen;
+                foreach ($cloudTitle['genres'] as $gen) {
+                    $name = is_array($gen) ? (string) ($gen['name'] ?? '') : (string) $gen;
                     $id = self::getGenres(strtolower($name));
                     if ($id !== null) {
                         $newGenres[] = $id;

@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-10-27
 
+### feat: catálogo genérico de títulos (Tenrai)
+
+- **Fecha:** 2026-10-27
+- **Branch:** feature/CACMS8-change-versions-and-jikan
+- Reemplaza el scrape `jikan-me/jikan` por `TitleCatalog` HTTP (`CATALOG_URL`, default Tenrai)
+- Broadcast, enrich y season sync usan schema v4; artisan `titles:sync-season`; se quitan Jikan y browser-kit
+
 ### chore: versionar leftovers JsonApiResource nativos
 - **Fecha:** 2026-10-27
 - **Branch:** feature/CACMS8-change-versions-and-jikan
