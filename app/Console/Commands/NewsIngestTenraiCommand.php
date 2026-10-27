@@ -6,7 +6,8 @@ namespace App\Console\Commands;
 
 use App\Services\CatalogNewsIngest;
 use Illuminate\Console\Command;
-use RuntimeException;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class NewsIngestTenraiCommand extends Command
 {
@@ -24,8 +25,12 @@ class NewsIngestTenraiCommand extends Command
 
         try {
             $result = $ingest->run($limit);
-        } catch (RuntimeException $e) {
+        } catch (Throwable $e) {
             $this->error($e->getMessage());
+            Log::error('news:ingest failed', [
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return self::FAILURE;
         }

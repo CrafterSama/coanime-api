@@ -13,8 +13,10 @@ use App\Support\CatalogNews;
 use App\Support\CatalogNewsEditorial;
 use App\Support\TitleCatalog;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Throwable;
 
 final class CatalogNewsIngest
 {
@@ -26,10 +28,13 @@ final class CatalogNewsIngest
     public function run(int $limit = 10): array
     {
         if (User::query()->find(self::USER_ID) === null) {
+            Log::error('news:ingest failed', ['exception' => 'User id 1 no existe']);
             throw new RuntimeException('User id 1 no existe');
         }
 
         $limit = max(1, min($limit, 25));
+        Log::info('news:ingest start', ['limit' => $limit, 'editorial' => CatalogNewsEditorial::status()]);
+
         $created = 0;
         $updated = 0;
         $skipped = 0;
@@ -55,9 +60,16 @@ final class CatalogNewsIngest
                 $body = rtrim($body).CatalogNews::ATTRIBUTION;
             }
 
+            $date = is_string($detail['date'] ?? null) ? $detail['date'] : null;
+            $postponed = $date !== null ? Carbon::parse($date) : Carbon::now();
+            $postCreatedAt = $postponed->format('Y-m-d H:i:s');
+            $image = $this->imageUrl($detail) ?? $this->imageUrl($raw);
+            $payload = $this->payload($malId, $copy, $body, $image, $postponed, $postCreatedAt);
+
             if (! CatalogNewsEditorial::isSpanish($copy['title'], $copy['excerpt'], $body, $enTitle, $enExcerpt)) {
                 $skipped++;
                 $items[] = ['mal_id' => $malId, 'source' => CatalogNewsEditorial::SOURCE_SKIPPED, 'action' => 'skipped_not_spanish'];
+                $this->logItem('warning', $malId, 'skipped_not_spanish', CatalogNewsEditorial::SOURCE_SKIPPED, $payload);
 
                 continue;
             }
@@ -66,6 +78,7 @@ final class CatalogNewsIngest
             if ($post !== null && $post->edited_by !== null && (int) $post->edited_by !== self::USER_ID) {
                 $skipped++;
                 $items[] = ['mal_id' => $malId, 'source' => $copy['source'], 'action' => 'skipped_locked'];
+                $this->logItem('warning', $malId, 'skipped_locked', $copy['source'], $payload, (int) $post->id);
 
                 continue;
             }
@@ -81,14 +94,22 @@ final class CatalogNewsIngest
                 $post->draft = PostDraft::PUBLISHED;
             }
 
-            $date = is_string($detail['date'] ?? null) ? $detail['date'] : null;
-            $post->title = Str::limit($copy['title'], 255, '');
-            $post->excerpt = Str::limit($copy['excerpt'], 255, '');
-            $post->content = $body;
-            $post->image = $this->imageUrl($detail) ?? $this->imageUrl($raw);
-            $post->postponed_to = $date !== null ? Carbon::parse($date) : Carbon::now();
-            $post->post_created_at = $date !== null ? Carbon::parse($date)->format('Y-m-d H:i:s') : Carbon::now()->format('Y-m-d H:i:s');
-            $post->save();
+            $post->title = $payload['title'];
+            $post->excerpt = $payload['excerpt'];
+            $post->content = $payload['content'];
+            $post->image = $payload['image'];
+            $post->postponed_to = $postponed;
+            $post->post_created_at = $postCreatedAt;
+
+            try {
+                $post->save();
+            } catch (Throwable $e) {
+                $skipped++;
+                $items[] = ['mal_id' => $malId, 'source' => $copy['source'], 'action' => 'save_failed'];
+                $this->logItem('error', $malId, 'save_failed', $copy['source'], $payload, null, $e->getMessage());
+
+                continue;
+            }
 
             if ($isNew) {
                 $created++;
@@ -103,15 +124,66 @@ final class CatalogNewsIngest
                 'source' => $copy['source'],
                 'action' => $action,
             ];
+            $this->logItem('info', $malId, $action, $copy['source'], $payload, (int) $post->id);
         }
 
+        $editorial = CatalogNewsEditorial::status();
+        Log::info('news:ingest done', [
+            'created' => $created,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'editorial' => $editorial,
+        ]);
+
         return [
-            'editorial' => CatalogNewsEditorial::status(),
+            'editorial' => $editorial,
             'created' => $created,
             'updated' => $updated,
             'skipped' => $skipped,
             'items' => $items,
         ];
+    }
+
+    /**
+     * @param  array{title: string, excerpt: string, content?: string, source?: string}  $copy
+     * @return array<string, mixed>
+     */
+    private function payload(int $malId, array $copy, string $body, ?string $image, Carbon $postponed, string $postCreatedAt): array
+    {
+        return [
+            'user_id' => self::USER_ID,
+            'slug' => CatalogNews::slug($malId),
+            'category_id' => CategoryEnum::CATEGORY_1->value,
+            'title' => Str::limit($copy['title'], 255, ''),
+            'excerpt' => Str::limit($copy['excerpt'], 255, ''),
+            'content' => $body,
+            'image' => $image,
+            'postponed_to' => $postponed->format('Y-m-d H:i:s'),
+            'post_created_at' => $postCreatedAt,
+            'mal_news_id' => $malId,
+            'approved' => PostApproved::YES->value,
+            'draft' => PostDraft::PUBLISHED->value,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function logItem(string $level, int $malId, string $action, string $source, array $payload, ?int $postId = null, ?string $exception = null): void
+    {
+        $context = [
+            'mal_id' => $malId,
+            'action' => $action,
+            'source' => $source,
+            'payload' => $payload,
+        ];
+        if ($postId !== null) {
+            $context['post_id'] = $postId;
+        }
+        if ($exception !== null) {
+            $context['exception'] = $exception;
+        }
+        Log::log($level, 'news:ingest item', $context);
     }
 
     /**

@@ -9,7 +9,9 @@ use App\Models\User;
 use App\Services\CatalogNewsIngest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 use Throwable;
@@ -28,6 +30,7 @@ class CatalogNewsIngestTest extends TestCase
     {
         $this->seedOwner();
         $this->fakeTenraiAndLlm(spanish: true);
+        Event::fake([MessageLogged::class]);
 
         $result = app(CatalogNewsIngest::class)->run(1);
 
@@ -41,6 +44,9 @@ class CatalogNewsIngestTest extends TestCase
         $this->assertTrue($result['editorial']['configured']);
         $this->assertTrue($result['editorial']['connected']);
         $this->assertSame('llm', $result['items'][0]['source']);
+        Event::assertDispatched(MessageLogged::class, fn (MessageLogged $e) => $e->message === 'news:ingest item'
+            && ($e->context['action'] ?? null) === 'created'
+            && ($e->context['payload']['title'] ?? null) === '¡Phantom Busters revela su elenco!');
     }
 
     public function test_ingest_does_not_duplicate(): void
@@ -75,12 +81,16 @@ class CatalogNewsIngestTest extends TestCase
     {
         $this->seedOwner();
         $this->fakeTenraiAndLlm(spanish: false);
+        Event::fake([MessageLogged::class]);
 
         $result = app(CatalogNewsIngest::class)->run(1);
 
         $this->assertSame(0, Post::count());
         $this->assertSame(1, $result['skipped']);
         $this->assertSame('skipped', $result['items'][0]['source']);
+        Event::assertDispatched(MessageLogged::class, fn (MessageLogged $e) => $e->message === 'news:ingest item'
+            && ($e->context['action'] ?? null) === 'skipped_not_spanish'
+            && ($e->context['payload']['mal_news_id'] ?? null) === 74870618);
     }
 
     public function test_api_requires_auth_and_owner(): void

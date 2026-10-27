@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-10-27
 
+### feat: logs del ingest de News
+
+- **Fecha:** 2026-10-27
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- `news:ingest` escribe start/item/done/failed en laravel.log con el payload de `posts`
+- Skip y `save` fallido no cortan el lote; el comando loguea cualquier excepción
+
 ### feat: probe LLM vs Google Translate para News
 
 - **Fecha:** 2026-10-27
