@@ -20,6 +20,7 @@ use App\Models\Title;
 use App\Models\TitleImage;
 use App\Models\User;
 use App\Services\BroadcastService;
+use App\Support\CatalogNews;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -61,7 +62,7 @@ class PostController extends Controller
                 ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at')
                 ->with('categories', 'tags', 'users')
                 ->whereIn('category_id', $categories)
-                ->whereBetween('postponed_to', [Carbon::now()->subMonth(24), Carbon::now()])
+                ->whereBetween('postponed_to', [Carbon::now()->subDays(7), Carbon::now()])
                 ->withImage()
                 ->where('approved', 'yes')
                 ->where('draft', '0')
@@ -95,6 +96,8 @@ class PostController extends Controller
             $broadcast = $broadcastService->getTodaySchedule();
 
             $upcoming = Title::with('images', 'type')->where('broad_time', '>=', Carbon::now())->where('status', TitleStatus::ESTRENO->value)->orderBy('broad_time', 'asc')->take(15)->get();
+
+            $relevants = CatalogNews::fill($relevants, 3);
 
             return response()->json([
                 'code' => 200,
@@ -1074,12 +1077,64 @@ class PostController extends Controller
                 'other_articles' => $newArticles,
                 'relateds' => $relateds,
             ], 200);
-        } else {
+        }
+
+        return $this->showCatalogNews((string) $slug);
+    }
+
+    /**
+     * @return \Illuminate\Http\JsonResponse
+     */
+    private function showCatalogNews(string $slug)
+    {
+        $malId = CatalogNews::parseSlug($slug);
+        if ($malId === null) {
             return response()->json([
                 'code' => 404,
                 'message' => Helper::errorMessage('Post not found'),
             ], 404);
         }
+
+        try {
+            $post = CatalogNews::article($malId);
+        } catch (Exception) {
+            $post = null;
+        }
+
+        if ($post === null) {
+            return response()->json([
+                'code' => 404,
+                'message' => Helper::errorMessage('Post not found'),
+            ], 404);
+        }
+
+        $newArticles = [];
+        $otherArticles = Post::select('id', 'title', 'category_id', 'slug', 'image')->with('categories')
+            ->where('category_id', '=', $post['category_id'])
+            ->where('view_counter', '>', '100')
+            ->withImage()
+            ->orderBy('postponed_to', 'desc')
+            ->get();
+        if ($otherArticles->count() > 2) {
+            foreach ($otherArticles->random(3) as $index) {
+                $newArticles[] = $index;
+            }
+        }
+
+        $categoryName = $post['categories']['name'] ?? 'Noticias';
+
+        return response()->json([
+            'code' => 200,
+            'message' => Helper::successMessage('Post found'),
+            'title' => 'Articulos - '.$categoryName.' - '.$post['title'],
+            'description' => $post['excerpt'],
+            'path_image' => $post['image'],
+            'tags' => '',
+            'result' => $post,
+            'article_video_links' => [],
+            'other_articles' => $newArticles,
+            'relateds' => [],
+        ], 200);
     }
 
     /**

@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-10-27
 
+### feat: relevants de home con News de Tenrai
+
+- **Fecha:** 2026-10-27
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- Completa `relevants` de `/external/home` con News de Tenrai si no hay 3 posts locales de 7 días
+- El detalle `/external/articles/mal-news-{id}` sirve el artículo Tenrai como post local (sin salir de Coanime)
+
 ### feat: catálogo genérico de títulos (Tenrai)
 
 - **Fecha:** 2026-10-27

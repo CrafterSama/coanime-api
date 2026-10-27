@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 
 final class TitleCatalog
@@ -67,6 +68,39 @@ final class TitleCatalog
         ]);
 
         return $json['data'] ?? [];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function news(int $limit = 3): array
+    {
+        $json = self::get('/news', [
+            'limit' => max(1, min($limit, 100)),
+            'sfw' => 'true',
+        ]);
+        $data = $json['data'] ?? [];
+
+        return is_array($data) ? array_values($data) : [];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function newsById(int $id): ?array
+    {
+        try {
+            $json = self::get('/news/'.$id, ['sfw' => 'true']);
+        } catch (RequestException $e) {
+            if ($e->response !== null && $e->response->status() === 404) {
+                return null;
+            }
+            throw $e;
+        }
+
+        $data = $json['data'] ?? null;
+
+        return is_array($data) ? $data : null;
     }
 
     public static function dayFilter(string $day): ?string
