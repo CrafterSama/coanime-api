@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## 2026-10-27
+
+### chore: versionar leftovers JsonApiResource nativos
+- **Fecha:** 2026-10-27
+- **Branch:** feature/CACMS8-change-versions-and-jikan
+- Sube controladores, resources y paginación JSON:API nativo de L13 que quedaron locales
+- Las rutas `/api/external` siguen en laravel-json-api; este código aún no está cableado
+
 ## 2026-10-26
 
 ### feat: Laravel 13, PHP 8.4 y scraper MAL (jikan-me/jikan)
