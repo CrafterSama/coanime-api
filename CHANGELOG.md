@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## 2026-11-15
+
+### feat: news:republish-es sin cache editorial 24h
+
+- **Fecha:** 2026-11-15
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- Quita el cache de 24h de card/article en CatalogNewsEditorial (status LLM queda a 30 min)
+- `php artisan news:republish-es` limpia caches del lote y reingesta posts en español
+
 ## 2026-10-27
 
 ### feat: logs del ingest de News

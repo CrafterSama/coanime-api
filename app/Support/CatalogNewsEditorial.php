@@ -15,7 +15,7 @@ final class CatalogNewsEditorial
     public const SOURCE_LLM = 'llm';
     public const SOURCE_TRANSLATE = 'translate';
     public const SOURCE_SKIPPED = 'skipped';
-    private const TTL = 86400;
+    private const STATUS_TTL = 1800;
     private const STATUS_KEY = 'catalog.news.editorial.status';
     private const SYSTEM = <<<'PROMPT'
 Eres la redacción de Coanime.net (tono hasta octubre 2024). Español de Latinoamérica.
@@ -30,31 +30,23 @@ PROMPT;
      */
     public static function cards(array $items): array
     {
-        $out = [];
         $miss = [];
         foreach ($items as $item) {
             if (! is_array($item) || ! isset($item['mal_id'])) {
                 continue;
             }
-            $id = (int) $item['mal_id'];
-            $cached = Cache::get(self::cardKey($id));
-            if (is_array($cached) && isset($cached['title'], $cached['excerpt'])) {
-                $out[$id] = ['title' => (string) $cached['title'], 'excerpt' => (string) $cached['excerpt']];
-            } else {
-                $miss[] = $item;
-            }
+            $miss[] = $item;
         }
 
         if ($miss === []) {
-            return $out;
+            return [];
         }
 
         $batch = self::llmCards($miss);
+        $out = [];
         foreach ($miss as $item) {
             $id = (int) $item['mal_id'];
-            $row = $batch[$id] ?? self::fallbackCard($item);
-            Cache::put(self::cardKey($id), $row, self::TTL);
-            $out[$id] = $row;
+            $out[$id] = $batch[$id] ?? self::fallbackCard($item);
         }
 
         return $out;
@@ -75,22 +67,21 @@ PROMPT;
      */
     public static function article(int $malId, string $title, string $excerpt, string $html): array
     {
-        $cached = Cache::get(self::articleKey($malId));
-        if (is_array($cached) && isset($cached['title'], $cached['excerpt'], $cached['content'])) {
-            return [
-                'title' => (string) $cached['title'],
-                'excerpt' => (string) $cached['excerpt'],
-                'content' => (string) $cached['content'],
-                'source' => (string) ($cached['source'] ?? self::SOURCE_TRANSLATE),
-            ];
-        }
-
         $llm = self::llmArticle($malId, $title, $excerpt, $html);
         $row = $llm ?? self::fallbackArticle($malId, $title, $excerpt, $html);
         $row['source'] = $llm !== null ? self::SOURCE_LLM : self::SOURCE_TRANSLATE;
-        Cache::put(self::articleKey($malId), $row, self::TTL);
 
         return $row;
+    }
+
+    public static function forgetNewsCaches(int $malId): void
+    {
+        Cache::forget(self::cardKey($malId));
+        Cache::forget(self::articleKey($malId));
+        Cache::forget('catalog.news.article.'.$malId);
+        Cache::forget('catalog.news.i18n.'.$malId.'.title');
+        Cache::forget('catalog.news.i18n.'.$malId.'.excerpt');
+        Cache::forget('catalog.news.i18n.'.$malId.'.content');
     }
 
     public static function configured(): bool
@@ -371,7 +362,7 @@ PROMPT;
             'ok' => $ok,
             'ok_at' => $ok ? now()->toIso8601String() : $okAt,
             'error' => $ok ? null : $error,
-        ], self::TTL);
+        ], self::STATUS_TTL);
     }
 
     private static function cardKey(int $malId): string
