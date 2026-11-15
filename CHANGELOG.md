@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-11-15
 
+### feat: migrate:deploy para deploys con schema legacy
+
+- **Fecha:** 2026-11-15
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- `php artisan migrate:deploy` corre pendientes una a una; si fallan por “already exists” las marca y sigue
+- Repara `postponed_to` cero-fecha antes de los ALTER de posts
+
 ### fix: no mostrar News en inglés en destacadas
 
 - **Fecha:** 2026-11-15
