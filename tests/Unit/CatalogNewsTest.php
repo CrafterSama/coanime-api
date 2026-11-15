@@ -56,7 +56,7 @@ class CatalogNewsTest extends TestCase
 
     public function test_fill_zero_locals_takes_three_tenrai(): void
     {
-        $this->fakeNewsList(3);
+        $this->fakeNewsList(3, spanish: true);
 
         $mixed = CatalogNews::fill([], 3);
 
@@ -64,11 +64,12 @@ class CatalogNewsTest extends TestCase
         $this->assertSame('tenrai', $mixed[0]['source']);
         $this->assertSame('mal-news-1', $mixed[0]['slug']);
         $this->assertSame('mal-news-3', $mixed[2]['slug']);
+        $this->assertStringContainsString('¡', $mixed[0]['title']);
     }
 
     public function test_fill_two_locals_takes_one_tenrai(): void
     {
-        $this->fakeNewsList(3);
+        $this->fakeNewsList(3, spanish: true);
 
         $local = [
             ['id' => 10, 'title' => 'Local 1', 'slug' => 'local-1'],
@@ -81,6 +82,15 @@ class CatalogNewsTest extends TestCase
         $this->assertSame(11, $mixed[1]['id']);
         $this->assertSame('tenrai', $mixed[2]['source']);
         $this->assertSame('mal-news-1', $mixed[2]['slug']);
+    }
+
+    public function test_fill_skips_english_tenrai_fallback(): void
+    {
+        $this->fakeNewsList(3, spanish: false);
+
+        $mixed = CatalogNews::fill([], 3);
+
+        $this->assertSame([], $mixed);
     }
 
     public function test_news_hits_catalog_with_limit_and_sfw(): void
@@ -226,13 +236,19 @@ class CatalogNewsTest extends TestCase
         ];
     }
 
-    private function fakeNewsList(int $count): void
+    private function fakeNewsList(int $count, bool $spanish = true): void
     {
         $data = [];
         for ($i = 1; $i <= $count; $i++) {
             $item = $this->listItem();
             $item['mal_id'] = $i;
-            $item['title'] = 'News '.$i;
+            if ($spanish) {
+                $item['title'] = '¡Noticia '.$i.' en español!';
+                $item['excerpt'] = 'Los fans ya pueden leer la noticia '.$i.'.';
+            } else {
+                $item['title'] = 'News '.$i.' announces official staff';
+                $item['excerpt'] = 'The official website announced the cast.';
+            }
             $data[] = $item;
         }
 

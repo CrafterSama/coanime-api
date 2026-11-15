@@ -39,7 +39,10 @@ final class CatalogNews
     {
         $items = [];
         $seen = [];
-        foreach (self::savedRelevants($limit) as $row) {
+        foreach (self::savedRelevants($limit * 3) as $row) {
+            if (! self::rowIsSpanish($row)) {
+                continue;
+            }
             self::pushUnique($items, $seen, $row, is_object($row) ? (string) $row->slug : '');
             if (count($items) >= $limit) {
                 return $items;
@@ -67,6 +70,13 @@ final class CatalogNews
         return array_values(array_slice($items, 0, $limit));
     }
 
+    public static function forgetDisplayCaches(): void
+    {
+        for ($i = 1; $i <= 25; $i++) {
+            Cache::forget('catalog.news.relevants.'.$i);
+        }
+    }
+
     /**
      * @return list<Post>
      */
@@ -74,7 +84,7 @@ final class CatalogNews
     {
         try {
             return Post::query()
-                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at', 'mal_news_id')
+                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at', 'mal_news_id', 'content')
                 ->with('categories', 'tags', 'users')
                 ->whereNotNull('mal_news_id')
                 ->publishedAndApproved()
@@ -83,12 +93,21 @@ final class CatalogNews
                 })
                 ->orderByDesc('postponed_to')
                 ->orderByDesc('id')
-                ->take($limit)
+                ->take(max(1, $limit))
                 ->get()
                 ->all();
         } catch (Throwable) {
             return [];
         }
+    }
+
+    private static function rowIsSpanish(mixed $row): bool
+    {
+        $title = is_object($row) ? (string) ($row->title ?? '') : (string) ($row['title'] ?? '');
+        $excerpt = is_object($row) ? (string) ($row->excerpt ?? '') : (string) ($row['excerpt'] ?? '');
+        $content = is_object($row) ? (string) ($row->content ?? '') : (string) ($row['content'] ?? '');
+
+        return CatalogNewsEditorial::isSpanish($title, $excerpt, $content !== '' ? $content : $excerpt);
     }
 
     /**
@@ -115,20 +134,36 @@ final class CatalogNews
 
         return Cache::remember('catalog.news.relevants.'.$limit, self::TTL, function () use ($limit) {
             $category = self::category();
+            // Fetch extra in case some cards stay English after editorial.
+            $fetch = max($limit * 3, $limit);
             $raw = [];
-            foreach (TitleCatalog::news($limit) as $item) {
+            foreach (TitleCatalog::news($fetch) as $item) {
                 if (! is_array($item) || ! isset($item['mal_id'])) {
                     continue;
                 }
                 $raw[] = $item;
-                if (count($raw) >= $limit) {
+                if (count($raw) >= $fetch) {
                     break;
                 }
             }
             $copy = CatalogNewsEditorial::cards($raw);
             $mapped = [];
             foreach ($raw as $item) {
-                $mapped[] = self::asRelevant($item, $category, $copy[(int) $item['mal_id']] ?? null);
+                $enTitle = (string) ($item['title'] ?? '');
+                $enExcerpt = (string) ($item['excerpt'] ?? '');
+                $card = $copy[(int) $item['mal_id']] ?? null;
+                $title = is_array($card) ? (string) ($card['title'] ?? $enTitle) : $enTitle;
+                $excerpt = is_array($card) ? (string) ($card['excerpt'] ?? $enExcerpt) : $enExcerpt;
+                // Only compare against EN originals when editorial actually changed the copy.
+                $cmpTitle = $title !== $enTitle ? $enTitle : '';
+                $cmpExcerpt = $excerpt !== $enExcerpt ? $enExcerpt : '';
+                if (! CatalogNewsEditorial::isSpanish($title, $excerpt, $excerpt, $cmpTitle, $cmpExcerpt)) {
+                    continue;
+                }
+                $mapped[] = self::asRelevant($item, $category, $card);
+                if (count($mapped) >= $limit) {
+                    break;
+                }
             }
 
             return $mapped;

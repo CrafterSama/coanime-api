@@ -73,10 +73,13 @@ class NewsRepublishEsCommandTest extends TestCase
             return Http::response(['data' => $list], 200);
         });
 
+        Cache::put('catalog.news.relevants.1', [['title' => 'EN']], 1800);
+
         $this->artisan('news:republish-es', ['--limit' => 1])->assertSuccessful();
 
         $this->assertFalse(Cache::has('catalog.news.editorial.article.74870618'));
         $this->assertFalse(Cache::has('catalog.news.relevants.3'));
+        $this->assertFalse(Cache::has('catalog.news.relevants.1'));
         $this->assertSame(1, Post::count());
         $post = Post::query()->first();
         $this->assertSame('¡Phantom Busters revela su elenco!', $post->title);

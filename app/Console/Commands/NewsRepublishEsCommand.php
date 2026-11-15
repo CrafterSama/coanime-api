@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\Post;
 use App\Services\CatalogNewsIngest;
+use App\Support\CatalogNews;
 use App\Support\CatalogNewsEditorial;
 use App\Support\TitleCatalog;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -16,7 +17,7 @@ class NewsRepublishEsCommand extends Command
 {
     protected $signature = 'news:republish-es {--limit=10 : Max news items (1-25)}';
 
-    protected $description = 'Forget news caches for the Tenrai batch and re-ingest Spanish posts (user_id=1).';
+    protected $description = 'Clear cached news (incl. English leftovers), then re-ingest Spanish posts for coanime.net.';
 
     public function handle(CatalogNewsIngest $ingest): int
     {
@@ -24,13 +25,24 @@ class NewsRepublishEsCommand extends Command
         $this->info("Republishing Tenrai news in Spanish (limit={$limit}).");
 
         try {
+            $ids = [];
             foreach (TitleCatalog::news($limit) as $raw) {
                 if (! is_array($raw) || ! isset($raw['mal_id'])) {
                     continue;
                 }
-                CatalogNewsEditorial::forgetNewsCaches((int) $raw['mal_id']);
+                $ids[(int) $raw['mal_id']] = true;
             }
-            Cache::forget('catalog.news.relevants.3');
+            try {
+                foreach (Post::query()->whereNotNull('mal_news_id')->pluck('mal_news_id') as $malId) {
+                    $ids[(int) $malId] = true;
+                }
+            } catch (Throwable) {
+            }
+            foreach (array_keys($ids) as $malId) {
+                CatalogNewsEditorial::forgetNewsCaches((int) $malId);
+            }
+            CatalogNews::forgetDisplayCaches();
+            $this->info('Cleared caches for '.count($ids).' news id(s) + relevants.');
 
             $result = $ingest->run($limit);
         } catch (Throwable $e) {

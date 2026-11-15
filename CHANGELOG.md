@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-11-15
 
+### fix: no mostrar News en inglés en destacadas
+
+- **Fecha:** 2026-11-15
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- `CatalogNews::fill` / `relevants` filtran con `isSpanish`; posts EN guardados no salen en home
+- `news:republish-es` limpia caches de todos los `mal_news_id` + `relevants.1..25`
+
 ### feat: news:republish-es sin cache editorial 24h
 
 - **Fecha:** 2026-11-15
