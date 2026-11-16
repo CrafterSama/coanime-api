@@ -4,7 +4,7 @@ La Editorial de Coanime localiza News de Tenrai (inglés) a español latinoameri
 
 ## Flujo
 
-1. Cron `news:ingest-tenrai` (horario) o `POST /internal/news/ingest`
+1. Cron diario `news:ingest-tenrai --limit=3` (08:00) o `POST /internal/news/ingest`
 2. `CatalogNewsEditorial` pide a Gemini la nota en ES
 3. Si Gemini falla o no hay key → fallback Google Translate
 4. Se guarda el `Post` en español (`mal_news_id`, slug `mal-news-{id}`)

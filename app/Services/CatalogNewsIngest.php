@@ -25,7 +25,7 @@ final class CatalogNewsIngest
     /**
      * @return array{editorial: array<string, mixed>, created: int, updated: int, skipped: int, items: list<array<string, mixed>>}
      */
-    public function run(int $limit = 10): array
+    public function run(int $limit = 3): array
     {
         if (User::query()->find(self::USER_ID) === null) {
             Log::error('news:ingest failed', ['exception' => 'User id 1 no existe']);

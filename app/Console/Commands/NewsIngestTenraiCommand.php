@@ -11,7 +11,7 @@ use Throwable;
 
 class NewsIngestTenraiCommand extends Command
 {
-    protected $signature = 'news:ingest-tenrai {--limit=10 : Max news items (1-25)}';
+    protected $signature = 'news:ingest-tenrai {--limit=3 : Max news items (1-25)}';
 
     /** @var list<string> */
     protected $aliases = ['news:ingest'];

@@ -20,7 +20,7 @@ class CatalogNewsIngestController extends Controller
             return $denied;
         }
 
-        $limit = (int) $request->input('limit', 10);
+        $limit = (int) $request->input('limit', 3);
         $limit = max(1, min($limit, 25));
 
         try {

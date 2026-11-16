@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-11-16
 
+### fix: ingest de News a 3 artículos diarios
+
+- **Fecha:** 2026-11-16
+- **Branch:** feature/CACMS10-change-llm-and-add-editorial
+- Cron `news:ingest-tenrai --limit=3` a las 08:00 (antes hourly con default 10)
+- Default de artisan/API/servicio alineado a 3
+
 ### fix: errores reales de Gemini en last_error + key por query
 
 - **Fecha:** 2026-11-16
