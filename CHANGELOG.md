@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-11-15
 
+### fix: migrate:deploy reconoce FK duplicados (MySQL 1826)
+
+- **Fecha:** 2026-11-15
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- `isAlreadyApplied` cubre `Duplicate foreign key constraint` / `1826` / `errno: 121`
+- Script canónico `scripts/deploy-migrate.sh` (`$PHP_BINARY` o `php` + `migrate:deploy`); en el host usar eso en lugar de `php artisan migrate` o `php php artisan …`
+
 ### feat: migrate:deploy para deploys con schema legacy
 
 - **Fecha:** 2026-11-15

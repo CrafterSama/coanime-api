@@ -16,7 +16,7 @@ final class DeployMigrate
     public static function isAlreadyApplied(string $message): bool
     {
         return (bool) preg_match(
-            '/already exists|Duplicate column|Duplicate key name|Can\'t DROP|check that column\/key exists|SQLSTATE\[42S01\]|SQLSTATE\[42S21\]|SQLSTATE\[42000\].*1091|\b1050\b|\b1060\b|\b1061\b|\b1091\b/i',
+            '/already exists|Duplicate column|Duplicate key name|Duplicate foreign key constraint|Duplicate key on write or update|Can\'t DROP|check that column\/key exists|SQLSTATE\[42S01\]|SQLSTATE\[42S21\]|SQLSTATE\[42000\].*1091|errno:\s*121|\b1050\b|\b1060\b|\b1061\b|\b1091\b|\b1826\b/i',
             $message
         );
     }
