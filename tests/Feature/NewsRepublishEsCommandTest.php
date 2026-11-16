@@ -32,8 +32,8 @@ class NewsRepublishEsCommandTest extends TestCase
         }
 
         config([
-            'services.editorial.key' => 'sk-test',
-            'services.editorial.url' => 'https://api.openai.com/v1/chat/completions',
+            'services.editorial.key' => 'test-key',
+            'services.editorial.enabled' => true,
         ]);
 
         Cache::put('catalog.news.editorial.article.74870618', [
@@ -61,9 +61,9 @@ class NewsRepublishEsCommandTest extends TestCase
         ];
 
         Http::fake(function (Request $request) use ($list, $detail, $llm) {
-            if (str_contains($request->url(), 'chat/completions')) {
+            if (str_contains($request->url(), 'generateContent')) {
                 return Http::response([
-                    'choices' => [['message' => ['content' => json_encode($llm, JSON_UNESCAPED_UNICODE)]]],
+                    'candidates' => [['content' => ['parts' => [['text' => json_encode($llm, JSON_UNESCAPED_UNICODE)]]]]],
                 ], 200);
             }
             if (preg_match('#/news/(\d+)#', $request->url())) {

@@ -126,20 +126,22 @@ class CatalogNewsTest extends TestCase
     public function test_as_relevant_uses_llm_editorial_json(): void
     {
         config([
-            'services.editorial.key' => 'sk-test',
-            'services.editorial.url' => 'https://api.openai.com/v1/chat/completions',
+            'services.editorial.key' => 'test-key',
+            'services.editorial.enabled' => true,
         ]);
         Http::fake([
-            'https://api.openai.com/v1/chat/completions' => Http::response([
-                'choices' => [[
-                    'message' => [
-                        'content' => json_encode([
-                            'items' => [[
-                                'mal_id' => 74870618,
-                                'title' => '¡Phantom Busters revela su elenco principal!',
-                                'excerpt' => 'El anime ya tiene caras y staff confirmados.',
-                            ]],
-                        ], JSON_UNESCAPED_UNICODE),
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [[
+                    'content' => [
+                        'parts' => [[
+                            'text' => json_encode([
+                                'items' => [[
+                                    'mal_id' => 74870618,
+                                    'title' => '¡Phantom Busters revela su elenco principal!',
+                                    'excerpt' => 'El anime ya tiene caras y staff confirmados.',
+                                ]],
+                            ], JSON_UNESCAPED_UNICODE),
+                        ]],
                     ],
                 ]],
             ], 200),
@@ -150,24 +152,26 @@ class CatalogNewsTest extends TestCase
         $this->assertSame('¡Phantom Busters revela su elenco principal!', $mapped['title']);
         $this->assertSame('El anime ya tiene caras y staff confirmados.', $mapped['excerpt']);
         $this->assertSame('Redacción Coanime', $mapped['users']['name']);
-        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'chat/completions'));
+        Http::assertSent(fn (Request $request) => str_contains($request->url(), 'generateContent'));
     }
 
     public function test_as_article_uses_llm_html(): void
     {
         config([
-            'services.editorial.key' => 'sk-test',
-            'services.editorial.url' => 'https://api.openai.com/v1/chat/completions',
+            'services.editorial.key' => 'test-key',
+            'services.editorial.enabled' => true,
         ]);
         Http::fake([
-            'https://api.openai.com/v1/chat/completions' => Http::response([
-                'choices' => [[
-                    'message' => [
-                        'content' => json_encode([
-                            'title' => '¡Phantom Busters ya tiene elenco!',
-                            'excerpt' => 'Se confirman voces y staff.',
-                            'content' => '<p>Los fans de Phantom Busters ya pueden ponerle cara al anime.</p><h4>Elenco</h4><p>Nobuhiko Okamoto encabeza el reparto.</p>',
-                        ], JSON_UNESCAPED_UNICODE),
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [[
+                    'content' => [
+                        'parts' => [[
+                            'text' => json_encode([
+                                'title' => '¡Phantom Busters ya tiene elenco!',
+                                'excerpt' => 'Se confirman voces y staff.',
+                                'content' => '<p>Los fans de Phantom Busters ya pueden ponerle cara al anime.</p><h4>Elenco</h4><p>Nobuhiko Okamoto encabeza el reparto.</p>',
+                            ], JSON_UNESCAPED_UNICODE),
+                        ]],
                     ],
                 ]],
             ], 200),
@@ -184,11 +188,11 @@ class CatalogNewsTest extends TestCase
     public function test_llm_error_falls_back_to_source_text(): void
     {
         config([
-            'services.editorial.key' => 'sk-test',
-            'services.editorial.url' => 'https://api.openai.com/v1/chat/completions',
+            'services.editorial.key' => 'test-key',
+            'services.editorial.enabled' => true,
         ]);
         Http::fake([
-            'https://api.openai.com/v1/chat/completions' => Http::response(['error' => 'nope'], 500),
+            'generativelanguage.googleapis.com/*' => Http::response(['error' => 'nope'], 500),
         ]);
 
         $mapped = CatalogNews::asRelevant($this->listItem(), $this->category());

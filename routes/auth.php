@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CatalogNewsIngestController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\EditorialController;
 use App\Http\Controllers\EncyclopediaController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\ImageController;
@@ -137,6 +138,10 @@ Route::middleware(['auth:api'])->group(function () {
             Route::post('news/ingest', [CatalogNewsIngestController::class, 'store']);
             Route::get('news/editorial', [CatalogNewsIngestController::class, 'status']);
         });
+
+        Route::get('editorial', [EditorialController::class, 'show']);
+        Route::get('editorial/versions', [EditorialController::class, 'versions']);
+        Route::post('editorial', [EditorialController::class, 'store']);
 
         // ** Auth Upload Image Endpoints **
         Route::post('upload-images', [ImageController::class, 'store']);

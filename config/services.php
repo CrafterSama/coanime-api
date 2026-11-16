@@ -39,9 +39,10 @@ return [
     ],
 
     'editorial' => [
-        'url' => env('EDITORIAL_LLM_URL', 'https://api.openai.com/v1/chat/completions'),
-        'key' => env('EDITORIAL_LLM_KEY'),
-        'model' => env('EDITORIAL_LLM_MODEL', 'gpt-4o-mini'),
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'enabled' => filter_var(env('EDITORIAL_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
     ],
 
 ];

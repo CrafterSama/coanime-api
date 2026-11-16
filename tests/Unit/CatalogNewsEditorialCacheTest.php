@@ -20,8 +20,8 @@ class CatalogNewsEditorialCacheTest extends TestCase
     public function test_article_does_not_write_24h_editorial_cache(): void
     {
         config([
-            'services.editorial.key' => 'sk-test',
-            'services.editorial.url' => 'https://api.openai.com/v1/chat/completions',
+            'services.editorial.key' => 'test-key',
+            'services.editorial.enabled' => true,
         ]);
 
         $llm = [
@@ -30,7 +30,7 @@ class CatalogNewsEditorialCacheTest extends TestCase
             'content' => '<p>Los fans de Phantom Busters ya pueden ponerle cara al anime.</p>',
         ];
         Http::fake(fn () => Http::response([
-            'choices' => [['message' => ['content' => json_encode($llm, JSON_UNESCAPED_UNICODE)]]],
+            'candidates' => [['content' => ['parts' => [['text' => json_encode($llm, JSON_UNESCAPED_UNICODE)]]]]],
         ], 200));
 
         $row = CatalogNewsEditorial::article(
@@ -49,7 +49,7 @@ class CatalogNewsEditorialCacheTest extends TestCase
     {
         config([
             'services.editorial.key' => '',
-            'services.editorial.url' => '',
+            'services.editorial.enabled' => true,
         ]);
 
         $out = CatalogNewsEditorial::cards([[

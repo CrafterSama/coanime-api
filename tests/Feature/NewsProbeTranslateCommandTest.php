@@ -18,18 +18,18 @@ class NewsProbeTranslateCommandTest extends TestCase
     public function test_probe_prints_en_and_llm_and_does_not_save(): void
     {
         config([
-            'services.editorial.key' => 'sk-test',
-            'services.editorial.url' => 'https://api.openai.com/v1/chat/completions',
+            'services.editorial.key' => 'test-key',
+            'services.editorial.enabled' => true,
         ]);
 
         Http::fake(function (Request $request) {
-            if (str_contains($request->url(), 'chat/completions')) {
+            if (str_contains($request->url(), 'generateContent')) {
                 return Http::response([
-                    'choices' => [['message' => ['content' => json_encode([
+                    'candidates' => [['content' => ['parts' => [['text' => json_encode([
                         'title' => '¡Phantom Busters revela su elenco!',
                         'excerpt' => 'El anime ya tiene caras confirmadas.',
                         'content' => '<p>Los fans de Phantom Busters ya pueden ponerle cara al anime.</p>',
-                    ], JSON_UNESCAPED_UNICODE)]]],
+                    ], JSON_UNESCAPED_UNICODE)]]]]],
                 ], 200);
             }
 

@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## 2026-11-16
+
+### feat: Editorial EN→ES con Gemini (reemplaza OpenAI)
+
+- **Fecha:** 2026-11-16
+- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- `GeminiTranslationService` + `GEMINI_API_KEY` / `GEMINI_MODEL` / `EDITORIAL_ENABLED`
+- `CatalogNewsEditorial` deja de usar `EDITORIAL_LLM_*` (OpenAI); fallback Google Translate se mantiene
+- Manual editorial versionado (`editorial_manuals`) + API `/internal/editorial` (admin)
+- Docs: `docs/editorial-gemini.md`
+
 ## 2026-11-15
 
 ### fix: migrate:deploy reconoce FK duplicados (MySQL 1826)
