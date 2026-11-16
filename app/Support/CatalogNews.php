@@ -7,6 +7,7 @@ namespace App\Support;
 use App\Enums\Category as CategoryEnum;
 use App\Models\Category;
 use App\Models\Post;
+use App\Services\NewsContentLinkResolver;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Throwable;
@@ -15,7 +16,6 @@ final class CatalogNews
 {
     public const SLUG_PREFIX = 'mal-news-';
     private const TTL = 1800;
-    public const ATTRIBUTION = '<p>Fuente: MyAnimeList (Tenrai)</p>';
 
     public static function slug(int $malId): string
     {
@@ -246,12 +246,9 @@ final class CatalogNews
             $html
         );
         $post = self::asRelevant($item, $category, $copy);
-        $body = $copy['content'];
-        if (! str_contains($body, 'Fuente: MyAnimeList')) {
-            $body = rtrim($body).self::ATTRIBUTION;
-        }
-        $post['content'] = $body;
-        $post['titles'] = [];
+        $resolved = app(NewsContentLinkResolver::class)->resolve($copy['content']);
+        $post['content'] = $resolved['html'];
+        $post['titles'] = $resolved['title_ids'];
 
         return $post;
     }

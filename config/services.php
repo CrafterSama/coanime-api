@@ -45,4 +45,13 @@ return [
         'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
     ],
 
+    'news_links' => [
+        'frontend_base' => env('FRONTEND_URL', 'https://coanime.net'),
+        'title' => '/ecma/titulos/{type}/{slug}',
+        'person' => '/ecma/personas/{slug}',
+        'magazine' => '/ecma/revistas/{slug}',
+        'company' => '/ecma/entidades/{slug}',
+        'similarity' => (int) env('NEWS_LINK_SIMILARITY', 90),
+    ],
+
 ];

@@ -102,7 +102,9 @@ HTML: {$payload['html_rules']}
 Perfil editorial (orientativo): {$profileText}
 Glosario (prioridad sobre preferencias del modelo):
 {$glossary}
-No inventes fechas, staff ni reparto. Responde SOLO JSON válido según el esquema pedido.
+No inventes fechas, staff ni reparto.
+No menciones MyAnimeList, MAL, Tenrai ni firmas de rewrite; el texto debe parecer original de Coanime.
+Responde SOLO JSON válido según el esquema pedido.
 PROMPT);
     }
 }

@@ -7,9 +7,11 @@ La Editorial de Coanime localiza News de Tenrai (inglés) a español latinoameri
 1. Cron diario `news:ingest-tenrai --limit=3` (08:00) o `POST /internal/news/ingest`
 2. `CatalogNewsEditorial` pide a Gemini la nota en ES
 3. Si Gemini falla o no hay key → fallback Google Translate
-4. Se guarda el `Post` en español (`mal_news_id`, slug `mal-news-{id}`)
+4. Cleanup: sin `Fuente: MyAnimeList`, Tenrai ni firmas MAL Rewrite
+5. Links MAL → buscar entidad similar en Coanime; si no hay, stub desde Tenrai **sin atribuir fuente**; reescribir a `/ecma/...`
+6. Se guarda el `Post` en español (`mal_news_id`, slug `mal-news-{id}`) + `post_title` si hubo títulos
 
-No se generan versiones en otros idiomas.
+No se generan versiones en otros idiomas. El texto público nunca debe mencionar MAL/Tenrai como fuente.
 
 ## Variables de entorno
 

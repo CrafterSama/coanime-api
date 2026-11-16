@@ -44,13 +44,14 @@ class CatalogNewsTest extends TestCase
         $this->assertSame(0, $mapped['view_counter']);
     }
 
-    public function test_as_article_adds_html_and_attribution(): void
+    public function test_as_article_adds_html_without_attribution(): void
     {
         $mapped = CatalogNews::asArticle($this->detailItem(), $this->category());
 
         $this->assertSame('mal-news-74870618', $mapped['slug']);
         $this->assertStringContainsString('Phantom Busters', $mapped['content']);
-        $this->assertStringContainsString('Fuente: MyAnimeList (Tenrai)', $mapped['content']);
+        $this->assertStringNotContainsString('Fuente: MyAnimeList', $mapped['content']);
+        $this->assertStringNotContainsString('Tenrai', $mapped['content']);
         $this->assertSame([], $mapped['titles']);
     }
 
@@ -182,7 +183,8 @@ class CatalogNewsTest extends TestCase
         $this->assertSame('¡Phantom Busters ya tiene elenco!', $mapped['title']);
         $this->assertStringContainsString('Los fans de Phantom Busters', $mapped['content']);
         $this->assertStringContainsString('<h4>Elenco</h4>', $mapped['content']);
-        $this->assertStringContainsString('Fuente: MyAnimeList (Tenrai)', $mapped['content']);
+        $this->assertStringNotContainsString('Fuente: MyAnimeList', $mapped['content']);
+        $this->assertStringNotContainsString('Tenrai', $mapped['content']);
     }
 
     public function test_llm_error_falls_back_to_source_text(): void

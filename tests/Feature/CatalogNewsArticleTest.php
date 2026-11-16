@@ -46,7 +46,8 @@ class CatalogNewsArticleTest extends TestCase
             ->assertJsonPath('result.slug', 'mal-news-74870618')
             ->assertJsonPath('result.source', 'tenrai')
             ->assertJsonPath('code', 200);
-        $this->assertStringContainsString('Fuente: MyAnimeList (Tenrai)', $response->json('result.content'));
+        $this->assertStringNotContainsString('Fuente: MyAnimeList', (string) $response->json('result.content'));
+        $this->assertStringNotContainsString('Tenrai', (string) $response->json('result.content'));
     }
 
     public function test_unknown_slug_is_404(): void

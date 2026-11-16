@@ -103,6 +103,25 @@ final class TitleCatalog
         return is_array($data) ? $data : null;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function byMalId(int $id, bool $manga): ?array
+    {
+        try {
+            $json = self::get(($manga ? '/manga/' : '/anime/').$id);
+        } catch (RequestException $e) {
+            if ($e->response !== null && $e->response->status() === 404) {
+                return null;
+            }
+            throw $e;
+        }
+
+        $data = $json['data'] ?? null;
+
+        return is_array($data) ? $data : null;
+    }
+
     public static function dayFilter(string $day): ?string
     {
         return match (strtolower($day)) {

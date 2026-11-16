@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-11-16
 
+### feat: reglas de contenido News (sin atribución + links Coanime)
+
+- **Fecha:** 2026-11-16
+- **Branch:** feature/CACMS10-change-llm-and-add-editorial
+- Elimina `Fuente: MyAnimeList (Tenrai)` y firmas MAL Rewrite del HTML
+- Resuelve links MAL a `/ecma/titulos|personas|revistas|entidades/...` con dedupe local; crea stubs desde Tenrai solo si no hay similar
+- Sync `post_title` al ingest; prompt Gemini sin mencionar MAL/Tenrai
+
 ### fix: modelo Gemini default a gemini-3.8-flash
 
 - **Fecha:** 2026-11-16

@@ -11,6 +11,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Support\CatalogNews;
 use App\Support\CatalogNewsEditorial;
+use App\Support\NewsContentCleanup;
 use App\Support\TitleCatalog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -55,10 +56,8 @@ final class CatalogNewsIngest
             $enTitle = (string) ($detail['title'] ?? $raw['title'] ?? '');
             $enExcerpt = (string) ($detail['excerpt'] ?? $raw['excerpt'] ?? '');
             $copy = CatalogNewsEditorial::article($malId, $enTitle, $enExcerpt, $html);
-            $body = $copy['content'];
-            if (! str_contains($body, 'Fuente: MyAnimeList')) {
-                $body = rtrim($body).CatalogNews::ATTRIBUTION;
-            }
+            $resolved = app(NewsContentLinkResolver::class)->resolve($copy['content']);
+            $body = $resolved['html'];
 
             $date = is_string($detail['date'] ?? null) ? $detail['date'] : null;
             $postponed = $date !== null ? Carbon::parse($date) : Carbon::now();
@@ -103,6 +102,9 @@ final class CatalogNewsIngest
 
             try {
                 $post->save();
+                if ($resolved['title_ids'] !== []) {
+                    $post->titles()->syncWithoutDetaching($resolved['title_ids']);
+                }
             } catch (Throwable $e) {
                 $skipped++;
                 $items[] = ['mal_id' => $malId, 'source' => $copy['source'], 'action' => 'save_failed'];
@@ -154,8 +156,8 @@ final class CatalogNewsIngest
             'user_id' => self::USER_ID,
             'slug' => CatalogNews::slug($malId),
             'category_id' => CategoryEnum::CATEGORY_1->value,
-            'title' => Str::limit($copy['title'], 255, ''),
-            'excerpt' => Str::limit($copy['excerpt'], 255, ''),
+            'title' => Str::limit(NewsContentCleanup::stripPlain($copy['title']), 255, ''),
+            'excerpt' => Str::limit(NewsContentCleanup::stripPlain($copy['excerpt']), 255, ''),
             'content' => $body,
             'image' => $image,
             'postponed_to' => $postponed->format('Y-m-d H:i:s'),
