@@ -15,7 +15,7 @@ use Throwable;
 
 class NewsRepublishEsCommand extends Command
 {
-    protected $signature = 'news:republish-es {--limit=10 : Max news items (1-25)}';
+    protected $signature = 'news:republish-es {--limit=3 : Max news items (1-25)}';
 
     protected $description = 'Clear cached news (incl. English leftovers), then re-ingest Spanish posts for coanime.net.';
 

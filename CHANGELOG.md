@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - **Branch:** feature/CACMS10-change-llm-and-add-editorial
 - Cron `news:ingest-tenrai --limit=3` a las 08:00 (antes hourly con default 10)
 - Default de artisan/API/servicio alineado a 3
+- `news:republish-es` también default `--limit=3`
 
 ### fix: errores reales de Gemini en last_error + key por query
 
