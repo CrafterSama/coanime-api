@@ -54,7 +54,10 @@ class GeminiTranslationServiceTest extends TestCase
             'generativelanguage.googleapis.com/*' => Http::response(['error' => 'quota'], 429),
         ]);
 
-        $this->assertNull(app(GeminiTranslationService::class)->generateJson('sys', 'user'));
+        $svc = app(GeminiTranslationService::class);
+        $this->assertNull($svc->generateJson('sys', 'user'));
+        $this->assertNotNull($svc->lastError());
+        $this->assertStringContainsString('429', (string) $svc->lastError());
     }
 
     public function test_invalid_json_returns_null(): void

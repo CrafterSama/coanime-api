@@ -6,10 +6,17 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-11-16
 
+### fix: errores reales de Gemini en last_error + key por query
+
+- **Fecha:** 2026-11-16
+- **Branch:** feature/CACMS10-change-llm-and-add-editorial
+- `last_error` expone HTTP/body/blocked en lugar de solo "gemini failed"
+- Envía API key también como `?key=` y normaliza schema a tipos lowercase
+
 ### feat: Editorial EN→ES con Gemini (reemplaza OpenAI)
 
 - **Fecha:** 2026-11-16
-- **Branch:** feature/CACMS9-test-cloud-relevants-news
+- **Branch:** feature/CACMS10-change-llm-and-add-editorial
 - `GeminiTranslationService` + `GEMINI_API_KEY` / `GEMINI_MODEL` / `EDITORIAL_ENABLED`
 - `CatalogNewsEditorial` deja de usar `EDITORIAL_LLM_*` (OpenAI); fallback Google Translate se mantiene
 - Manual editorial versionado (`editorial_manuals`) + API `/internal/editorial` (admin)
