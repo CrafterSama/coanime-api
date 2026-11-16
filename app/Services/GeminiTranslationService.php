@@ -26,9 +26,9 @@ final class GeminiTranslationService
 
     public function model(): string
     {
-        $model = config('services.editorial.model', 'gemini-2.5-flash');
+        $model = config('services.editorial.model', 'gemini-3.8-flash');
 
-        return is_string($model) && $model !== '' ? $model : 'gemini-2.5-flash';
+        return is_string($model) && $model !== '' ? $model : 'gemini-3.8-flash';
     }
 
     public function host(): ?string

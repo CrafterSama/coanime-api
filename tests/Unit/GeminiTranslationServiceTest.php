@@ -16,7 +16,7 @@ class GeminiTranslationServiceTest extends TestCase
         config([
             'services.editorial.key' => 'test-key',
             'services.editorial.enabled' => true,
-            'services.editorial.model' => 'gemini-2.5-flash',
+            'services.editorial.model' => 'gemini-3.8-flash',
         ]);
 
         Http::fake([
@@ -37,7 +37,7 @@ class GeminiTranslationServiceTest extends TestCase
         $this->assertSame(11, $result['tokens_in']);
         $this->assertSame(3, $result['tokens_out']);
         Http::assertSent(function (Request $request) {
-            return str_contains($request->url(), 'gemini-2.5-flash:generateContent')
+            return str_contains($request->url(), 'gemini-3.8-flash:generateContent')
                 && $request->hasHeader('x-goog-api-key', 'test-key')
                 && ($request['generationConfig']['responseMimeType'] ?? null) === 'application/json';
         });

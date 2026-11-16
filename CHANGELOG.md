@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-11-16
 
+### fix: modelo Gemini default a gemini-3.8-flash
+
+- **Fecha:** 2026-11-16
+- **Branch:** feature/CACMS10-change-llm-and-add-editorial
+- `gemini-2.5-flash` devolvía 404 para usuarios nuevos; default y docs pasan a `gemini-3.8-flash`
+
 ### fix: ingest de News a 3 artículos diarios
 
 - **Fecha:** 2026-11-16

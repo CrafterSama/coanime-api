@@ -15,7 +15,7 @@ No se generan versiones en otros idiomas.
 
 ```env
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.8-flash
 GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 EDITORIAL_ENABLED=true
 ```
@@ -29,7 +29,7 @@ EDITORIAL_ENABLED=true
 3. Ponela en `GEMINI_API_KEY` del host
 4. No commits de la key
 
-Modelo default: `gemini-2.5-flash` (cuota free según Google). No hay auto-cambio a modelos de pago.
+Modelo default: `gemini-3.8-flash` (cuota free según Google; `gemini-2.5-flash` ya no acepta usuarios nuevos). No hay auto-cambio a modelos de pago.
 
 ## Config editorial (admin)
 
