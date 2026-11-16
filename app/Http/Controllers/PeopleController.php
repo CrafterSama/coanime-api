@@ -186,6 +186,112 @@ class PeopleController extends Controller
     }
 
     /**
+     * Return countries and cities for the people create/edit form.
+     * Prefer using countries-search and cities-search for async search (debounce, min 3 chars).
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function formFilters()
+    {
+        $countries = Country::orderBy('name', 'asc')->get(['iso3 as id', 'name']);
+        $cities = City::orderBy('name', 'asc')->get(['id', 'name']);
+
+        return response()->json([
+            'code' => 200,
+            'message' => [
+                'type' => 'success',
+                'text' => 'Filtros cargados',
+            ],
+            'countries' => $countries,
+            'cities' => $cities,
+        ], 200);
+    }
+
+    /**
+     * Search countries by name. For people form async select.
+     * Query param: q (min 3 chars), limit (optional, default 20).
+     * Returns [{ value: iso3, label: name }].
+     */
+    public function countriesSearch(Request $request)
+    {
+        $q = $request->input('q', '');
+        $q = \is_string($q) ? trim($q) : '';
+
+        if (\strlen($q) < 3) {
+            return response()->json([
+                'code' => 200,
+                'result' => [],
+                'message' => ['type' => 'success', 'text' => 'Escribe al menos 3 caracteres'],
+            ], 200);
+        }
+
+        $limit = min(max((int) $request->input('limit', 20), 1), 50);
+        $countries = Country::where('name', 'like', '%' . $q . '%')
+            ->orderBy('name', 'asc')
+            ->limit($limit)
+            ->get(['iso3', 'name'])
+            ->map(fn ($c) => ['value' => $c->iso3, 'label' => $c->name]);
+
+        return response()->json([
+            'code' => 200,
+            'result' => $countries,
+            'message' => ['type' => 'success', 'text' => 'OK'],
+        ], 200);
+    }
+
+    /**
+     * Search cities by name, filtered by country. For people form async select.
+     * Query params: q (min 3 chars), country_code (required, iso3), limit (optional, default 20).
+     * Returns [{ value: id, label: name }].
+     */
+    public function citiesSearch(Request $request)
+    {
+        $q = $request->input('q', '');
+        $q = \is_string($q) ? trim($q) : '';
+        $countryCode = $request->input('country_code', '');
+        $countryCode = \is_string($countryCode) ? trim($countryCode) : '';
+
+        if (!$countryCode) {
+            return response()->json([
+                'code' => 400,
+                'result' => [],
+                'message' => ['type' => 'error', 'text' => 'country_code is required'],
+            ], 400);
+        }
+
+        if (\strlen($q) < 3) {
+            return response()->json([
+                'code' => 200,
+                'result' => [],
+                'message' => ['type' => 'success', 'text' => 'Escribe al menos 3 caracteres'],
+            ], 200);
+        }
+
+        $country = Country::where('iso3', $countryCode)->first();
+        if (!$country) {
+            return response()->json([
+                'code' => 200,
+                'result' => [],
+                'message' => ['type' => 'success', 'text' => 'País no encontrado'],
+            ], 200);
+        }
+
+        $limit = min(max((int) $request->input('limit', 20), 1), 50);
+        $cities = City::where('country_id', $country->id)
+            ->where('name', 'like', '%' . $q . '%')
+            ->orderBy('name', 'asc')
+            ->limit($limit)
+            ->get(['id', 'name'])
+            ->map(fn ($c) => ['value' => (int) $c->id, 'label' => $c->name]);
+
+        return response()->json([
+            'code' => 200,
+            'result' => $cities,
+            'message' => ['type' => 'success', 'text' => 'OK'],
+        ], 200);
+    }
+
+    /**
      * Show the form for creating a new resource.
      *
      * @return \Illuminate\Http\JsonResponse
@@ -236,39 +342,21 @@ class PeopleController extends Controller
             $request['slug'] = Str::slug($request['name']).'1';
         }
 
-        if ($request->file('image-client')) {
-                $file = $request->file('image-client');
-                //Creamos una instancia de la libreria instalada
-                $image = Image::make($request->file('image-client')->getRealPath());
-                //Ruta donde queremos guardar las imagenes
-                $originalPath = public_path().'/images/encyclopedia/people/';
-                //Ruta donde se guardaran los Thumbnails
-                $thumbnailPath = public_path().'/images/encyclopedia/people/thumbnails/';
-                // Guardar Original
-                $fileName = hash('sha256', Str::slug($request['name']).strval(time()));
+        $payload = $request->except(['image', 'image-client', 'bio']);
+        $payload['about'] = $request->input('bio') ?? $request->input('about');
 
-                $watermark = Image::make(public_path().'/images/logo_homepage.png');
-
-                $watermark->opacity(30);
-
-                $image->insert($watermark, 'bottom-right', 10, 10);
-
-                $image->save($originalPath.$fileName.'.jpg');
-                // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-                $image->resize(300, null, function ($constraint) {
-                    $constraint->aspectRatio();
-                });
-                // Guardar
-                $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
-
-            $request['image'] = $fileName.'.jpg';
-        } else {
-            $request['image'] = null;
-        }
-
-        //dd($data);
-
-        if ($data = People::create($request->all())) {
+        if ($data = People::create($payload)) {
+            if ($request->filled('image') && \is_string($request->image)) {
+                $data->clearMediaCollection('default');
+                try {
+                    $data->addMediaFromUrl($request->image)->toMediaCollection('default');
+                } catch (\Exception $e) {
+                    \Log::warning('People addMediaFromUrl failed: '.$e->getMessage());
+                }
+            } elseif ($request->file('image-client')) {
+                $data->clearMediaCollection('default');
+                $data->addMediaFromRequest('image-client')->toMediaCollection('default');
+            }
             return response()->json([
                 'code' => 200,
                 'message' => [
@@ -292,37 +380,59 @@ class PeopleController extends Controller
     }
 
     /**
+     * Build person payload for API (include image + media).
+     *
+     * @param  \App\Models\People  $person
+     * @return array<string, mixed>
+     */
+    private function personResult(People $person): array
+    {
+        $arr = $person->toArray();
+        $arr['image'] = $person->image;
+        $arr['about'] = Helper::bbcodeToHtmlSafe($arr['about'] ?? '');
+        $arr['media'] = $person->getMedia('default')->map(fn ($m) => [
+            'id' => $m->id,
+            'url' => $m->getUrl(),
+            'file_name' => $m->file_name,
+        ])->values()->all();
+
+        return $arr;
+    }
+
+    /**
      * Display the specified resource.
      *
-     * @param  int  $id
+     * @param  int|string  $idOrSlug
      * @return \Illuminate\Http\JsonResponse
      */
-    public function show($slug)
+    public function show($idOrSlug)
     {
-        if (People::where('slug', '=', $slug)->count() > 0) {
-            $people = People::with('city', 'country')->whereSlug($slug)->firstOrFail();
-            //dd($people);
+        $person = \is_numeric($idOrSlug)
+            ? People::with('city', 'country')->find($idOrSlug)
+            : People::with('city', 'country')->where('slug', $idOrSlug)->first();
+
+        if (! $person) {
             return response()->json([
-                'code' => 200,
-                'message' => [
-                    'type' => 'success',
-                    'text' => 'Persona encontrada',
-                ],
-                'title' => 'Coanime.net - Persona',
-                'description' => 'Ver la información de una persona',
-                'result' => $people,
-            ], 200);
-        } else {
-            return response()->json([
-                'code' => 400,
+                'code' => 404,
                 'message' => [
                     'type' => 'error',
                     'text' => 'Persona no encontrada',
                 ],
                 'title' => 'Coanime.net - Persona',
                 'description' => 'Ver la información de una persona',
-            ], 400);
+            ], 404);
         }
+
+        return response()->json([
+            'code' => 200,
+            'message' => [
+                'type' => 'success',
+                'text' => 'Persona encontrada',
+            ],
+            'title' => 'Coanime.net - Persona',
+            'description' => 'Ver la información de una persona',
+            'result' => $this->personResult($person),
+        ], 200);
     }
 
     /**
@@ -335,7 +445,7 @@ class PeopleController extends Controller
     {
         if (People::where('slug', '=', $slug)->count() > 0) {
             $people = People::with('city', 'country')->whereSlug($slug)->firstOrFail();
-            $people->about = Helper::bbcodeToHtml($people->about);
+            $people->about = Helper::bbcodeToHtmlSafe($people->about);
 
             //dd($people);
 
@@ -370,19 +480,21 @@ class PeopleController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $data = People::find($id);
+        $data = People::findOrFail($id);
 
         $this->validate($request, [
             'name' => 'required|max:255',
             'japanese_name' => 'required',
             'areas_skills_hobbies' => 'required',
-            'bio' => 'required',
+            'bio' => 'required_without:about|nullable|string',
+            'about' => 'required_without:bio|nullable|string',
             'city_id' => 'required',
-            'birthday' => 'date_format:"Y-m-d H:i:s"',
+            'birthday' => 'nullable|date_format:Y-m-d H:i:s',
             'country_code' => 'required',
             'falldown' => 'required',
-            'falldown_date' => 'date_format:"Y-m-d H:i:s"',
-            'image-client' => 'max:2048|mimes:jpeg,gif,bmp,png',
+            'falldown_date' => 'nullable|date_format:Y-m-d H:i:s',
+            'image' => 'nullable|string|max:500',
+            'image-client' => 'nullable|max:2048|mimes:jpeg,gif,bmp,png',
         ]);
 
         if (empty($request['falldown_date'])) {
@@ -392,35 +504,29 @@ class PeopleController extends Controller
         $request['user_id'] = Auth::user()->id;
         $request['slug'] = Str::slug($request['name']);
 
-        if ($request->file('image-client')) {
-            $file = $request->file('image-client');
-            //Creamos una instancia de la libreria instalada
-            $image = Image::make($request->file('image-client')->getRealPath());
-            //Ruta donde queremos guardar las imagenes
-            $originalPath = public_path().'/images/encyclopedia/people/';
-            //Ruta donde se guardaran los Thumbnails
-            $thumbnailPath = public_path().'/images/encyclopedia/people/thumbnails/';
-            // Guardar Original
-            $fileName = hash('sha256', Str::slug($request['name']).strval(time()));
+        $updatePayload = $request->except(['image', 'image-client', 'bio']);
+        $updatePayload['about'] = $request->input('bio') ?? $request->input('about');
 
-            $watermark = Image::make(public_path().'/images/logo_homepage.png');
+        if ($data->update($updatePayload)) {
+            $currentUrl = $data->getFirstMedia('default')?->getUrl();
 
-            $watermark->opacity(30);
+            if ($request->file('image-client')) {
+                $data->clearMediaCollection('default');
+                $data->addMediaFromRequest('image-client')->toMediaCollection('default');
+            } elseif ($request->filled('image') && \is_string($request->image)) {
+                $newUrl = trim($request->image);
+                if ($newUrl !== $currentUrl) {
+                    $data->clearMediaCollection('default');
+                    try {
+                        $data->addMediaFromUrl($newUrl)->toMediaCollection('default');
+                    } catch (\Exception $e) {
+                        \Log::warning('People addMediaFromUrl failed: '.$e->getMessage());
+                    }
+                }
+            }
 
-            $image->insert($watermark, 'bottom-right', 10, 10);
+            $data->load(['city', 'country']);
 
-            $image->save($originalPath.$fileName.'.jpg');
-            // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-            $image->resize(300, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-            // Guardar
-            $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
-
-            $request['image'] = $fileName.'.jpg';
-        }
-
-        if ($data->update($request->all())) {
             return response()->json([
                 'code' => 200,
                 'message' => [
@@ -429,6 +535,7 @@ class PeopleController extends Controller
                 ],
                 'title' => 'Coanime.net - Editar Persona',
                 'description' => 'Editar una persona',
+                'result' => $this->personResult($data),
             ], 200);
         } else {
             return response()->json([

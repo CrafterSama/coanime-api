@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\MergesParamsPayload;
+use App\Models\Tag;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PostUpdateRequest extends FormRequest
 {
+    use MergesParamsPayload;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -19,7 +24,7 @@ class PostUpdateRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -34,7 +39,7 @@ class PostUpdateRequest extends FormRequest
                 'nullable',
                 function (string $attribute, mixed $value, \Closure $fail): void {
                     if (is_numeric($value)) {
-                        if (! \App\Models\Tag::where('id', (int) $value)->exists()) {
+                        if (! Tag::where('id', (int) $value)->exists()) {
                             $fail('El tag seleccionado no es válido.');
                         }
                     } elseif (is_string($value)) {

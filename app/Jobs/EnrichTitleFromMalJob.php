@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\Title;
-use App\Services\MalTitleEnrichmentService;
+use App\Services\AnimeMangaTitleEnrichmentService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,7 +30,7 @@ class EnrichTitleFromMalJob implements ShouldQueue, ShouldBeUnique
         return 'enrich-title-' . $this->titleId;
     }
 
-    public function handle(MalTitleEnrichmentService $service): void
+    public function handle(AnimeMangaTitleEnrichmentService $service): void
     {
         $title = Title::with('type', 'genres')->find($this->titleId);
         if ($title === null) {

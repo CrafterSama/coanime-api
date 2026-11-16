@@ -153,7 +153,9 @@ class CompanyController extends Controller
             'about' => 'required',
             'country_code' => 'required',
             'website' => 'required',
-            'foundation_date' => 'date_format:"Y-m-d H:i:s"',
+            'foundation_date' => 'nullable|date_format:Y-m-d H:i:s',
+            'image' => 'nullable|string|max:500',
+            'image-client' => 'nullable|image|mimes:jpeg,gif,bmp,png|max:2048',
         ]);
 
         if (Company::where('slug', '=', Str::slug($request->get('name')))->count() > 0) {
@@ -161,30 +163,41 @@ class CompanyController extends Controller
                 'code' => 409,
                 'message' => Helper::errorMessage('There is already a company with this name'),
             ], 409);
-        } else {
-            $data = new Company();
-            $request['user_id'] = Auth::user()->id;
-            $request['slug'] = Str::slug($request['name']);
+        }
 
-            if (Company::where('slug', 'like', $request['slug'])->count() > 0) {
-                $request['slug'] = Str::slug($request['name']).'1';
+        $request['user_id'] = Auth::user()->id;
+        $request['slug'] = Str::slug($request['name']);
+        if (Company::where('slug', 'like', $request['slug'])->count() > 0) {
+            $request['slug'] = Str::slug($request['name']).'1';
+        }
+
+        $payload = $request->except(['image', 'image-client']);
+
+        try {
+            $data = Company::create($payload);
+            if ($request->filled('image') && \is_string($request->image)) {
+                $data->clearMediaCollection('default');
+                try {
+                    $data->addMediaFromUrl($request->image)->toMediaCollection('default');
+                } catch (\Exception $e) {
+                    \Log::warning('Company addMediaFromUrl failed: '.$e->getMessage());
+                }
+            } elseif ($request->file('image-client')) {
+                $data->clearMediaCollection('default');
+                $data->addMediaFromRequest('image-client')->toMediaCollection('default');
             }
 
-            try {
-                $data = Company::create($request->all());
-
-                return response()->json([
-                    'code' => 200,
-                    'message' => Helper::successMessage('Entity created successfully'),
-                    'result' => $data,
-                ], 200);
-            } catch (Exception $e) {
-                return response()->json([
-                    'code' => 500,
-                    'message' => Helper::errorMessage($e->getMessage()),
-                    'result' => [],
-                ], 500);
-            }
+            return response()->json([
+                'code' => 200,
+                'message' => Helper::successMessage('Entity created successfully'),
+                'result' => $data,
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'message' => Helper::errorMessage($e->getMessage()),
+                'result' => [],
+            ], 500);
         }
     }
 
@@ -193,12 +206,14 @@ class CompanyController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse|mixed
      */
-    public function show($slug)
+    public function show($idOrSlug)
     {
-        $company = Company::with('country')->whereSlug($slug)->firstOrFail();
+        $company = \is_numeric($idOrSlug)
+            ? Company::with('country')->findOrFail($idOrSlug)
+            : Company::with('country')->where('slug', $idOrSlug)->firstOrFail();
 
         try {
-            if ($company->count() > 0) {
+            if ($company) {
                 return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage(),
@@ -268,17 +283,29 @@ class CompanyController extends Controller
             'about' => 'required',
             'country_code' => 'required',
             'website' => 'required',
-            'foundation_date' => 'date_format:"Y-m-d H:i:s"',
-            'image-client' => 'max:2048|mimes:jpeg,gif,bmp,png',
+            'foundation_date' => 'nullable|date_format:Y-m-d H:i:s',
+            'image' => 'nullable|string|max:500',
+            'image-client' => 'nullable|image|mimes:jpeg,gif,bmp,png|max:2048',
         ]);
 
-        $data = Company::find($id);
+        $data = Company::findOrFail($id);
         $request['user_id'] = $data->user_id;
         $request['slug'] = Str::slug($request['name']);
         $request['edited_by'] = Auth::user()->id;
 
         try {
-            if ($data->update($request->all())) {
+            if ($data->update($request->except(['image', 'image-client']))) {
+                if ($request->filled('image') && \is_string($request->image)) {
+                    $data->clearMediaCollection('default');
+                    try {
+                        $data->addMediaFromUrl($request->image)->toMediaCollection('default');
+                    } catch (\Exception $e) {
+                        \Log::warning('Company addMediaFromUrl failed: '.$e->getMessage());
+                    }
+                } elseif ($request->file('image-client')) {
+                    $data->clearMediaCollection('default');
+                    $data->addMediaFromRequest('image-client')->toMediaCollection('default');
+                }
                 return response()->json([
                     'code' => 200,
                     'message' => Helper::successMessage('Entity updated successfully'),

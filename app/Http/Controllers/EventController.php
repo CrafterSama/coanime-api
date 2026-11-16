@@ -150,41 +150,13 @@ class EventController extends Controller
             $request['slug'] = Str::slug($request['name']).'1';
         }
 
-        if ($request->file('image-client')) {
-            $file = $request->file('image-client');
-            //Creamos una instancia de la libreria instalada
-            $image = Image::make($request->file('image-client')->getRealPath());
-            //Ruta donde queremos guardar las imagenes
-            $originalPath = public_path().'/images/events/';
-            //Ruta donde se guardaran los Thumbnails
-            $thumbnailPath = public_path().'/images/events/thumbnails/';
-            // Guardar Original
-            $fileName = hash('sha256', $data['slug'].strval(time()));
-
-            $watermark = Image::make(public_path().'/images/logo_homepage.png');
-
-            $watermark->opacity(30);
-
-            $image->insert($watermark, 'bottom-right', 10, 10);
-
-            $image->encode('jpg', 95);
-            //dd($fileName);
-            $image->save($originalPath.$fileName.'.jpg');
-            // Cambiar de tamaño Tomando en cuenta el radio para hacer un thumbnail
-            $image->resize(300, null, function ($constraint) {
-                $constraint->aspectRatio();
-            });
-            // Guardar
-            $image->save($thumbnailPath.'thumb-'.$fileName.'.jpg');
-
-            $request['image'] = $fileName.'.jpg';
-        } else {
-            $request['image'] = null;
-        }
-
-        //dd($data);
+        $request['image'] = null;
 
         if ($data = Event::create($request->all())) {
+            if ($request->file('image-client')) {
+                $data->clearMediaCollection('default');
+                $data->addMediaFromRequest('image-client')->toMediaCollection('default');
+            }
             return response()->json([
                 'code' => 200,
                 'message' => [
@@ -304,9 +276,12 @@ class EventController extends Controller
 
         $request['user_id'] = Auth::user()->id;
         $request['slug'] = Str::slug($request['name']);
-        $request['image'] = is_string($request->get('image')) ? $request->get('image') : null;
 
-        if ($data->update($request->all())) {
+        if ($data->update($request->except(['image-client']))) {
+            if ($request->file('image-client')) {
+                $data->clearMediaCollection('default');
+                $data->addMediaFromRequest('image-client')->toMediaCollection('default');
+            }
             return response()->json([
                 'code' => 200,
                 'message' => [
