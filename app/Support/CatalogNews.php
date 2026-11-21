@@ -194,6 +194,34 @@ final class CatalogNews
     public static function asRelevant(array $item, array $category, ?array $copy = null): array
     {
         $malId = (int) ($item['mal_id'] ?? 0);
+        $saved = self::savedByMalId($malId);
+        if ($saved !== null) {
+            return [
+                'id' => (int) $saved->id,
+                'title' => (string) $saved->title,
+                'excerpt' => (string) $saved->excerpt,
+                'slug' => (string) $saved->slug,
+                'category_id' => (int) ($saved->category_id ?? $category['id']),
+                'image' => $saved->image,
+                'view_counter' => (int) ($saved->view_counter ?? 0),
+                'user_id' => (int) ($saved->user_id ?? 0),
+                'postponed_to' => $saved->postponed_to,
+                'created_at' => $saved->created_at,
+                'updated_at' => $saved->updated_at,
+                'approved' => (string) ($saved->approved ?? 'yes'),
+                'draft' => (string) ($saved->draft ?? '0'),
+                'post_created_at' => $saved->post_created_at,
+                'categories' => $category,
+                'tags' => [],
+                'users' => [
+                    'name' => CatalogNewsEditorial::AUTHOR,
+                    'slug' => Str::slug(CatalogNewsEditorial::AUTHOR),
+                ],
+                'source' => 'tenrai',
+                'mal_news_id' => $malId,
+            ];
+        }
+
         $date = is_string($item['date'] ?? null) ? $item['date'] : null;
         $copy ??= CatalogNewsEditorial::card(
             $malId,
@@ -272,6 +300,21 @@ final class CatalogNews
         }
 
         return ['id' => $id, 'name' => 'Noticias', 'slug' => 'noticias'];
+    }
+
+    private static function savedByMalId(int $malId): ?Post
+    {
+        if ($malId <= 0) {
+            return null;
+        }
+        try {
+            return Post::query()
+                ->select('id', 'title', 'excerpt', 'slug', 'category_id', 'image', 'view_counter', 'user_id', 'postponed_to', 'created_at', 'updated_at', 'approved', 'draft', 'post_created_at', 'mal_news_id')
+                ->where('mal_news_id', $malId)
+                ->first();
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**

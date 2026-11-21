@@ -68,4 +68,38 @@ class CatalogNewsFillSavedTest extends TestCase
         $this->assertSame('local-vieja', $mixed[1]['slug']);
         $this->assertSame('otra-local', $mixed[2]['slug']);
     }
+
+    public function test_as_relevant_prefers_saved_post_slug(): void
+    {
+        try {
+            User::factory()->create(['id' => 1]);
+        } catch (Throwable $e) {
+            $this->markTestSkipped('Database unavailable: '.$e->getMessage());
+        }
+
+        $post = new Post;
+        $post->mal_news_id = 74870618;
+        $post->user_id = 1;
+        $post->slug = 'phantom-busters-revela-su-elenco';
+        $post->category_id = 1;
+        $post->title = '¡Phantom Busters revela su elenco!';
+        $post->excerpt = 'Bajada corta.';
+        $post->content = '<p>Cuerpo.</p>';
+        $post->approved = PostApproved::YES;
+        $post->draft = PostDraft::PUBLISHED;
+        $post->save();
+
+        $mapped = CatalogNews::asRelevant([
+            'mal_id' => 74870618,
+            'title' => 'English title',
+            'excerpt' => 'English excerpt',
+            'date' => now()->toIso8601String(),
+            'images' => ['jpg' => ['image_url' => 'https://cdn.example/a.jpeg']],
+        ], ['id' => 1, 'name' => 'Noticias', 'slug' => 'noticias']);
+
+        $this->assertSame((int) $post->id, $mapped['id']);
+        $this->assertSame('phantom-busters-revela-su-elenco', $mapped['slug']);
+        $this->assertSame('¡Phantom Busters revela su elenco!', $mapped['title']);
+        $this->assertSame('tenrai', $mapped['source']);
+    }
 }

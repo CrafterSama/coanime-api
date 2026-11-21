@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ## 2026-11-21
 
+### feat: títulos cortos y slug desde título en News Tenrai
+
+- **Fecha:** 2026-11-21
+- **Branch:** feature/CACMS11-change-the-way-to-create-content
+- Ingest genera slug con `Helper::createSlug` desde el título ES (migra `mal-news-{id}` en reingest)
+- Editorial: títulos cortos/sutiles; excerpt como bajada breve del título
+- `mal-news-{id}` legacy resuelve al Post local por `mal_news_id`; `asRelevant` hidrata slug de BD si existe
+
 ### fix: YouTube embeds Error 153 en ingest de News
 
 - **Fecha:** 2026-11-21

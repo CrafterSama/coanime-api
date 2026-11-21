@@ -40,7 +40,7 @@ class EditorialManual extends Model
             'medium_name' => 'Coanime',
             'declaration' => 'Coanime: vivimos las historias que contamos. Medio digital de anime, manga y cultura otaku que informa con rigor, comunica con entusiasmo y acerca cada historia a su comunidad. Hablamos como aficionados que investigan, no como espectadores que repiten rumores.',
             'tone' => 'Cercano, informativo y natural en español latinoamericano. Evitar regionalismos excesivamente locales.',
-            'title_rules' => 'Titulares atractivos, claros y verificables. Identificar la franquicia. Evitar clickbait engañoso. Mantener equilibrio SEO/legibilidad.',
+            'title_rules' => 'Títulos cortos y sutiles (unas 6–12 palabras, máx. ~70 caracteres), claros y verificables. Sin clickbait. Identificar la franquicia solo si cabe. El excerpt es una bajada breve (1–2 frases) que describe o amplía el título; no repetir el titular ni copiar el lead largo en inglés.',
             'content_rules' => 'Mantener significado, citas y datos. No inventar hechos ni spoilers. Adaptar expresiones. Parecer escrito por un editor de Coanime en español.',
             'fidelity_rules' => 'Rigor antes que viralidad. No presentar rumores como confirmaciones. Conservar atribuciones. Diferenciar confirmado de especulación.',
             'html_rules' => 'Conservar HTML, enlaces, imágenes, embeds y estructura. Usar <p> y <h4>. No eliminar multimedia.',

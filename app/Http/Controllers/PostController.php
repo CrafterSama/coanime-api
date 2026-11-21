@@ -1095,6 +1095,11 @@ class PostController extends Controller
             ], 404);
         }
 
+        $localSlug = Post::query()->where('mal_news_id', $malId)->value('slug');
+        if (is_string($localSlug) && $localSlug !== '' && $localSlug !== $slug) {
+            return $this->showApi($localSlug);
+        }
+
         try {
             $post = CatalogNews::article($malId);
         } catch (Exception) {

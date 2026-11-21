@@ -368,25 +368,26 @@ class Helper extends Model
         }
     }
 
-    protected function getRelatedSlugs($slug, $id = 0)
+    /**
+     * @return \Illuminate\Support\Collection<int, object{slug: string}>
+     */
+    protected static function getRelatedSlugs($slug, $id = 0)
     {
         return Post::select('slug')->where('slug', 'like', $slug.'%')
-            ->whereNotIn($id)
+            ->when((int) $id > 0, fn ($q) => $q->where('id', '!=', (int) $id))
             ->get();
     }
 
     public static function createSlug($title, $id = 0)
     {
-        // Normalize the title
-        $slug = Str::slug($title);
-        // Get any that could possibly be related.
-        // This cuts the queries down by doing it once.
+        $slug = Str::slug((string) $title);
+        if ($slug === '') {
+            $slug = 'noticia';
+        }
         $allSlugs = self::getRelatedSlugs($slug, $id);
-        // If we haven't used it before then we are all good.
         if (! $allSlugs->contains('slug', $slug)) {
             return $slug;
         }
-        // Just append numbers like a savage until we find not used.
         for ($i = 1; $i <= 10; $i++) {
             $newSlug = $slug.'-'.$i;
             if (! $allSlugs->contains('slug', $newSlug)) {

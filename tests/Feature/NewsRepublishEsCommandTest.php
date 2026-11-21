@@ -83,6 +83,6 @@ class NewsRepublishEsCommandTest extends TestCase
         $this->assertSame(1, Post::count());
         $post = Post::query()->first();
         $this->assertSame('¡Phantom Busters revela su elenco!', $post->title);
-        $this->assertSame('mal-news-74870618', $post->slug);
+        $this->assertSame('phantom-busters-revela-su-elenco', $post->slug);
     }
 }

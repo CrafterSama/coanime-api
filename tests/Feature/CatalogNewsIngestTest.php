@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\PostApproved;
+use App\Enums\PostDraft;
 use App\Models\Post;
 use App\Models\User;
 use App\Services\CatalogNewsIngest;
@@ -39,7 +41,7 @@ class CatalogNewsIngestTest extends TestCase
         $post = Post::query()->first();
         $this->assertSame(74870618, (int) $post->mal_news_id);
         $this->assertSame(1, (int) $post->user_id);
-        $this->assertSame('mal-news-74870618', $post->slug);
+        $this->assertSame('phantom-busters-revela-su-elenco', $post->slug);
         $this->assertSame('¡Phantom Busters revela su elenco!', $post->title);
         $this->assertTrue($result['editorial']['configured']);
         $this->assertTrue($result['editorial']['connected']);
@@ -59,6 +61,30 @@ class CatalogNewsIngestTest extends TestCase
 
         $this->assertSame(1, Post::count());
         $this->assertSame(1, $result['updated']);
+        $this->assertSame('phantom-busters-revela-su-elenco', Post::query()->first()->slug);
+    }
+
+    public function test_ingest_migrates_legacy_mal_news_slug(): void
+    {
+        $this->seedOwner();
+        $this->fakeTenraiAndLlm(spanish: true);
+
+        $post = new Post;
+        $post->mal_news_id = 74870618;
+        $post->user_id = 1;
+        $post->slug = 'mal-news-74870618';
+        $post->category_id = 1;
+        $post->title = 'Viejo';
+        $post->excerpt = 'Viejo excerpt';
+        $post->content = '<p>viejo</p>';
+        $post->approved = PostApproved::YES;
+        $post->draft = PostDraft::PUBLISHED;
+        $post->save();
+
+        $result = app(CatalogNewsIngest::class)->run(1);
+
+        $this->assertSame(1, $result['updated']);
+        $this->assertSame('phantom-busters-revela-su-elenco', $post->fresh()->slug);
     }
 
     public function test_ingest_skips_when_edited_by_another_user(): void

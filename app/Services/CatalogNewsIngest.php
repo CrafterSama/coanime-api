@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Enums\Category as CategoryEnum;
 use App\Enums\PostApproved;
 use App\Enums\PostDraft;
+use App\Models\Helper;
 use App\Models\Post;
 use App\Models\User;
 use App\Support\CatalogNews;
@@ -87,7 +88,6 @@ final class CatalogNewsIngest
                 $post = new Post;
                 $post->mal_news_id = $malId;
                 $post->user_id = self::USER_ID;
-                $post->slug = CatalogNews::slug($malId);
                 $post->category_id = CategoryEnum::CATEGORY_1->value;
                 $post->approved = PostApproved::YES;
                 $post->draft = PostDraft::PUBLISHED;
@@ -99,6 +99,12 @@ final class CatalogNewsIngest
             $post->image = $payload['image'];
             $post->postponed_to = $postponed;
             $post->post_created_at = $postCreatedAt;
+
+            $currentSlug = (string) ($post->slug ?? '');
+            if ($isNew || CatalogNews::parseSlug($currentSlug) !== null) {
+                $post->slug = Helper::createSlug($payload['title'], $isNew ? 0 : (int) $post->id);
+            }
+            $payload['slug'] = (string) $post->slug;
 
             try {
                 $post->save();
@@ -154,7 +160,6 @@ final class CatalogNewsIngest
     {
         return [
             'user_id' => self::USER_ID,
-            'slug' => CatalogNews::slug($malId),
             'category_id' => CategoryEnum::CATEGORY_1->value,
             'title' => Str::limit(NewsContentCleanup::stripPlain($copy['title']), 255, ''),
             'excerpt' => Str::limit(NewsContentCleanup::stripPlain($copy['excerpt']), 255, ''),
