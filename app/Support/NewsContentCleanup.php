@@ -16,6 +16,12 @@ final class NewsContentCleanup
             '',
             $html
         ) ?? $html;
+        // YouTube Error 153: Tenrai/LLM iframes often ship referrerpolicy=no-referrer
+        $html = preg_replace(
+            '/(<iframe\b[^>]*?)\breferrerpolicy\s*=\s*(["\']?)no-referrer\2/iu',
+            '$1referrerpolicy="strict-origin-when-cross-origin"',
+            $html
+        ) ?? $html;
 
         return trim($html);
     }

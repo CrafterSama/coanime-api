@@ -32,4 +32,13 @@ class NewsContentCleanupTest extends TestCase
         $html = '<p><a href="https://myanimelist.net/anime/1/x">x</a></p>';
         $this->assertStringContainsString('myanimelist.net/anime/1/x', NewsContentCleanup::stripNoise($html));
     }
+
+    public function test_rewrites_youtube_iframe_no_referrer_policy(): void
+    {
+        $html = '<iframe src="https://www.youtube-nocookie.com/embed/abc" referrerpolicy="no-referrer" allowfullscreen></iframe>';
+        $out = NewsContentCleanup::stripNoise($html);
+
+        $this->assertStringContainsString('referrerpolicy="strict-origin-when-cross-origin"', $out);
+        $this->assertStringNotContainsString('no-referrer', $out);
+    }
 }

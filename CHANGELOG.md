@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## 2026-11-21
+
+### fix: YouTube embeds Error 153 en ingest de News
+
+- **Fecha:** 2026-11-21
+- **Branch:** feature/CACMS11-change-the-way-to-create-content
+- `NewsContentCleanup::stripNoise` reescribe `referrerpolicy="no-referrer"` de iframes a `strict-origin-when-cross-origin`
+- Evita que el HTML Tenrai/LLM guarde embeds que rompen el player de YouTube
+
 ## 2026-11-16
 
 ### feat: reglas de contenido News (sin atribución + links Coanime)
